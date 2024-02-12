@@ -1,2 +1,2 @@
-# basyx-pdf-to-aas
-Python library to extract technical data via LLMs from PDF and export them in AAS format.
+# pdf-to-aas
+Libraries and Scripts to extract technical data from PDFs and format it as an Asset Administration Shell (AAS) submodel.
