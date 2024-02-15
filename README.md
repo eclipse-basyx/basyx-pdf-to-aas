@@ -31,7 +31,6 @@ flowchart LR
     submodelGenerator --json--> submodel
 ```
 
-
 ## Modules
 
 * **preprocessor**: converts the PDF to a text format that can be processed by LLMs, keeping layout and table information.
@@ -40,7 +39,12 @@ flowchart LR
 * **dictionary**: defines classes and properties semantically.
   * **eclass**: downloads eclass property definitions with value lists etc. from [eclass website](https://eclass.eu/en/eclass-standard/search-content) for a given eclass class.
 * **extractor**: extracts technical properties from the preprocessed data sheet.
-  * **propertyLLM**: Uses an LLM to search and extract a single property value with its unit from the given text. 
+  * **propertyLLM**: Uses an LLM to search and extract a single property value with its unit from the given text.
 * **generator**: transforms a given property-value list into different formats.
   * **submodelTD**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
 
+## run tests
+
+* Install `pytest` package
+* cd into `pdf2aas/pdf2aas`
+* Run tests with `python -m pytest`
