@@ -3,6 +3,7 @@
         "dict",
         "pre",
         "ext",
-        "gen"
+        "gen",
+        "eval"
     ]
 }

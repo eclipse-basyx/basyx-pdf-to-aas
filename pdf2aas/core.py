@@ -1,3 +1,4 @@
 class PDF2AAS:
-    def convert(self, pdf_filepath: str, classification: str) -> str:
-        return "{}"
+    submodel_technical_data = {}
+    def convert(self, pdf_filepath: str, classification: str):
+        pass
