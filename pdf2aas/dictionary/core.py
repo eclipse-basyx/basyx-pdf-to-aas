@@ -1,5 +1,5 @@
 class Dictionary:
-    def getClassProperties(self, class_id: str) -> str:
+    def get_class_properties(self, class_id: str) -> str:
         raise NotImplementedError()
 
 class ECLASS(Dictionary):
@@ -11,7 +11,7 @@ class ETIM(Dictionary):
 # CDD, UNSPSC, ...
 
 class DummyDictionary(Dictionary):
-    def getClassProperties(self, class_id: str) -> str:
+    def get_class_properties(self, class_id: str) -> str:
         # e.g.: https://prod.etim-international.com/Feature/Details/EF003647?local=False
         return [{'id': 'EF003647', 'name': 'Switching distance', 'type': 'N'}]
     

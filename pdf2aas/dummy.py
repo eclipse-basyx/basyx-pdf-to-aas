@@ -8,7 +8,7 @@ def main():
     preprocessed_datasheet = preprocessor.convert("file.pdf")
 
     dictionary = DummyDictionary()
-    property_definitions = dictionary.getClassProperties("EC002714")
+    property_definitions = dictionary.get_class_properties("EC002714")
 
     extractor = DummyPropertyLLM()
     properties = []
