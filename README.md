@@ -6,30 +6,39 @@ Python libraries and scripts to extract technical data from PDFs utilizing Trans
 
 ```mermaid
 flowchart LR
-    dataSheet[Data Sheet]
-    dictionary[("Property 
+    datasheet(Data Sheet)
+    dict[("Property 
                  Dictionary")]
     llm{{LLM}}
-    submodel[AAS Submodel]
+    submodel(AAS Submodel)
+    table(Table)
 
-    preprocessor[[PDF Preprocessor]]
-    propertyPreprocessor[[Property Preprocessor]]
+    preprocessor[[Preprocessor]]
+    dictProcessor[[Dictionary]]
     propertyExtractor[[Extractor]]
-    submodelGenerator[[Generator]]
+    generator[[Generator]]
 
-    dataSheet --pdf---> preprocessor --text--> propertyExtractor
+    datasheet --pdf---> preprocessor --text--> propertyExtractor
 
-    dataSheet -.classification.-> propertyPreprocessor
-    dictionary --"class and
-    property definition"---> propertyPreprocessor --"property 
+    datasheet -.classification.-> dictProcessor
+    dict --"class and
+    property definition"---> dictProcessor --"property 
         definitions"
         -->  propertyExtractor
 
     propertyExtractor --prompt--> llm --property--> propertyExtractor
-    propertyExtractor --property list--> submodelGenerator
+    propertyExtractor --property list--> generator
 
-    submodelGenerator --json--> submodel
+    generator --json--> submodel
+    generator --csv, json--> table
 ```
+
+Remarks:
+
+* Typical *Property Dictionaries* are ECLASS, CDD, ETIM, EDIBATEC, EPIC, GPC, UniClass
+* The *classification* (e.g. ECLASS or ETIM class of the device) will be done manualy first, but can be automated (e.g. also via LLMs) in the future
+* Additional *PDF Preprocessors* might be added in the future, e.g. specialized on table or image extraction.
+LLMs might also be used to preprocess the PDF content first, e.g. summarize it in JSON format
 
 ## Modules
 
@@ -45,8 +54,46 @@ flowchart LR
   * **TechnicalDataSubmodel**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
   * **CSV**: outputs the properties as csv file
 
-## Run Tests
+## Tests
 
 * Install `pytest` package, e.g. via `pip install -r requirements.in`
 * cd into `pdf2aas`
 * Run tests with `python -m pytest`
+
+## Evaluation
+
+To evaluate the extraction process we will use existing manufacturer catalogs, e.g. from WAGO.
+
+```mermaid
+flowchart
+    testset(Testset)
+    stats(Statistic)
+
+    subgraph eval [Evaluator]
+      man[Manufacturer]
+      
+      dict[("Property
+            Dictionary")]
+
+      datasheet(Data Sheet)
+      man_submodel(AAS Submodel)
+
+      pdf2aas[[PDF to AAS]]
+      comp[[Comparator]]
+      download[[Downloader]]
+      download[[Downloader]]
+
+      man --> download --> datasheet & man_submodel
+
+      dict --"class and
+              property definition"--> pdf2aas
+
+      datasheet --pdf--> pdf2aas
+      man_submodel -.classification.-> pdf2aas
+      
+      pdf2aas --json--> comp
+      man_submodel --json--> comp
+    end
+    
+    testset --> eval --> stats
+```
