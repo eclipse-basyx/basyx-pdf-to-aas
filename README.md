@@ -34,17 +34,18 @@ flowchart LR
 ## Modules
 
 * **preprocessor**: converts the PDF to a text format that can be processed by LLMs, keeping layout and table information.
-  * **pdf2html**: Uses [pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX) to convert the PDF data sheets to HTML.
+  * **PDF2HTML**: Uses [pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX) to convert the PDF data sheets to HTML.
     The converted html is preprocessed further to reduce token usage for the llms.
 * **dictionary**: defines classes and properties semantically.
-  * **eclass**: downloads eclass property definitions with value lists etc. from [eclass website](https://eclass.eu/en/eclass-standard/search-content) for a given eclass class.
+  * **ECLASS**: downloads property definitions from [ECLASS website](https://eclass.eu/en/eclass-standard/search-content) for a given ECLASS class.
+  * **ETIM**: downloads property definitions from [ETIM model releases](https://www.etim-international.com/downloads/?_sft_downloadcategory=model-releases) or via the [ETIM API](https://etimapi.etim-international.com/)
 * **extractor**: extracts technical properties from the preprocessed data sheet.
-  * **propertyLLM**: Uses an LLM to search and extract a single property value with its unit from the given text.
+  * **PropertyLLM**: Uses an LLM to search and extract a single property value with its unit from the given text.
 * **generator**: transforms a given property-value list into different formats.
-  * **submodelTD**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
+  * **TechnicalDataSubmodel**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
 
-## run tests
+## Run Tests
 
-* Install `pytest` package
-* cd into `pdf2aas/pdf2aas`
+* Install `pytest` package, e.g. via `pip install -r requirements.in`
+* cd into `pdf2aas`
 * Run tests with `python -m pytest`

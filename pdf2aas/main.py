@@ -1,16 +1,22 @@
-from pdf2html import SimplePDF2HTML
-from property_extractor import SimplePropertyExtractor
-from aas_submodel_generator import SimpleAASSubmodelGenerator
+from preprocessor import DummyPDF2HTML
+from extractor import DummyPropertyLLM
+from generator import DummyTechnicalDataSubmodel
+from dictionary import DummyDictionary
 
 
 def main():
-    sp2h = SimplePDF2HTML()
-    result: str = sp2h.generate(54354)
+    preprocessor = DummyPDF2HTML()
+    preprocessed_datasheet = preprocessor.convert("file.pdf")
 
-    spe = SimplePropertyExtractor()
-    result = spe.extract(result)
+    dictionary = DummyDictionary()
+    property_definitions = dictionary.getClassProperties("EC002714")
 
-    sasg = SimpleAASSubmodelGenerator()
-    result = sasg.generate(result)
+    extractor = DummyPropertyLLM()
+    properties = []
+    for property_definition in property_definitions:
+        properties.append(extractor.extract(preprocessed_datasheet, property_definition))
+
+    generator = DummyTechnicalDataSubmodel()
+    result = generator.generate(result)
 
     print(result)

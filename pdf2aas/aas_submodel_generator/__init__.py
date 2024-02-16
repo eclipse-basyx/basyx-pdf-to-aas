@@ -1,1 +1,0 @@
-from aas_submodel_generator.core import AASSubmodelGenerator, SimpleAASSubmodelGenerator

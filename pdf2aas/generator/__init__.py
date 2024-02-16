@@ -1,0 +1,1 @@
+from generator.core import TechnicalDataSubmodel, DummyTechnicalDataSubmodel

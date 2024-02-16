@@ -1,1 +1,0 @@
-from property_extractor.core import PropertyExtractor, SimplePropertyExtractor

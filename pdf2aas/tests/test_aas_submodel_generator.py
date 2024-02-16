@@ -1,6 +1,6 @@
-from ..aas_submodel_generator import SimpleAASSubmodelGenerator
+from ..generator import DummyTechnicalDataSubmodel
 
 
-def test_simple_aas_submodel_generator():
-    g = SimpleAASSubmodelGenerator()
-    assert g.generate("input") == "<AASSubmodel>DUMMY</AASSubmodel>"
+def test_dummy_technical_data_submodel_generator():
+    g = DummyTechnicalDataSubmodel()
+    assert g.generate([]) == "<AASSubmodel>DUMMY</AASSubmodel>"
