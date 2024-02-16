@@ -1,0 +1,8 @@
+{
+    "conventionalCommits.scopes": [
+        "dict",
+        "pre",
+        "ext",
+        "gen"
+    ]
+}
