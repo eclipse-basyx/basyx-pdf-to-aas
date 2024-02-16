@@ -3,7 +3,6 @@ from extractor import DummyPropertyLLM
 from generator import DummyTechnicalDataSubmodel
 from dictionary import DummyDictionary
 
-
 def main():
     preprocessor = DummyPDF2HTML()
     preprocessed_datasheet = preprocessor.convert("file.pdf")
@@ -17,6 +16,9 @@ def main():
         properties.append(extractor.extract(preprocessed_datasheet, property_definition))
 
     generator = DummyTechnicalDataSubmodel()
-    result = generator.generate(result)
+    result = generator.generate(properties)
 
     print(result)
+
+if __name__ == "__main__":
+    main()
