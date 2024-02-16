@@ -41,8 +41,9 @@ flowchart LR
   * **ETIM**: downloads property definitions from [ETIM model releases](https://www.etim-international.com/downloads/?_sft_downloadcategory=model-releases) or via the [ETIM API](https://etimapi.etim-international.com/)
 * **extractor**: extracts technical properties from the preprocessed data sheet.
   * **PropertyLLM**: Uses an LLM to search and extract a single property value with its unit from the given text.
-* **generator**: transforms a given property-value list into different formats.
+* **generator**: transforms an extracted property-value list into different formats.
   * **TechnicalDataSubmodel**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
+  * **CSV**: outputs the properties as csv file
 
 ## Run Tests
 
