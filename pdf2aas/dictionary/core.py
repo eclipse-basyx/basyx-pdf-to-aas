@@ -1,5 +1,15 @@
+from dataclasses import dataclass
+
+#TODO use property class from aas python package instead?
+@dataclass
+class PropertyDefinition():
+    id: str
+    name: str = ''
+    type: str = 'string'
+    #TODO add keywords, value list
+
 class Dictionary:
-    def get_class_properties(self, class_id: str) -> str:
+    def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         raise NotImplementedError()
 
 class ECLASS(Dictionary):
@@ -11,7 +21,7 @@ class ETIM(Dictionary):
 # CDD, UNSPSC, ...
 
 class DummyDictionary(Dictionary):
-    def get_class_properties(self, class_id: str) -> str:
+    def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         # e.g.: https://prod.etim-international.com/Feature/Details/EF003647?local=False
-        return [{'id': 'EF003647', 'name': 'Switching distance', 'type': 'N'}]
+        return [PropertyDefinition('EF003647', 'Switching distance', 'numeric')]
     

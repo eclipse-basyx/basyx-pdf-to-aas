@@ -1,1 +1,1 @@
-from dictionary.core import ECLASS, ETIM, DummyDictionary
+from dictionary.core import PropertyDefinition, ECLASS, ETIM, DummyDictionary
