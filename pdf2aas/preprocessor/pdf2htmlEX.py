@@ -3,6 +3,8 @@ from pathlib import Path
 import subprocess
 from enum import IntEnum
 import re
+import os.path
+import shutil
 
 class ReductionLevel(IntEnum):
     NONE=0 # No Reduction
@@ -66,5 +68,6 @@ class PDF2HTMLEX(Preprocessor):
                 reduced_datasheet[idx] = re.sub(r'<div.*?>|</div>', '', page)
         return reduced_datasheet
     
-    def clear_temp_dir():
-        pass
+    def clear_temp_dir(self):
+        if os.path.isdir(self.temp_dir):
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
