@@ -1,3 +1,6 @@
+# temp dir for pdf conversion
+pdf2aas/temp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -54,6 +54,42 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
   * **TechnicalDataSubmodel**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
   * **CSV**: outputs the properties as csv file
 
+## Usage
+
+* Install requirements, e.g. via `pip install -r requirements.in`
+* For [PDF2HTMLEX preprocessor](pdf2aas/preprocessor/pdf2htmlEX.py) the pdf2htmlEX binary needs to be [downloaded](https://github.com/pdf2htmlEX/pdf2htmlEX/wiki/Download) and installed. Currently it is only available for linux distributions, but it can be used via WSL or docker on Windows.
+
+Example:
+
+```py
+from preprocessor import PDF2HTMLEX, ReductionLevel
+from extractor import DummyPropertyLLM
+from generator import DummyTechnicalDataSubmodel
+from dictionary import DummyDictionary
+
+def main():
+    preprocessor = PDF2HTMLEX()
+    preprocessor.reduction_level = ReductionLevel.STRUCTURE
+    preprocessed_datasheet = preprocessor.convert("tests/assets/datasheet-festo.pdf")
+    #preprocessor.clear_temp_dir()
+
+    dictionary = DummyDictionary()
+    property_definitions = dictionary.get_class_properties("EC002714")
+
+    extractor = DummyPropertyLLM()
+    properties = []
+    for property_definition in property_definitions:
+        properties.append(extractor.extract(preprocessed_datasheet, property_definition))
+
+    generator = DummyTechnicalDataSubmodel()
+    result = generator.generate(properties)
+
+    print(result)
+
+if __name__ == "__main__":
+    main()
+```
+
 ## Tests
 
 * Install `pytest` package, e.g. via `pip install -r requirements.in`
