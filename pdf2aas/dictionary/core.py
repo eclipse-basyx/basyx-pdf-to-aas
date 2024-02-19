@@ -6,14 +6,14 @@ class PropertyDefinition():
     id: str
     name: str = ''
     type: str = 'string'
-    #TODO add keywords, value list
+    definition: str = ''
+    language: str = 'en'
+    unit: str = ''
+    values = []
 
 class Dictionary:
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         raise NotImplementedError()
-
-class ECLASS(Dictionary):
-    pass
     
 class ETIM(Dictionary):
     pass
