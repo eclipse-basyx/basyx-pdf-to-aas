@@ -47,7 +47,9 @@ class PDF2HTMLEX(Preprocessor):
         
         return self.reduce_datasheet(Path(dest_dir, filename + '.html').read_text())
 
-    def reduce_datasheet(self, datasheet: str, level: ReductionLevel = reduction_level) -> str:
+    def reduce_datasheet(self, datasheet: str, level: ReductionLevel = None) -> str:
+        if level == None:
+            level = self.reduction_level
         reduced_datasheet = datasheet
         if level >= ReductionLevel.BODY:
             reduced_datasheet = re.search(r'<body>\n((?:.*\n)*.*)\n</body>', reduced_datasheet).group(1)
