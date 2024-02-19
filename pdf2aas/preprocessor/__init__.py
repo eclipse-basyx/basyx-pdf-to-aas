@@ -1,1 +1,2 @@
-from preprocessor.core import PDF2HTML, DummyPDF2HTML
+from preprocessor.core import DummyPDF2HTML
+from preprocessor.pdf2htmlEX import PDF2HTMLEX

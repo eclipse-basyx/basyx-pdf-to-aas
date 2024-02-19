@@ -1,8 +1,8 @@
-class PDF2HTML:
+class Preprocessor:
     def convert(self, filepath: str) -> str:
         raise NotImplementedError()
 
 
-class DummyPDF2HTML(PDF2HTML):
+class DummyPDF2HTML(Preprocessor):
     def convert(self, filepath: str) -> str:
         return "html"
