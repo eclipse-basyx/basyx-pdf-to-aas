@@ -21,11 +21,15 @@ class PDF2HTMLEX(Preprocessor):
         filename = Path(filepath).stem
         dest_dir = Path(self.temp_dir, filename)
         pdf2htmlEX = subprocess.run(['pdf2htmlEX',
+            # '--heps', '1',
+            # '--veps', '1',
+            '--quiet', '0',
             '--embed-css', '0',
             '--embed-font', '0',
             '--embed-image', '0',
             '--embed-javascript', '0',
             '--embed-outline', '0',
+            '--svg-embed-bitmap', '0',
             '--split-pages', '0',
             '--process-nontext', '0',
             '--process-outline', '0',
@@ -38,6 +42,7 @@ class PDF2HTMLEX(Preprocessor):
 
         if pdf2htmlEX.returncode != 0:
             print("Call to pdf2htmlEX failed:" + str(pdf2htmlEX))
+            #TODO raise custom PDF2HTML error instead
             return None
         
         return self.reduce_datasheet(Path(dest_dir, filename + '.html').read_text())
@@ -58,3 +63,6 @@ class PDF2HTMLEX(Preprocessor):
             for idx, page in enumerate(reduced_datasheet):
                 reduced_datasheet[idx] = re.sub(r'<div.*?>|</div>', '', page)
         return reduced_datasheet
+    
+    def clear_temp_dir():
+        pass
