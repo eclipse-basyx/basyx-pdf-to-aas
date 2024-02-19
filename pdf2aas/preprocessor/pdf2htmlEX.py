@@ -1,11 +1,23 @@
 from preprocessor.core import Preprocessor
 from pathlib import Path
 import subprocess
+from enum import IntEnum
+import re
+
+class ReductionLevel(IntEnum):
+    NONE=0 # No Reduction
+    BODY=1 # Complete html body
+    PAGES=2 # Complete html elements representing pages
+    DIVS=3 # Span elements removed 
+    STRUCTURE=4 # Div elements without classes
+    TEXT=5 # Only return Text
 
 class PDF2HTMLEX(Preprocessor):
     temp_dir = "temp/html"
+    reduction_level: ReductionLevel = ReductionLevel.NONE
 
-    def convert(self, filepath: str) -> str | None:
+    #TODO add possibility to specify pages
+    def convert(self, filepath: str) -> list[str] | str | None:
         filename = Path(filepath).stem
         dest_dir = Path(self.temp_dir, filename)
         pdf2htmlEX = subprocess.run(['pdf2htmlEX',
@@ -28,4 +40,21 @@ class PDF2HTMLEX(Preprocessor):
             print("Call to pdf2htmlEX failed:" + str(pdf2htmlEX))
             return None
         
-        return Path(dest_dir, filename + '.html').read_text()
+        return self.reduce_datasheet(Path(dest_dir, filename + '.html').read_text())
+
+    def reduce_datasheet(self, datasheet: str, level: ReductionLevel = reduction_level) -> str:
+        reduced_datasheet = datasheet
+        if level >= ReductionLevel.BODY:
+            reduced_datasheet = re.search(r'<body>\n((?:.*\n)*.*)\n</body>', reduced_datasheet).group(1)
+        if level >= ReductionLevel.PAGES:
+            reduced_datasheet = re.findall(r'<div id="pf.*', reduced_datasheet)
+        if level >= ReductionLevel.DIVS:
+            for idx, page in enumerate(reduced_datasheet):
+                reduced_datasheet[idx] = re.sub(r'<span .*?>|</span>', '', page)
+        if level >= ReductionLevel.STRUCTURE:
+            for idx, page in enumerate(reduced_datasheet):
+                reduced_datasheet[idx] = re.sub(r'<div.*?>', '<div>', page)
+        if level >= ReductionLevel.TEXT:
+            for idx, page in enumerate(reduced_datasheet):
+                reduced_datasheet[idx] = re.sub(r'<div.*?>|</div>', '', page)
+        return reduced_datasheet
