@@ -50,12 +50,9 @@ def parse_html_eclass_property(span, data, id):
     if value_list_span:
         print(" -- Download value list for " + property.name[data['language']])
         parse_html_eclass_valuelist(property, value_list_span)
-    
-    ECLASS.properties[id] = property
     return property
 
 def parse_html_eclass_properties(soup : BeautifulSoup):
-    identifiers = []
     properties = []
     li_elements = soup.find_all('li')
     for li in li_elements:
@@ -64,17 +61,16 @@ def parse_html_eclass_properties(soup : BeautifulSoup):
             data_props = span['data-props'].replace('&quot;', '"')
             data = json.loads(data_props)
             id = data['IRDI_PR']
-            identifiers.append(id)
-            if id in ECLASS.properties.keys():
-                property = ECLASS.properties[id]
-                print(f" - Found property {id}: {property.name}")
-                properties.append(property)
+            property = ECLASS.properties.get(id)
+            if property is None:
+                print(f" - Add new property {id}: {data['preferred_name']}")
+                property = parse_html_eclass_property(span, data, id)
+                ECLASS.properties[id] = property
             else:
-                print(f" - Create property {id}: {data['preferred_name']}")
-                properties.append(parse_html_eclass_property(span, data, id))
-
-    return (identifiers, properties)
-
+                print(f" - Add existing property {id}: {property.name}")
+            properties.append(property)
+    return properties
+                
 def split_keywords(li_keywords):
     if li_keywords is None:
         return []
@@ -86,30 +82,6 @@ def split_keywords(li_keywords):
         else:
             keyphrases[len(keyphrases)-1] = keyphrases[len(keyphrases)-1] + ' ' + keyword
     return keyphrases
-
-
-def parse_html_eclass_class(html_content):
-    soup = BeautifulSoup(html_content, 'html.parser')
-    eclass_class = {}
-    #TODO get IRDI instead of id, e.g.: 0173-1#01-AGZ376#020, which is = data-cc in span of value lists
-    class_hierarchy = soup.find('ul', attrs={"class": "tree-simple-list"})
-    li_elements = class_hierarchy.find_all('li', attrs={"id": True})
-    for li in li_elements:
-        identifier = li['id'].replace('node_', '')
-        if identifier in ECLASS.classes.keys():
-            print(f" - Found class {identifier}: {ECLASS.classes[identifier]['name']}")
-        else:
-            a_description = li.find('a', attrs={"title": True})
-            eclass_class = {
-                'id': identifier,
-                'name': ' '.join(li.getText().strip().split()[1:]),
-                'description': a_description['title'] if a_description != None else '',
-                'keywords': split_keywords(li.find('i', attrs={"data-toggle": "tooltip"}))
-            }
-            print(f" - Create class {identifier}: {eclass_class['name']}")
-            ECLASS.classes[identifier] = eclass_class
-    (eclass_class['properties'], properties) = parse_html_eclass_properties(soup)
-    return (eclass_class, properties)
 
 def download_html(url):
     try:
@@ -132,10 +104,9 @@ class ECLASS(Dictionary):
             are filled in dynamically when performing a search.
         properties (dict[str, PropertyDefinition]): A dictionary that maps property
             IDs to their PropertyDefinition instances.
-        classes (dict[str, object]): A dictionary that maps class IDs to their
-            corresponding class objects.
-        RELEASES (List[str]): A list of string representations of the available eCl@ss
-            standard releases.
+        releases (dict[str, dict[str, object]]): A dictionary that maps release versions
+            to another dictionary. This nested dictionary maps class IDs to their
+            corresponding class objects for that release version.
 
     Args:
         release (str): The release version of the eCl@ss standard to be used when
@@ -154,11 +125,16 @@ class ECLASS(Dictionary):
             Returns:
                 list[PropertyDefinition]: A list of PropertyDefinition instances
                 associated with the specified class ID.
+        classes (property) -> dict[str, object]:
+            A property that retrieves the class objects for the currently set release
+            version from the `releases` attribute.
+
+            Returns:
+                dict[str, object]: A dictionary of class objects for the current release.
     """
     eclass_class_search_pattern: str = 'https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}'
     properties: dict[str, PropertyDefinition] = {}
-    classes: dict[str, object] = {}
-    RELEASES = ['14.0', '13.0', '12.0', '11.1', '11.0', '10.1', '10.0.1', '9.1', '9.0', '8.1', '8.0', '7.1', '7.0', '6.2', '6.1', '5.14']
+    releases: dict[dict[str, object]] = {'14.0': {}, '13.0': {}, '12.0': {}, '11.1': {}, '11.0': {}, '10.1': {}, '10.0.1': {}, '9.1': {}, '9.0': {}, '8.1': {}, '8.0': {}, '7.1': {}, '7.0': {}, '6.2': {}, '6.1': {}, '5.14': {}}
 
     def __init__(self, release = '14.0') -> None:
         """
@@ -170,33 +146,67 @@ class ECLASS(Dictionary):
         """
         super().__init__()
         self.release = release
+    
+    @property
+    def classes(self) -> dict[str, object]:
+        """
+        Retrieves the class objects for the currently set eCl@ss release version.
+
+        Returns:
+            dict[str, object]: A dictionary of class objects for the current release, with their class id as key.
+        """
+        return self.releases.get(self.release)
 
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """
-        Retrieves a list of property definitions for the given eCl@ss class ID.
+        Retrieves a list of property definitions for the given eCl@ss class ID, e.g. 27274001.
 
-        If the class properties are already stored in the `classes` attribute, they
+        If the class properties are already stored in the `classes` property, they
         are returned directly. Otherwise, an HTML page is downloaded based on the
         eclass_class_search_pattern and the parsed HTML is used to obtain the
         properties.
+        Currently only concrete classes (level 4, not endingin with 00) are supported.
 
         Args:
-            class_id (str): The ID of the eCl@ss class for which to retrieve properties.
+            class_id (str): The ID of the eCl@ss class for which to retrieve properties, e.g. 27274001.
 
         Returns:
             list[PropertyDefinition]: A list of PropertyDefinition instances
                                       associated with the specified class ID.
         """
-        if class_id in ECLASS.classes.keys():
-            properties = []
-            for property_id in ECLASS.classes[class_id]['properties']:
-                if property_id in ECLASS.properties.keys():
-                    properties.append(ECLASS.properties[property_id])
-        else:    
+        if class_id.endswith('00'):
+            print(f"Currently only concrete (level 4) classes are supported.")
+            # Because the eclass content-search only lists properties in level 4 for classes
+            return []
+        eclass_class = self.classes.get(class_id)
+        if eclass_class is None:
             html_content = download_html(ECLASS.eclass_class_search_pattern.format(
                 class_id=class_id,
                 language='1', # 0=de, 1=en, 2=fr, 3=cn
                 release=self.release))
-            (_, properties) = parse_html_eclass_class(html_content)
+            eclass_class = self.__parse_html_eclass_class(html_content)
 
-        return properties
+        return eclass_class['properties']
+    
+    def __parse_html_eclass_class(self, html_content):
+        soup = BeautifulSoup(html_content, 'html.parser')
+        #TODO get IRDI instead of id, e.g.: 0173-1#01-AGZ376#020, which is = data-cc in span of value lists
+        class_hierarchy = soup.find('ul', attrs={"class": "tree-simple-list"})
+        li_elements = class_hierarchy.find_all('li', attrs={"id": True})
+        for li in li_elements:
+            identifier = li['id'].replace('node_', '')
+            eclass_class = self.classes.get(identifier)
+            if eclass_class is None:
+                a_description = li.find('a', attrs={"title": True})
+                eclass_class = {
+                    'id': identifier,
+                    'name': ' '.join(li.getText().strip().split()[1:]),
+                    'description': a_description['title'] if a_description != None else '',
+                    'keywords': split_keywords(li.find('i', attrs={"data-toggle": "tooltip"})),
+                }
+                print(f" - Add class {identifier}: {eclass_class['name']}")
+                self.classes[identifier] = eclass_class
+            else:
+                print(f" - Update class {identifier}: {eclass_class['name']}")
+        eclass_class['properties'] = parse_html_eclass_properties(soup)
+        return eclass_class

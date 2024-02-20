@@ -9,8 +9,8 @@ def test_get_class_properties():
     properties = d.get_class_properties("27274001")
     assert len(properties) == 108
 
-    assert '27274001' in ECLASS.classes.keys()
-    eclass_class = ECLASS.classes['27274001']
+    assert '27274001' in d.classes.keys()
+    eclass_class = d.classes['27274001']
     assert eclass_class['id'] == '27274001'
     assert eclass_class['name'] == 'Inductive proximity switch'
     assert eclass_class['description'] == 'Inductive proximity switch producing an electromagnetic field within a sensing zone and having a semiconductor switching element'
@@ -27,3 +27,6 @@ def test_get_class_properties():
         values=[])
     assert switching_distance in properties 
     assert ECLASS.properties['0173-1#02-BAD815#009'] == switching_distance
+
+    d.release = '13.0'
+    assert '27274001' not in d.classes.keys()
