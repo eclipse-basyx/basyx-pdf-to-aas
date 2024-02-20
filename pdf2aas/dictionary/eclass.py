@@ -76,6 +76,19 @@ def parse_html_eclass_properties(soup : BeautifulSoup):
 
     return (identifiers, properties)
 
+def split_keywords(li_keywords):
+    if li_keywords is None:
+        return []
+    keywords = li_keywords.get('title').strip().split(':')[1].split()
+    keyphrases = []
+    for keyword in keywords:
+        if keyword[0].isupper():
+            keyphrases.append(keyword)
+        else:
+            keyphrases[len(keyphrases)-1] = keyphrases[len(keyphrases)-1] + ' ' + keyword
+    return keyphrases
+
+
 def parse_html_eclass_class(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
     eclass_class = {}
@@ -88,12 +101,11 @@ def parse_html_eclass_class(html_content):
             print(f" - Found class {identifier}: {ECLASS.classes[identifier]['name']}")
         else:
             a_description = li.find('a', attrs={"title": True})
-            keywords = li.find('i', attrs={"data-toggle": "tooltip"})
             eclass_class = {
                 'id': identifier,
                 'name': ' '.join(li.getText().strip().split()[1:]),
                 'description': a_description['title'] if a_description != None else '',
-                "keywords": keywords.get('title').strip().replace('Schlagwörter: ', '').split() if keywords != None else []
+                'keywords': split_keywords(li.find('i', attrs={"data-toggle": "tooltip"}))
             }
             print(f" - Create class {identifier}: {eclass_class['name']}")
             ECLASS.classes[identifier] = eclass_class
