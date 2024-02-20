@@ -121,16 +121,72 @@ def download_html(url):
         return None
 
 class ECLASS(Dictionary):
+    """
+    ECLASS is a class designed to interact with the eCl@ss standard for classification
+    and product description. It provides functionalities to search for eCl@ss classes
+    and retrieve their properties based on different releases of the standard.
+
+    Attributes:
+        eclass_class_search_pattern (str): The URL pattern to search for eCl@ss classes.
+            The URL contains placeholders for class_id, language, and release which
+            are filled in dynamically when performing a search.
+        properties (dict[str, PropertyDefinition]): A dictionary that maps property
+            IDs to their PropertyDefinition instances.
+        classes (dict[str, object]): A dictionary that maps class IDs to their
+            corresponding class objects.
+        RELEASES (List[str]): A list of string representations of the available eCl@ss
+            standard releases.
+
+    Args:
+        release (str): The release version of the eCl@ss standard to be used when
+            interacting with the eCl@ss database. Defaults to '14.0'.
+
+    Methods:
+        get_class_properties(class_id: str) -> list[PropertyDefinition]:
+            Retrieves a list of property definitions for a given eCl@ss class ID.
+            If the properties are already cached in the `properties` attribute, those
+            are returned. Otherwise, a web request is made to the eCl@ss website to
+            fetch and parse the properties.
+
+            Args:
+                class_id (str): The ID of the eCl@ss class for which to retrieve properties.
+
+            Returns:
+                list[PropertyDefinition]: A list of PropertyDefinition instances
+                associated with the specified class ID.
+    """
     eclass_class_search_pattern: str = 'https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}'
     properties: dict[str, PropertyDefinition] = {}
     classes: dict[str, object] = {}
     RELEASES = ['14.0', '13.0', '12.0', '11.1', '11.0', '10.1', '10.0.1', '9.1', '9.0', '8.1', '8.0', '7.1', '7.0', '6.2', '6.1', '5.14']
 
     def __init__(self, release = '14.0') -> None:
+        """
+        Initializes the ECLASS instance with a specified eCl@ss release version.
+
+        Args:
+            release (str): The release version of the eCl@ss standard to be used.
+                           Defaults to '14.0'.
+        """
         super().__init__()
         self.release = release
 
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
+        """
+        Retrieves a list of property definitions for the given eCl@ss class ID.
+
+        If the class properties are already stored in the `classes` attribute, they
+        are returned directly. Otherwise, an HTML page is downloaded based on the
+        eclass_class_search_pattern and the parsed HTML is used to obtain the
+        properties.
+
+        Args:
+            class_id (str): The ID of the eCl@ss class for which to retrieve properties.
+
+        Returns:
+            list[PropertyDefinition]: A list of PropertyDefinition instances
+                                      associated with the specified class ID.
+        """
         if class_id in ECLASS.classes.keys():
             properties = []
             for property_id in ECLASS.classes[class_id]['properties']:
