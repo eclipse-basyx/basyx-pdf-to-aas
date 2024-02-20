@@ -122,9 +122,15 @@ def download_html(url):
         return None
 
 class ECLASS(Dictionary):
-    eclass_class_search_pattern: str = 'https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={version}'
+    eclass_class_search_pattern: str = 'https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}'
     properties: dict[str, PropertyDefinition] = {}
     classes: dict[str, object] = {}
+    RELEASES = ['14.0', '13.0', '12.0', '11.1', '11.0', '10.1', '10.0.1', '9.1', '9.0', '8.1', '8.0', '7.1', '7.0', '6.2', '6.1', '5.14']
+
+    def __init__(self, release = '14.0') -> None:
+        super().__init__()
+        self.release = release
+
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         if class_id in ECLASS.classes.keys():
             properties = []
@@ -132,7 +138,10 @@ class ECLASS(Dictionary):
                 if property_id in ECLASS.properties.keys():
                     properties.append(ECLASS.properties[property_id])
         else:    
-            html_content = download_html(ECLASS.eclass_class_search_pattern.format(class_id=class_id, language='1', version='14.0'))
+            html_content = download_html(ECLASS.eclass_class_search_pattern.format(
+                class_id=class_id,
+                language='1', # 0=de, 1=en, 2=fr, 3=cn
+                release=self.release))
             (_, properties) = parse_html_eclass_class(html_content)
 
         return properties
