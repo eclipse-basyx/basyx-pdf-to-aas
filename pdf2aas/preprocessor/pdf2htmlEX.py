@@ -30,11 +30,12 @@ class PDF2HTMLEX(Preprocessor):
     A preprocessor that converts PDF files to HTML using pdf2htmlEX and applies reductions to the HTML structure.
     
     Attributes:
-        temp_dir (str): The directory where temporary HTML files will be stored.
         reduction_level (ReductionLevel): The default level of HTML reduction to apply after conversion.
+        temp_dir (str): The directory where temporary HTML files will be stored.
     """
-    temp_dir = "temp/html"
-    reduction_level: ReductionLevel = ReductionLevel.NONE
+    def __init__(self, reduction_level=ReductionLevel.NONE, temp_dir="temp/html"):
+        self.reduction_level = reduction_level
+        self.temp_dir = temp_dir
 
     #TODO add possibility to specify pages
     def convert(self, filepath: str) -> list[str] | str | None:
