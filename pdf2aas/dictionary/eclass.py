@@ -66,7 +66,7 @@ def parse_html_eclass_properties(soup : BeautifulSoup):
             data = json.loads(data_props)
             id = data['IRDI_PR']
             identifiers.append(id)
-            if id in ECLASS.properties:
+            if id in ECLASS.properties.keys():
                 property = ECLASS.properties[id]
                 print(f" - Found property {id}: {property.name}")
                 properties.append(property)
@@ -85,7 +85,7 @@ def parse_html_eclass_class(html_content):
     li_elements = class_hierarchy.find_all('li', attrs={"id": True})
     for li in li_elements:
         identifier = li['id'].replace('node_', '')
-        if identifier in ECLASS.classes:
+        if identifier in ECLASS.classes.keys():
             print(f" - Found class {identifier}: {ECLASS.classes[identifier]['name']}")
         else:
             a_description = li.find('a', attrs={"title": True})
@@ -117,7 +117,13 @@ class ECLASS(Dictionary):
     properties: dict[str, PropertyDefinition] = {}
     classes: dict[str, object] = {}
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        html_content = download_html(ECLASS.eclass_class_search_pattern.format(class_id=class_id, language='1', version='14.0'))
-        (_, properties) = parse_html_eclass_class(html_content)
+        if class_id in ECLASS.classes.keys():
+            properties = []
+            for property_id in ECLASS.classes[class_id]['properties']:
+                if property_id in ECLASS.properties.keys():
+                    properties.append(ECLASS.properties[property_id])
+        else:    
+            html_content = download_html(ECLASS.eclass_class_search_pattern.format(class_id=class_id, language='1', version='14.0'))
+            (_, properties) = parse_html_eclass_class(html_content)
 
         return properties
