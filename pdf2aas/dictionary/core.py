@@ -1,13 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 #TODO use property class from aas python package instead?
 @dataclass
 class PropertyDefinition():
     id: str
-    name: str = ''
+    name: dict[str, str] = field(default_factory= lambda: {})
     type: str = 'string'
-    definition: str = ''
-    language: str = 'en'
+    definition: dict[str, str] = field(default_factory= lambda: {})
     unit: str = ''
     values = []
 

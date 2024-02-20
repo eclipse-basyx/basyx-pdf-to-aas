@@ -35,10 +35,9 @@ def parse_html_eclass_valuelist(property, span):
 def parse_html_eclass_property(span, data, id):
     property = PropertyDefinition(
         id,
-        data['preferred_name'],
+        {data['language']: data['preferred_name']},
         eclass_datatype_to_type.get(data['data_type'], 'string'),
-        data['definition'],
-        data['language'])
+        {data['language']: data['definition']})
 
     # Check for physical unit
     if ('unit_ref' in data) and ('short_name' in data['unit_ref']) and data['unit_ref']['short_name'] != '':
@@ -47,7 +46,7 @@ def parse_html_eclass_property(span, data, id):
     # Check for value list
     value_list_span = span.find_next_sibling('span')
     if value_list_span:
-        print(" -- Getting Value list for " + property.name)
+        print(" -- Getting Value list for " + property.name[data['language']])
         parse_html_eclass_valuelist(property, value_list_span)
         property.type = "enum"
     
