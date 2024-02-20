@@ -50,7 +50,6 @@ def parse_html_eclass_property(span, data, id):
     if value_list_span:
         print(" -- Download value list for " + property.name[data['language']])
         parse_html_eclass_valuelist(property, value_list_span)
-        property.type = "enum"
     
     ECLASS.properties[id] = property
     return property
