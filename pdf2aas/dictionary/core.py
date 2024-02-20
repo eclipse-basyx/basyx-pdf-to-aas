@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 #TODO use property class from aas python package instead?
 #TODO define data types
@@ -21,6 +21,11 @@ class PropertyDefinition():
     definition: dict[str, str] = field(default_factory= lambda: {})
     unit: str = ''
     values: dict = field(default_factory= lambda: [])
+
+def dictionary_serializer(obj):
+    if isinstance(obj, PropertyDefinition):
+        return asdict(obj)
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 class Dictionary:
 
