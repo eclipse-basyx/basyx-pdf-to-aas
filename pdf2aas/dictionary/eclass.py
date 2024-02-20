@@ -3,6 +3,9 @@ from bs4 import BeautifulSoup
 import requests
 import json
 from urllib.parse import quote
+import logging
+
+logger = logging.getLogger(__name__)
 
 eclass_datatype_to_type = {
     'BOOLEAN': 'bool',
@@ -31,8 +34,7 @@ def parse_html_eclass_valuelist(property, span):
                 }
                 property.values.append(value)
             except json.decoder.JSONDecodeError:
-                print("Error, while decoding:" + valuelist_span['data-props'])
-                print("  Url: " + valuelist_url)
+                logger.warning("Error, while decoding:" + valuelist_span['data-props'])
 
 def parse_html_eclass_property(span, data, id):
     property = PropertyDefinition(
@@ -48,7 +50,7 @@ def parse_html_eclass_property(span, data, id):
     # Check for value list
     value_list_span = span.find_next_sibling('span')
     if value_list_span:
-        print(" -- Download value list for " + property.name[data['language']])
+        logger.debug("Download value list for " + property.name[data['language']])
         parse_html_eclass_valuelist(property, value_list_span)
     return property
 
@@ -63,11 +65,11 @@ def parse_html_eclass_properties(soup : BeautifulSoup):
             id = data['IRDI_PR']
             property = ECLASS.properties.get(id)
             if property is None:
-                print(f" - Add new property {id}: {data['preferred_name']}")
+                logger.debug(f"Add new property {id}: {data['preferred_name']}")
                 property = parse_html_eclass_property(span, data, id)
                 ECLASS.properties[id] = property
             else:
-                print(f" - Add existing property {id}: {property.name}")
+                logger.debug(f"Add existing property {id}: {property.name}")
             properties.append(property)
     return properties
                 
@@ -89,7 +91,7 @@ def download_html(url):
         response.raise_for_status()
         return response.text
     except requests.RequestException as e:
-        print(f"Error downloading the HTML from the URL: {e}")
+        logger.error(f"Error downloading the HTML from the URL: {e}")
         return None
 
 class ECLASS(Dictionary):
@@ -174,18 +176,25 @@ class ECLASS(Dictionary):
             list[PropertyDefinition]: A list of PropertyDefinition instances
                                       associated with the specified class ID.
         """
+        if len(class_id) != 8 or not class_id.isdigit():
+            logger.warning(f"Class id has unknown format. Should be 8 digits, but got: {class_id}")
+            return []
         if class_id.endswith('00'):
-            print(f"Currently only concrete (level 4) classes are supported.")
+            logger.warning(f"No properties for {class_id}. Currently only concrete (level 4) classes are supported.")
             # Because the eclass content-search only lists properties in level 4 for classes
             return []
         eclass_class = self.classes.get(class_id)
         if eclass_class is None:
+            logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
             html_content = download_html(ECLASS.eclass_class_search_pattern.format(
                 class_id=class_id,
                 language='1', # 0=de, 1=en, 2=fr, 3=cn
                 release=self.release))
+            if html_content is None:
+                return []
             eclass_class = self.__parse_html_eclass_class(html_content)
-
+        else:
+            logger.info(f"Found class and property definitions for {class_id} in release {self.release}.")
         return eclass_class['properties']
     
     def __parse_html_eclass_class(self, html_content):
@@ -204,9 +213,9 @@ class ECLASS(Dictionary):
                     'description': a_description['title'] if a_description != None else '',
                     'keywords': split_keywords(li.find('i', attrs={"data-toggle": "tooltip"})),
                 }
-                print(f" - Add class {identifier}: {eclass_class['name']}")
+                logger.debug(f"Add class {identifier}: {eclass_class['name']}")
                 self.classes[identifier] = eclass_class
             else:
-                print(f" - Update class {identifier}: {eclass_class['name']}")
+                logger.debug(f"Found class {identifier}: {eclass_class['name']}")
         eclass_class['properties'] = parse_html_eclass_properties(soup)
         return eclass_class
