@@ -79,7 +79,6 @@ def parse_html_eclass_properties(soup : BeautifulSoup):
 def parse_html_eclass_class(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
     eclass_class = {}
-    superclass_identifier=''
     #TODO get IRDI instead of id, e.g.: 0173-1#01-AGZ376#020, which is = data-cc in span of value lists
     class_hierarchy = soup.find('ul', attrs={"class": "tree-simple-list"})
     li_elements = class_hierarchy.find_all('li', attrs={"id": True})
@@ -91,15 +90,13 @@ def parse_html_eclass_class(html_content):
             a_description = li.find('a', attrs={"title": True})
             keywords = li.find('i', attrs={"data-toggle": "tooltip"})
             eclass_class = {
-                'subClassOf': superclass_identifier,
-                'description': a_description['title'] if a_description != None else '',
-                'id': li.getText().strip().split()[0],
+                'id': identifier,
                 'name': ' '.join(li.getText().strip().split()[1:]),
+                'description': a_description['title'] if a_description != None else '',
                 "keywords": keywords.get('title').strip().replace('Schlagwörter: ', '').split() if keywords != None else []
             }
             print(f" - Create class {identifier}: {eclass_class['name']}")
             ECLASS.classes[identifier] = eclass_class
-        superclass_identifier = identifier
     (eclass_class['properties'], properties) = parse_html_eclass_properties(soup)
     return (eclass_class, properties)
 
