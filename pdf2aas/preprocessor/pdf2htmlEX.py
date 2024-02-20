@@ -26,7 +26,7 @@ class ReductionLevel(IntEnum):
     TEXT = 5
 
 class PDF2HTMLEX(Preprocessor):
-     """
+    """
     A preprocessor that converts PDF files to HTML using pdf2htmlEX and applies reductions to the HTML structure.
     
     Attributes:
