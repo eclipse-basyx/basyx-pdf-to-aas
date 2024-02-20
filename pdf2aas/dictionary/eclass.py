@@ -8,10 +8,13 @@ eclass_datatype_to_type = {
     'BOOLEAN': 'bool',
     'INTEGER_COUNT': 'numeric',
     'INTEGER_MEASURE': 'numeric',
+    'REAL_COUNT' : 'numeric',
+    'REAL_CURRENCY': 'numeric',
     'REAL_MEASURE': 'numeric',
     'STRING': 'string',
     'STRING_TRANSLATEABLE': 'string',
     'URL': 'string'
+    #TODO Map: DATE, RATIONAL, RATIONAL_MEASURE, REFERENCE, TIME, TIMESTAMP, AXIS1, AXIS2, AXIS3
 }
 
 def parse_html_eclass_valuelist(property, span):
@@ -23,9 +26,8 @@ def parse_html_eclass_valuelist(property, span):
             try:
                 valuelist_data = json.loads(valuelist_span['data-props'].replace("'",' '))
                 value = {
-                    "id": valuelist_data['preferred_name'], # Or use short name if available?
+                    "value": valuelist_data['preferred_name'],
                     "definition": valuelist_data['definition'],
-                    "name": valuelist_data['preferred_name'],
                 }
                 property.values.append(value)
             except json.decoder.JSONDecodeError:
@@ -46,7 +48,7 @@ def parse_html_eclass_property(span, data, id):
     # Check for value list
     value_list_span = span.find_next_sibling('span')
     if value_list_span:
-        print(" -- Getting Value list for " + property.name[data['language']])
+        print(" -- Download value list for " + property.name[data['language']])
         parse_html_eclass_valuelist(property, value_list_span)
         property.type = "enum"
     
@@ -69,7 +71,7 @@ def parse_html_eclass_properties(soup : BeautifulSoup):
                 print(f" - Found property {id}: {property.name}")
                 properties.append(property)
             else:
-                print(f" - Download property {id}: {data['preferred_name']}")
+                print(f" - Create property {id}: {data['preferred_name']}")
                 properties.append(parse_html_eclass_property(span, data, id))
 
     return (identifiers, properties)
