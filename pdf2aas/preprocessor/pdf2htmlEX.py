@@ -5,6 +5,9 @@ from enum import IntEnum
 import re
 import os.path
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ReductionLevel(IntEnum):
     """
@@ -50,12 +53,13 @@ class PDF2HTMLEX(Preprocessor):
             or a list of strings, where each element represents a page of the pdf file if the ReductionLevel is greater or equal to PAGES
             or None if the conversion fails.
         """
+        logger.info(f"Converting to html from pdf: {filepath}")
         filename = Path(filepath).stem
         dest_dir = Path(self.temp_dir, filename)
         pdf2htmlEX = subprocess.run(['pdf2htmlEX',
             # '--heps', '1',
             # '--veps', '1',
-            '--quiet', '0',
+            '--quiet', '1',
             '--embed-css', '0',
             '--embed-font', '0',
             '--embed-image', '0',
@@ -69,11 +73,17 @@ class PDF2HTMLEX(Preprocessor):
             '--embed-external-font', '0',
             '--optimize-text', '1',
             '--dest-dir', dest_dir,
-            filepath])
-        #TODO log stdout/stderr from subprocess
+            filepath],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        if pdf2htmlEX.stdout:
+            logger.debug("pdf2htmlEX stdout:\n%s", pdf2htmlEX.stdout)
+        if pdf2htmlEX.stderr:
+            logger.warning("Call to pdf2htmlEX stderr:\n%s", pdf2htmlEX.stderr)
 
         if pdf2htmlEX.returncode != 0:
-            print("Call to pdf2htmlEX failed:" + str(pdf2htmlEX))
+            logger.error(f"Call to pdf2htmlEX failed with returncode: {pdf2htmlEX.returncode}")
+            logger.debug(f"pdf2htmlEX arguments: {pdf2htmlEX.args}")
             #TODO raise custom PDF2HTML error instead
             return None
         
@@ -94,18 +104,25 @@ class PDF2HTMLEX(Preprocessor):
             level = self.reduction_level
         reduced_datasheet = datasheet
         if level >= ReductionLevel.BODY:
+            logger.debug("Reducing datasheet to ReductionLevel.BODY")
             reduced_datasheet = re.search(r'<body>\n((?:.*\n)*.*)\n</body>', reduced_datasheet).group(1)
         if level >= ReductionLevel.PAGES:
+            logger.debug("Reducing datasheet to ReductionLevel.PAGES")
             reduced_datasheet = re.findall(r'<div id="pf.*', reduced_datasheet)
         if level >= ReductionLevel.DIVS:
+            logger.debug("Reducing datasheet to ReductionLevel.DIVS")
             for idx, page in enumerate(reduced_datasheet):
                 reduced_datasheet[idx] = re.sub(r'<span .*?>|</span>', '', page)
         if level >= ReductionLevel.STRUCTURE:
+            logger.debug("Reducing datasheet to ReductionLevel.STRUCTURE")
             for idx, page in enumerate(reduced_datasheet):
                 reduced_datasheet[idx] = re.sub(r'<div.*?>', '<div>', page)
         if level >= ReductionLevel.TEXT:
+            logger.debug("Reducing datasheet to ReductionLevel.TEXT")
             for idx, page in enumerate(reduced_datasheet):
                 reduced_datasheet[idx] = re.sub(r'<div.*?>|</div>', '', page)
+        logger.info(f"Reduced datasheet to ReductionLevel {level.name}")
+        logger.debug("reduced datasheet:\n" + str(reduced_datasheet))
         return reduced_datasheet
     
     def clear_temp_dir(self):
@@ -113,4 +130,5 @@ class PDF2HTMLEX(Preprocessor):
         Clears the temporary directory used for storing intermediate HTML files.
         """
         if os.path.isdir(self.temp_dir):
+            logger.info(f"Clearing temporary directory: {os.path.realpath(self.temp_dir)}")
             shutil.rmtree(self.temp_dir, ignore_errors=True)
