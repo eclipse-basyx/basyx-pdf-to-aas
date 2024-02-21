@@ -1,6 +1,7 @@
 from extractor import PropertyLLM
 from dictionary import PropertyDefinition
 from openai import OpenAI
+import tiktoken
 import os
 
 
@@ -16,3 +17,24 @@ class PropertyLLMOpenAI(PropertyLLM):
             raise ValueError("No OpenAI API key found in environment")
         client = OpenAI()
         return ''
+
+
+    def calculate_token_count(self, text: str) -> int:
+        """
+        Calculate the number of tokens in a given text based on a specified model's encoding.
+
+        Parameters:
+        - text (str): The input text to encode.
+        - model_identifier (str): The identifier of the model to use for encoding.
+
+        Returns:
+        - int: The number of tokens in the encoded text.
+
+        Raises:
+        - ValueError: If the model_identifier does not correspond to any known model encoding.
+        """
+        try:
+            encoding = tiktoken.encoding_for_model(self.model_identifier)
+        except KeyError:
+            raise ValueError(f"Unknown model identifier: {self.model_identifier}")
+        return len(encoding.encode(text))
