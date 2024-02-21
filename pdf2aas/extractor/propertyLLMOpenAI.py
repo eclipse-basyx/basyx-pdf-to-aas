@@ -58,12 +58,18 @@ Example result:
         return property
 
     def create_prompt(self, datasheet: str, property: PropertyDefinition, language: str = 'en') -> str :
-        property_name = property.name.get(language, property.name[0])
+        if property.name is None:
+            raise ValueError(f"Property {property.id} has no name.")
+        property_name = property.name.get(language)
+        if property_name is None:
+            property_name = property.name
+            logger.warning(f"Property {property.id} name not defined for language {language}.")
+        property_definition = property.definition.get(language)
         prompt =f"The following html text in triple # is a datasheet of a technical device that was converted from pdf.\n Datasheet:###{datasheet}###"
-        if property.definition or property.unit or property.values:
+        if property_definition or property.unit or property.values:
             prompt += f'\nThe "{property_name}"'
-            if property.definition: 
-                prompt += f'\n- is defined as "{property.definition.get(language, property.definition[0])}".'
+            if property_definition: 
+                prompt += f'\n- is defined as "{property_definition}".'
             if property.unit: 
                 prompt += f'\n- has the unit of measure "{property.unit}".'
             if property.values: 
