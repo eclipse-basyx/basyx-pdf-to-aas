@@ -32,10 +32,9 @@ Example result:
 
         #TODO create Datasheet class and add information about char length
         if isinstance(datasheet, list):
-            logger.info(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
+            logger.info(f"Processing property {property_definition.id}: {property_definition.name['en']} for datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
         else:
-            logger.info(f"Processing datasheet with {len(datasheet)} chars.")
-        logger.info(f"Extracting property {property_definition.id}: {property_definition.name['en']}")
+            logger.info(f"Processing property {property_definition.id}: {property_definition.name['en']} for datasheet with {len(datasheet)} chars.")
 
         messages=[
                 {"role": "system", "content": self.system_prompt_template },
@@ -58,7 +57,7 @@ Example result:
         property = json.loads(result)
         
         property['id'] = property_definition.id
-        property['name'] = property_definition.name
+        property['name'] = property_definition.name['en']
         
         return property
 
