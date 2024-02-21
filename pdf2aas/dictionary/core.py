@@ -41,6 +41,7 @@ def dictionary_serializer(obj):
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 class Dictionary:
+    temp_dir = 'temp/dict'
 
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """
@@ -52,6 +53,12 @@ class Dictionary:
         Returns:
             list[PropertyDefinition]: A list of PropertyDefinition instances associated with the class.
         """
+        raise NotImplementedError()
+
+    def save_to_file(self, filepath: str = None):
+        raise NotImplementedError()
+
+    def load_from_file(self, filepath: str = None):
         raise NotImplementedError()
     
 class ETIM(Dictionary):

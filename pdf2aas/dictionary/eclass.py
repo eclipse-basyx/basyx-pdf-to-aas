@@ -1,8 +1,9 @@
-from dictionary.core import Dictionary, PropertyDefinition, ClassDefinition
+from dictionary.core import Dictionary, PropertyDefinition, ClassDefinition, dictionary_serializer
 from bs4 import BeautifulSoup
 import requests
 import json
 from urllib.parse import quote
+import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -219,3 +220,40 @@ class ECLASS(Dictionary):
                 logger.debug(f"Found class {identifier}: {eclass_class.name}")
         eclass_class.properties = parse_html_eclass_properties(soup)
         return eclass_class
+    
+    def save_to_file(self, filepath: str = None):
+        if filepath is None:
+            filepath = os.path.join(self.temp_dir, 'ECLASS-'+ self.release +'.json')
+        logger.info(f"Save ECLASS dictionary to file: {filepath}")
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "w") as file:
+            json.dump({
+                'release' : self.release,
+                'properties' : self.properties,
+                'classes' : self.classes,
+            }, file, default=dictionary_serializer)
+    
+    def load_from_file(self, filepath: str = None):
+        if filepath is None:
+            filepath = os.path.join(self.temp_dir, 'ECLASS-'+ self.release +'.json')
+        if not os.path.exists(filepath):
+            logger.warn(f"Couldn't load ECLASS dictionary from file. File does not exist: {filepath}")
+            return
+        logger.info(f"Load ECLASS dictionary from file: {filepath}")
+        with open(filepath, 'r') as file:
+            dict = json.load(file)
+            if dict['release'] != self.release:
+                logger.warning(f"Loading eclass release {dict['release']} for dictionary with release {self.release}.")
+            for id, property in dict['properties'].items():
+                if id not in self.properties.keys():
+                    logger.debug(f"Load property {property['id']}: {property['name']}")
+                    self.properties[id] = PropertyDefinition(**property)
+            for id, eclass_class in dict['classes'].items():
+                classes = self.releases[dict['release']]
+                if id not in classes.keys():
+                    logger.debug(f"Load eclass class {eclass_class['id']}: {eclass_class['name']}")
+                    new_class = ClassDefinition(**eclass_class)
+                    new_class.properties = [self.properties[property_id] for property_id in new_class.properties]
+                    classes[id] = new_class
+
+        
