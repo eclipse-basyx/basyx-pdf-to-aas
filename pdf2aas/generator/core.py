@@ -1,9 +1,5 @@
-class Generator:
-    output = None
-    
-    def generate(self, properties: str) -> str:
-        raise NotImplementedError()
-    def save(self, properties: str) -> str:
+class Generator:    
+    def generate(self, properties: list) -> str:
         raise NotImplementedError()
 
 class AASSubmodel:
@@ -13,11 +9,5 @@ class TechnicalDataSubmodel(AASSubmodel):
     pass
 
 class DummyTechnicalDataSubmodel():
-    def generate(self, properties: str) -> str:
+    def generate(self, properties: list) -> str:
         return "<AASSubmodel>DUMMY</AASSubmodel>"
-
-class CSV():
-    def generate(self, properties: str) -> str:
-        return "property, value, unit, datatype, semantic"
-    def save(self, filepath: str):
-        raise NotImplementedError()
