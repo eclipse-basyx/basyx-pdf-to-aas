@@ -27,10 +27,11 @@ Example result:
     def extract(self, datasheet: str, property_definition: PropertyDefinition) -> str:
         if os.getenv('OPENAI_API_KEY') is None:
             raise ValueError("No OpenAI API key found in environment")
-        client = OpenAI()
+
+        client = OpenAI(base_url=self.api_endpoint)
 
         #TODO create Datasheet class and add information about char length
-        if datasheet.isinstance(list):
+        if isinstance(datasheet, list):
             logger.info(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
         else:
             logger.info(f"Processing datasheet with {len(datasheet)} chars.")
