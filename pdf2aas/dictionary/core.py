@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field, asdict
 
-#TODO use property class from aas python package instead?
+#TODO use ConceptDescription class from aas python package instead?
 #TODO define data types
 @dataclass
 class PropertyDefinition():
@@ -22,9 +22,22 @@ class PropertyDefinition():
     unit: str = ''
     values: dict = field(default_factory= lambda: [])
 
+#TODO use ConceptDescription class from aas python package instead?
+@dataclass
+class ClassDefinition():
+    id: str
+    name: str = ''
+    description: str = ''
+    keywords: list[str] = field(default_factory= lambda: [])
+    properties: list[PropertyDefinition] = field(default_factory= lambda: [])
+
 def dictionary_serializer(obj):
     if isinstance(obj, PropertyDefinition):
         return asdict(obj)
+    if isinstance(obj, ClassDefinition):
+        class_dict = asdict(obj)
+        class_dict['properties'] = [prop.id for prop in obj.properties]
+        return class_dict
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 class Dictionary:

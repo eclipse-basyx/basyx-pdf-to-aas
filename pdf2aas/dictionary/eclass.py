@@ -1,4 +1,4 @@
-from dictionary.core import Dictionary, PropertyDefinition
+from dictionary.core import Dictionary, PropertyDefinition, ClassDefinition
 from bs4 import BeautifulSoup
 import requests
 import json
@@ -127,16 +127,16 @@ class ECLASS(Dictionary):
             Returns:
                 list[PropertyDefinition]: A list of PropertyDefinition instances
                 associated with the specified class ID.
-        classes (property) -> dict[str, object]:
-            A property that retrieves the class objects for the currently set release
+        classes (property) -> dict[str, ClassDefinition]:
+            A property that retrieves the class definitions for the currently set release
             version from the `releases` attribute.
 
             Returns:
-                dict[str, object]: A dictionary of class objects for the current release.
+                dict[str, ClassDefinition]: A dictionary of class definitions for the current release.
     """
     eclass_class_search_pattern: str = 'https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}'
     properties: dict[str, PropertyDefinition] = {}
-    releases: dict[dict[str, object]] = {'14.0': {}, '13.0': {}, '12.0': {}, '11.1': {}, '11.0': {}, '10.1': {}, '10.0.1': {}, '9.1': {}, '9.0': {}, '8.1': {}, '8.0': {}, '7.1': {}, '7.0': {}, '6.2': {}, '6.1': {}, '5.14': {}}
+    releases: dict[dict[str, ClassDefinition]] = {'14.0': {}, '13.0': {}, '12.0': {}, '11.1': {}, '11.0': {}, '10.1': {}, '10.0.1': {}, '9.1': {}, '9.0': {}, '8.1': {}, '8.0': {}, '7.1': {}, '7.0': {}, '6.2': {}, '6.1': {}, '5.14': {}}
 
     def __init__(self, release = '14.0') -> None:
         """
@@ -150,12 +150,12 @@ class ECLASS(Dictionary):
         self.release = release
     
     @property
-    def classes(self) -> dict[str, object]:
+    def classes(self) -> dict[str, ClassDefinition]:
         """
-        Retrieves the class objects for the currently set eCl@ss release version.
+        Retrieves the class definitions for the currently set eCl@ss release version.
 
         Returns:
-            dict[str, object]: A dictionary of class objects for the current release, with their class id as key.
+            dict[str, ClassDefinition]: A dictionary of class definitions for the current release, with their class id as key.
         """
         return self.releases.get(self.release)
 
@@ -195,7 +195,7 @@ class ECLASS(Dictionary):
             eclass_class = self.__parse_html_eclass_class(html_content)
         else:
             logger.info(f"Found class and property definitions for {class_id} in release {self.release}.")
-        return eclass_class['properties']
+        return eclass_class.properties
     
     def __parse_html_eclass_class(self, html_content):
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -207,15 +207,15 @@ class ECLASS(Dictionary):
             eclass_class = self.classes.get(identifier)
             if eclass_class is None:
                 a_description = li.find('a', attrs={"title": True})
-                eclass_class = {
-                    'id': identifier,
-                    'name': ' '.join(li.getText().strip().split()[1:]),
-                    'description': a_description['title'] if a_description != None else '',
-                    'keywords': split_keywords(li.find('i', attrs={"data-toggle": "tooltip"})),
-                }
-                logger.debug(f"Add class {identifier}: {eclass_class['name']}")
+                eclass_class = ClassDefinition(
+                    id = identifier,
+                    name = ' '.join(li.getText().strip().split()[1:]),
+                    description = a_description['title'] if a_description != None else '',
+                    keywords = split_keywords(li.find('i', attrs={"data-toggle": "tooltip"})),
+                )
+                logger.debug(f"Add class {identifier}: {eclass_class.name}")
                 self.classes[identifier] = eclass_class
             else:
-                logger.debug(f"Found class {identifier}: {eclass_class['name']}")
-        eclass_class['properties'] = parse_html_eclass_properties(soup)
+                logger.debug(f"Found class {identifier}: {eclass_class.name}")
+        eclass_class.properties = parse_html_eclass_properties(soup)
         return eclass_class

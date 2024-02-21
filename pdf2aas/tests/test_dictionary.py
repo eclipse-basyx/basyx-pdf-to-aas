@@ -11,11 +11,11 @@ def test_get_class_properties():
 
     assert '27274001' in d.classes.keys()
     eclass_class = d.classes['27274001']
-    assert eclass_class['id'] == '27274001'
-    assert eclass_class['name'] == 'Inductive proximity switch'
-    assert eclass_class['description'] == 'Inductive proximity switch producing an electromagnetic field within a sensing zone and having a semiconductor switching element'
-    assert eclass_class['keywords'] == ['Transponder switch', 'Inductive sensor', 'Inductive proximity sensor']
-    assert len(eclass_class['properties']) == 108
+    assert eclass_class.id == '27274001'
+    assert eclass_class.name == 'Inductive proximity switch'
+    assert eclass_class.description == 'Inductive proximity switch producing an electromagnetic field within a sensing zone and having a semiconductor switching element'
+    assert eclass_class.keywords == ['Transponder switch', 'Inductive sensor', 'Inductive proximity sensor']
+    assert len(eclass_class.properties) == 108
 
     switching_distance = PropertyDefinition(
         id='0173-1#02-BAD815#009',
