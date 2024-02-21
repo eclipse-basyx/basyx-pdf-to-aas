@@ -4,3 +4,4 @@ pytest
 beautifulsoup4
 openai
 tiktoken
+python-dotenv

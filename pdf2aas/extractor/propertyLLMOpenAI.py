@@ -54,7 +54,11 @@ Example result:
         
         result = property_response.choices[0].message.content
         logger.debug("Response from LLM:" + result)
-        property = json.loads(result)
+        try: 
+            property = json.loads(result)
+        except json.decoder.JSONDecodeError:
+            logger.warning("Couldn't decode LLM result: " + result)
+            return None
         
         property['id'] = property_definition.id
         property['name'] = property_definition.name['en']
