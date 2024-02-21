@@ -2,3 +2,4 @@ pydantic
 pydantic-settings
 pytest
 beautifulsoup4
+openai
