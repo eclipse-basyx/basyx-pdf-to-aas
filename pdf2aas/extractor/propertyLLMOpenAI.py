@@ -6,6 +6,15 @@ import os
 
 
 class PropertyLLMOpenAI(PropertyLLM):
+    system_prompt_template = """You are a technical expert and worked as mechatronic engineer.
+Answer only in valid JSON format with the keys 'property', 'value', 'unit', 'reference'.
+The property field must contain the property name as provided in the data source.
+The value field must only contain the value.
+The unit field contains the physical unit of measurement, if applicable.
+The reference field contains a small excerpt from the source surrounding the extracted value.
+Answer with null values if you don't find the information or if not applicable.
+Example result:
+{'property': 'Rated Torque', 'value': 1000, 'unit': 'Nm', 'reference': 'nominal torque is 1kNm.'}"""
     
     def __init__(self, model_identifier: str, api_endpoint: str = None) -> None:
         super().__init__()
@@ -18,6 +27,21 @@ class PropertyLLMOpenAI(PropertyLLM):
         client = OpenAI()
         return ''
 
+
+    def create_prompt(self, datasheet: str, property: PropertyDefinition, language: str = 'en') -> str :
+        property_name = property.name.get(language, property.name[0])
+        prompt =f"The following html text in triple # is a datasheet of a technical device that was converted from pdf.\n Datasheet:###{datasheet}###"
+        if property.definition or property.unit or property.values:
+            prompt += f'\nThe "{property_name}"'
+            if property.definition: 
+                prompt += f'\n- is defined as "{property.definition.get(language, property.definition[0])}".'
+            if property.unit: 
+                prompt += f'\n- has the unit of measure "{property.unit}".'
+            if property.values: 
+                prompt += f'\n- has possible values: "{[v["value"] for v in property.values]}".'
+        
+        prompt += f'\nWhat is the "{property_name}" of the device?'
+        return prompt
 
     def calculate_token_count(self, text: str) -> int:
         """
