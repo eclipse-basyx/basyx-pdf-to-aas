@@ -35,15 +35,19 @@ Example result:
             logger.info(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
         else:
             logger.info(f"Processing datasheet with {len(datasheet)} chars.")
-        logger.info(f"Extracting property {property_definition.id}: {property_definition.name}")
+        logger.info(f"Extracting property {property_definition.id}: {property_definition.name['en']}")
 
         messages=[
                 {"role": "system", "content": self.system_prompt_template },
                 {"role": "user", "content": self.create_prompt(datasheet, property_definition)}
             ]
-        logger.debug("System prompt token count: %i" % self.calculate_token_count(messages[0]['content']))
-        logger.debug("Prompt token count: %i" % self.calculate_token_count(messages[1]['content']))
-        
+        try:
+            logger.debug("System prompt token count: %i" % self.calculate_token_count(messages[0]['content']))
+            logger.debug("Prompt token count: %i" % self.calculate_token_count(messages[1]['content']))
+        except ValueError:
+            logger.debug("System prompt char count: %i" % len(messages[0]['content']))
+            logger.debug("Prompt char count: %i" % len(messages[1]['content']))
+
         property_response = client.chat.completions.create(
             model=self.model_identifier,
             response_format={ "type": "json_object" },
