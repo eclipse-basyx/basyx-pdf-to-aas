@@ -2,6 +2,7 @@ from extractor import PropertyLLM
 from dictionary import PropertyDefinition
 from openai import OpenAI
 import tiktoken
+import json
 import os
 
 
@@ -25,8 +26,33 @@ Example result:
         if os.getenv('OPENAI_API_KEY') is None:
             raise ValueError("No OpenAI API key found in environment")
         client = OpenAI()
-        return ''
 
+        if datasheet.isinstance(list):
+            print(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
+        else:
+            print(f"Processing datasheet with {len(datasheet)} chars.")
+        print(f"Processing property {property_definition.id}: {property_definition.name}")
+
+        messages=[
+                {"role": "system", "content": self.system_prompt_template },
+                {"role": "user", "content": self.create_prompt(datasheet, property_definition)}
+            ]
+        print("System prompt token count: %i" % self.calculate_token_count(messages[0]['content']))
+        print("Prompt token count: %i" % self.calculate_token_count(messages[1]['content']))
+        
+        property_response = client.chat.completions.create(
+            model=self.model_identifier,
+            response_format={ "type": "json_object" },
+            messages=messages)
+        
+        result = property_response.choices[0].message.content
+        print(result)
+        property = json.loads(result)
+        
+        property['id'] = property_definition.id
+        property['name'] = property_definition.name
+        
+        return property
 
     def create_prompt(self, datasheet: str, property: PropertyDefinition, language: str = 'en') -> str :
         property_name = property.name.get(language, property.name[0])
