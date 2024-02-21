@@ -4,7 +4,9 @@ from openai import OpenAI
 import tiktoken
 import json
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 
 class PropertyLLMOpenAI(PropertyLLM):
     system_prompt_template = """You are a technical expert and worked as mechatronic engineer.
@@ -27,18 +29,19 @@ Example result:
             raise ValueError("No OpenAI API key found in environment")
         client = OpenAI()
 
+        #TODO create Datasheet class and add information about char length
         if datasheet.isinstance(list):
-            print(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
+            logger.info(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
         else:
-            print(f"Processing datasheet with {len(datasheet)} chars.")
-        print(f"Processing property {property_definition.id}: {property_definition.name}")
+            logger.info(f"Processing datasheet with {len(datasheet)} chars.")
+        logger.info(f"Extracting property {property_definition.id}: {property_definition.name}")
 
         messages=[
                 {"role": "system", "content": self.system_prompt_template },
                 {"role": "user", "content": self.create_prompt(datasheet, property_definition)}
             ]
-        print("System prompt token count: %i" % self.calculate_token_count(messages[0]['content']))
-        print("Prompt token count: %i" % self.calculate_token_count(messages[1]['content']))
+        logger.debug("System prompt token count: %i" % self.calculate_token_count(messages[0]['content']))
+        logger.debug("Prompt token count: %i" % self.calculate_token_count(messages[1]['content']))
         
         property_response = client.chat.completions.create(
             model=self.model_identifier,
@@ -46,7 +49,7 @@ Example result:
             messages=messages)
         
         result = property_response.choices[0].message.content
-        print(result)
+        logger.debug("Response from LLM:" + result)
         property = json.loads(result)
         
         property['id'] = property_definition.id
