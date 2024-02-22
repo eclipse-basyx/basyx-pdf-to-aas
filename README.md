@@ -58,36 +58,17 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
 
 * Install requirements, e.g. via `pip install -r requirements.in`
 * For [PDF2HTMLEX preprocessor](pdf2aas/preprocessor/pdf2htmlEX.py) the pdf2htmlEX binary needs to be [downloaded](https://github.com/pdf2htmlEX/pdf2htmlEX/wiki/Download) and installed. Currently it is only available for linux distributions, but it can be used via WSL or docker on Windows.
+* To run the GPT models via the openAI API an API key needs to be set as environment variable `OPENAI_API_KEY` or via `.env` file and the `python-dotenv` package.
+* To run a local model, the extractor needs to be initialised or configured with an openai API conform api_endpoint.
 
-Example:
+Example using default toolchain (results in csv):
 
 ```py
-from preprocessor import PDF2HTMLEX, ReductionLevel
-from extractor import DummyPropertyLLM
-from generator import DummyTechnicalDataSubmodel
-from dictionary import DummyDictionary
+from pdf2aas import PDF2AAS
 
-def main():
-    preprocessor = PDF2HTMLEX()
-    preprocessor.reduction_level = ReductionLevel.STRUCTURE
-    preprocessed_datasheet = preprocessor.convert("tests/assets/datasheet-festo.pdf")
-    #preprocessor.clear_temp_dir()
-
-    dictionary = DummyDictionary()
-    property_definitions = dictionary.get_class_properties("EC002714")
-
-    extractor = DummyPropertyLLM()
-    properties = []
-    for property_definition in property_definitions:
-        properties.append(extractor.extract(preprocessed_datasheet, property_definition))
-
-    generator = DummyTechnicalDataSubmodel()
-    result = generator.generate(properties)
-
-    print(result)
-
-if __name__ == "__main__":
-    main()
+pdf2aas = PDF2AAS()
+result = pdf2aas.convert('path/to/datasheet.pdf', 'eclass id, e.g. 27274001')
+print(result)
 ```
 
 ## Tests
