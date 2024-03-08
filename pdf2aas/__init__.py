@@ -1,1 +1,0 @@
-from pdf2aas.core import PDF2AAS

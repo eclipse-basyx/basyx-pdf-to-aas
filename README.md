@@ -54,11 +54,18 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
   * **TechnicalDataSubmodel**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
   * **CSV**: outputs the properties as csv file
 
-## Usage
+## Setup
 
-* Install requirements, e.g. via `pip install -r requirements.in`
-* For [PDF2HTMLEX preprocessor](pdf2aas/preprocessor/pdf2htmlEX.py) the pdf2htmlEX binary needs to be [downloaded](https://github.com/pdf2htmlEX/pdf2htmlEX/wiki/Download) and installed. Currently it is only available for linux distributions, but it can be used via WSL or docker on Windows.
-* To run the GPT models via the openAI API an API key needs to be set as environment variable `OPENAI_API_KEY` or via `.env` file and the `python-dotenv` package.
+* Create virtual environment (venv) in current directory with `python -m venv .venv`
+* Activate venv
+  * Windows: `.venv/Scripts/activate`
+  * Linux: `source .venv/bin/activate`
+* Install requirements
+  * if you just want to use the project use `python -m pip install -r requirements.txt`
+  * if you want to test it use `python -m pip install -r dev-requirements.txt`
+* Install the PDF2AAS package as editable package with `python -m pip install -e .` This makes the package importable in the entire local system while remaining editable.
+* For [pdf2htmlEX preprocessor](pdf2aas/preprocessor/pdf2htmlEX.py) the binary needs to be [downloaded](https://github.com/pdf2htmlEX/pdf2htmlEX/wiki/Download) and installed. Currently it is only available for Linux distributions, but it can be used via WSL or Docker on Windows.
+* To run the GPT models via the OpenAI API an API key needs to be set as environment variable `OPENAI_API_KEY` or via `.env` file and the `python-dotenv` package.
 * To run a local model, the extractor needs to be initialised or configured with an openai API conform api_endpoint.
 
 Example using default toolchain (results in csv):
@@ -73,9 +80,8 @@ print(result)
 
 ## Tests
 
-* Install `pytest` package, e.g. via `pip install -r requirements.in`
-* cd into `pdf2aas`
-* Run tests with `python -m pytest`
+* If not already done, install the dev dependencies via `python -m pip install -r dev-requirements.txt`
+* Run tests with `pytest`
 
 ## Evaluation
 

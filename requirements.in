@@ -1,7 +1,0 @@
-pydantic
-pydantic-settings
-pytest
-beautifulsoup4
-openai
-tiktoken
-python-dotenv

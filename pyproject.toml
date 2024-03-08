@@ -1,0 +1,26 @@
+[project]
+authors = [
+  {name = "Julian Grothoff", email = "julian.grothoff@sms-group.com"},
+  {name = "Christian Malek", email = "christian.malek@iese.fraunhofer.de"},
+]
+dependencies = [
+  "pydantic",
+  "pydantic-settings",
+  "tiktoken",
+  "openai",
+  "beautifulsoup4",
+  "requests",
+  "python-dotenv",
+]
+name = "pdf2aas"
+requires-python = ">=3.10"
+version = "0.1.0"
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "setuptools-scm"]

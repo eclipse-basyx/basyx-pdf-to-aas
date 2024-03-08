@@ -1,12 +1,15 @@
-from extractor import PropertyLLM
-from dictionary import PropertyDefinition
-from openai import OpenAI
-import tiktoken
 import json
-import os
 import logging
+import os
+
+import tiktoken
+from openai import OpenAI
+
+from ..dictionary import PropertyDefinition
+from . import PropertyLLM
 
 logger = logging.getLogger(__name__)
+
 
 class PropertyLLMOpenAI(PropertyLLM):
     system_prompt_template = """You are a technical expert and worked as mechatronic engineer.
@@ -18,71 +21,89 @@ The reference field contains a small excerpt from the source surrounding the ext
 Answer with null values if you don't find the information or if not applicable.
 Example result:
 {'property': 'Rated Torque', 'value': 1000, 'unit': 'Nm', 'reference': 'nominal torque is 1kNm.'}"""
-    
+
     def __init__(self, model_identifier: str, api_endpoint: str = None) -> None:
         super().__init__()
         self.model_identifier = model_identifier
         self.api_endpoint = api_endpoint
-    
+
     def extract(self, datasheet: str, property_definition: PropertyDefinition) -> str:
-        if os.getenv('OPENAI_API_KEY') is None:
+        if os.getenv("OPENAI_API_KEY") is None:
             raise ValueError("No OpenAI API key found in environment")
 
         client = OpenAI(base_url=self.api_endpoint)
 
-        #TODO create Datasheet class and add information about char length
+        # TODO create Datasheet class and add information about char length
         if isinstance(datasheet, list):
-            logger.info(f"Processing property {property_definition.id}: {property_definition.name['en']} for datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
+            logger.info(
+                f"Processing property {property_definition.id}: {property_definition.name['en']} for datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars."
+            )
         else:
-            logger.info(f"Processing property {property_definition.id}: {property_definition.name['en']} for datasheet with {len(datasheet)} chars.")
+            logger.info(
+                f"Processing property {property_definition.id}: {property_definition.name['en']} for datasheet with {len(datasheet)} chars."
+            )
 
-        messages=[
-                {"role": "system", "content": self.system_prompt_template },
-                {"role": "user", "content": self.create_prompt(datasheet, property_definition)}
-            ]
+        messages = [
+            {"role": "system", "content": self.system_prompt_template},
+            {
+                "role": "user",
+                "content": self.create_prompt(datasheet, property_definition),
+            },
+        ]
         try:
-            logger.debug("System prompt token count: %i" % self.calculate_token_count(messages[0]['content']))
-            logger.debug("Prompt token count: %i" % self.calculate_token_count(messages[1]['content']))
+            logger.debug(
+                "System prompt token count: %i"
+                % self.calculate_token_count(messages[0]["content"])
+            )
+            logger.debug(
+                "Prompt token count: %i"
+                % self.calculate_token_count(messages[1]["content"])
+            )
         except ValueError:
-            logger.debug("System prompt char count: %i" % len(messages[0]['content']))
-            logger.debug("Prompt char count: %i" % len(messages[1]['content']))
+            logger.debug("System prompt char count: %i" % len(messages[0]["content"]))
+            logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
 
         property_response = client.chat.completions.create(
             model=self.model_identifier,
-            response_format={ "type": "json_object" },
-            messages=messages)
-        
+            response_format={"type": "json_object"},
+            messages=messages,
+        )
+
         result = property_response.choices[0].message.content
         logger.debug("Response from LLM:" + result)
-        try: 
+        try:
             property = json.loads(result)
         except json.decoder.JSONDecodeError:
             logger.warning("Couldn't decode LLM result: " + result)
             return None
-        
-        property['id'] = property_definition.id
-        property['name'] = property_definition.name['en']
-        
+
+        property["id"] = property_definition.id
+        property["name"] = property_definition.name["en"]
+
         return property
 
-    def create_prompt(self, datasheet: str, property: PropertyDefinition, language: str = 'en') -> str :
+    def create_prompt(
+        self, datasheet: str, property: PropertyDefinition, language: str = "en"
+    ) -> str:
         if property.name is None:
             raise ValueError(f"Property {property.id} has no name.")
         property_name = property.name.get(language)
         if property_name is None:
             property_name = property.name
-            logger.warning(f"Property {property.id} name not defined for language {language}.")
+            logger.warning(
+                f"Property {property.id} name not defined for language {language}."
+            )
         property_definition = property.definition.get(language)
-        prompt =f"The following html text in triple # is a datasheet of a technical device that was converted from pdf.\n Datasheet:###{datasheet}###"
+        prompt = f"The following html text in triple # is a datasheet of a technical device that was converted from pdf.\n Datasheet:###{datasheet}###"
         if property_definition or property.unit or property.values:
             prompt += f'\nThe "{property_name}"'
-            if property_definition: 
+            if property_definition:
                 prompt += f'\n- is defined as "{property_definition}".'
-            if property.unit: 
+            if property.unit:
                 prompt += f'\n- has the unit of measure "{property.unit}".'
-            if property.values: 
+            if property.values:
                 prompt += f'\n- has possible values: "{[v["value"] for v in property.values]}".'
-        
+
         prompt += f'\nWhat is the "{property_name}" of the device?'
         return prompt
 

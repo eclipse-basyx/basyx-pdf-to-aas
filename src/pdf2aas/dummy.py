@@ -1,7 +1,8 @@
-from preprocessor import DummyPDF2HTML
-from extractor import DummyPropertyLLM
-from generator import DummyTechnicalDataSubmodel
-from dictionary import DummyDictionary
+from .dictionary import DummyDictionary
+from .extractor import DummyPropertyLLM
+from .generator import DummyTechnicalDataSubmodel
+from .preprocessor import DummyPDF2HTML
+
 
 def main():
     preprocessor = DummyPDF2HTML()

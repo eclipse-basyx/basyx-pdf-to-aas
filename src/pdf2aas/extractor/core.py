@@ -1,4 +1,5 @@
-from dictionary import PropertyDefinition
+from ..dictionary import PropertyDefinition
+
 
 class PropertyLLM:
     def extract(self, datasheet: str, property_definition: PropertyDefinition) -> str:
