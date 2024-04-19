@@ -61,45 +61,49 @@ class PDF2HTMLEX(Preprocessor):
         logger.info(f"Converting to html from pdf: {filepath}")
         filename = Path(filepath).stem
         dest_dir = Path(self.temp_dir, filename)
-        pdf2htmlEX = subprocess.run(
-            [
-                "pdf2htmlEX",
-                # '--heps', '1',
-                # '--veps', '1',
-                "--quiet",
-                "1",
-                "--embed-css",
-                "0",
-                "--embed-font",
-                "0",
-                "--embed-image",
-                "0",
-                "--embed-javascript",
-                "0",
-                "--embed-outline",
-                "0",
-                "--svg-embed-bitmap",
-                "0",
-                "--split-pages",
-                "0",
-                "--process-nontext",
-                "0",
-                "--process-outline",
-                "0",
-                "--printing",
-                "0",
-                "--embed-external-font",
-                "0",
-                "--optimize-text",
-                "1",
-                "--dest-dir",
-                dest_dir,
-                filepath,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
+        try:
+            pdf2htmlEX = subprocess.run(
+                [
+                    "pdf2htmlEX",
+                    # '--heps', '1',
+                    # '--veps', '1',
+                    "--quiet",
+                    "1",
+                    "--embed-css",
+                    "0",
+                    "--embed-font",
+                    "0",
+                    "--embed-image",
+                    "0",
+                    "--embed-javascript",
+                    "0",
+                    "--embed-outline",
+                    "0",
+                    "--svg-embed-bitmap",
+                    "0",
+                    "--split-pages",
+                    "0",
+                    "--process-nontext",
+                    "0",
+                    "--process-outline",
+                    "0",
+                    "--printing",
+                    "0",
+                    "--embed-external-font",
+                    "0",
+                    "--optimize-text",
+                    "1",
+                    "--dest-dir",
+                    dest_dir,
+                    filepath,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+        except FileNotFoundError:
+            logger.error("pdf2htmlEX executable not found in path.")
+            return None
 
         if pdf2htmlEX.stdout:
             logger.debug("pdf2htmlEX stdout:\n%s", pdf2htmlEX.stdout)
