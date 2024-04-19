@@ -26,4 +26,4 @@ class PDFium(Preprocessor):
         except (PdfiumError, FileNotFoundError) as e:
             logger.error(f"Error reading {filepath}: {e}")
             return None
-        return [page.get_textpage().get_text_bounded() for page in doc]
+        return [page.get_textpage().get_text_bounded().replace('\r\n', '\n').replace('\r', '\n') for page in doc]
