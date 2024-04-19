@@ -19,9 +19,9 @@ class CSV(Generator):
         for row in properties:
             try:
                 writer.writerow(row)
-            except:
+            except AttributeError:
                 logger.warning(
-                    f"Couldn't write csv row for property {row['id']}: {row['name']}"
+                    f"Couldn't write csv row for property {row.get('id')}: {row.get('name')}"
                 )
                 continue
         return csv_str.getvalue()
