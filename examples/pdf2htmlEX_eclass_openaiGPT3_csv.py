@@ -3,10 +3,10 @@ import logging
 
 from dotenv import load_dotenv
 
-from .dictionary import ECLASS, dictionary_serializer
-from .extractor import PropertyLLMOpenAI
-from .generator import CSV
-from .preprocessor import PDF2HTMLEX, ReductionLevel
+from pdf2aas.dictionary import ECLASS, dictionary_serializer
+from pdf2aas.extractor import PropertyLLMOpenAI
+from pdf2aas.generator import CSV
+from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

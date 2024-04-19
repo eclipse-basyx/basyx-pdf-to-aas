@@ -78,6 +78,12 @@ result = pdf2aas.convert('path/to/datasheet.pdf', 'eclass id, e.g. 27274001')
 print(result)
 ```
 
+## Examples
+
+You can find some example toolchains with intermediate steps in the [examples](examples/) folder.
+To run them make sure PDF2AAS is installed according to [setup section above](#setup).
+Then execute from this directory for example: `python examples/dummy.py`
+
 ## Tests
 
 * If not already done, install the dev dependencies via `python -m pip install -r dev-requirements.txt`

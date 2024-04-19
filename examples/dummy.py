@@ -1,7 +1,7 @@
-from .dictionary import DummyDictionary
-from .extractor import DummyPropertyLLM
-from .generator import DummyTechnicalDataSubmodel
-from .preprocessor import DummyPDF2HTML
+from pdf2aas.dictionary import DummyDictionary
+from pdf2aas.extractor import DummyPropertyLLM
+from pdf2aas.generator import DummyTechnicalDataSubmodel
+from pdf2aas.preprocessor import DummyPDF2HTML
 
 
 def main():

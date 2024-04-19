@@ -1,5 +1,6 @@
-# temp dir for pdf conversion
+# temp dir for pdf conversion or local dict cache
 pdf2aas/temp
+temp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
