@@ -1,5 +1,5 @@
 import pytest
-from pdf2aas.preprocessor import PDF2HTMLEX, DummyPDF2HTML, ReductionLevel
+from pdf2aas.preprocessor import PDF2HTMLEX, DummyPDF2HTML, ReductionLevel, PDFium
 
 
 def test_dummy_pdf_2_html_convert():
@@ -32,3 +32,15 @@ class TestPDF2HTMLEX:
         ) as html_file:
             html_expected = html_file.read()
             assert html_reduced == html_expected
+
+class TestPDFium:
+    preprocessor = PDFium()
+    datasheet_prefix = "tests/assets/dummy-test-datasheet"
+
+    def dummy_datasheet_txt(self):
+        with open(f"{self.datasheet_prefix}.txt") as txt:
+            return txt.read()
+    
+    def test_pypdfium2_convert(self):
+        text_converted = self.preprocessor.convert(f"{self.datasheet_prefix}.pdf")
+        assert "\n".join(text_converted) == self.dummy_datasheet_txt()
