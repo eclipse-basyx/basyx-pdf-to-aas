@@ -45,6 +45,7 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
 * **preprocessor**: converts the PDF to a text format that can be processed by LLMs, keeping layout and table information.
   * **PDF2HTML**: Uses [pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX) to convert the PDF data sheets to HTML.
     The converted html is preprocessed further to reduce token usage for the llms.
+  * **PDFium**: Uses [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) based on PDFium to extract text from pdf without layout information
 * **dictionary**: defines classes and properties semantically.
   * **ECLASS**: downloads property definitions from [ECLASS website](https://eclass.eu/en/eclass-standard/search-content) for a given ECLASS class.
   * **ETIM**: downloads property definitions from [ETIM model releases](https://www.etim-international.com/downloads/?_sft_downloadcategory=model-releases) or via the [ETIM API](https://etimapi.etim-international.com/)
