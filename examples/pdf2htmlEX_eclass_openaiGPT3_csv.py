@@ -8,20 +8,12 @@ from pdf2aas.extractor import PropertyLLMOpenAI
 from pdf2aas.generator import CSV
 from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
-
 
 # Load the .env file with openai API Key
 load_dotenv()
 
-
-def main():
-    datasheet = "tests/assets/dummy-test-datasheet.pdf"
-    eclass_class_id = "27274001"
-
+def main(datasheet, eclass_class_id, property_range):
     preprocessor = PDF2HTMLEX()
     preprocessor.reduction_level = ReductionLevel.STRUCTURE
     preprocessed_datasheet = preprocessor.convert(datasheet)
@@ -43,20 +35,11 @@ def main():
     extractor = PropertyLLMOpenAI("gpt-3.5-turbo")
     # extractor = PropertyLLMOpenAI('llama2', 'http://localhost:11434/v1/')
     properties = []
-    for idx, property_definition in enumerate(property_definitions):
-        if idx > 5:
-            break  # filter for first 5 properties
-        if (
-            "upplier" in property_definition.name["en"]
-        ):  # filter supplier properties, as they are not inside datasheets
-            logger.info(
-                f"Skipping {property_definition.id}: {property_definition.name['en']}"
-            )
-            continue
+    for property_definition in property_definitions[property_range[0]:property_range[1]]:
         properties.append(
             extractor.extract(preprocessed_datasheet, property_definition)
         )
-    print(properties)
+    logger.info(f"Extracted properties: {properties}")
     with open("temp/properties.json", "w") as file:
         file.write(json.dumps(properties, indent=2))
 
@@ -65,6 +48,19 @@ def main():
     with open("temp/properties.csv", "w") as file:
         file.write(csv)
 
-
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description='Example for toolchain pdf2htmlEX + eclass --> openaiGPT3 --> csv')
+    parser.add_argument('--datasheet', type=str, help="Path to datasheet", default="tests/assets/dummy-test-datasheet.pdf")
+    parser.add_argument('--eclass', type=str, help="ECLASS class id, e.g. 27274001", default="27274001")
+    parser.add_argument('--range', type=int, nargs=2, help="Lower and upper range of properties to be send to the extractor. E.g. 0 1 extracts the first property only", default=[0, 1])
+    parser.add_argument('--debug', action="store_true", help="Print debug information.")
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    else:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+    logger = logging.getLogger()
+    
+    main(datasheet=args.datasheet, eclass_class_id=args.eclass, property_range=args.range)

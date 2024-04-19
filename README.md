@@ -83,6 +83,7 @@ print(result)
 You can find some example toolchains with intermediate steps in the [examples](examples/) folder.
 To run them make sure PDF2AAS is installed according to [setup section above](#setup).
 Then execute from this directory for example: `python examples/dummy.py`
+Use `-h` or `--help` argument for more information on command line arguments.
 
 ## Tests
 

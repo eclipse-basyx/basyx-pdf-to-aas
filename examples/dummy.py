@@ -3,7 +3,6 @@ from pdf2aas.extractor import DummyPropertyLLM
 from pdf2aas.generator import DummyTechnicalDataSubmodel
 from pdf2aas.preprocessor import DummyPDF2HTML
 
-
 def main():
     preprocessor = DummyPDF2HTML()
     preprocessed_datasheet = preprocessor.convert("file.pdf")
@@ -22,4 +21,8 @@ def main():
     print(result)
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='This is just a dummy example to illustrate the toolchain sequence in code.')
+    args = parser.parse_args()
+
     main()
