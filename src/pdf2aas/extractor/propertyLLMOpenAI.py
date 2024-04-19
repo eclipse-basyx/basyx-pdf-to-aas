@@ -27,7 +27,7 @@ Example result:
         self.model_identifier = model_identifier
         self.api_endpoint = api_endpoint
 
-    def extract(self, datasheet: str, property_definition: PropertyDefinition) -> str:
+    def extract(self, datasheet: str, property_definition: PropertyDefinition) -> dict | None:
         if os.getenv("OPENAI_API_KEY") is None:
             raise ValueError("No OpenAI API key found in environment")
 

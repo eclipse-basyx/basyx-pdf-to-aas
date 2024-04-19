@@ -2,10 +2,19 @@ from ..dictionary import PropertyDefinition
 
 
 class PropertyLLM:
-    def extract(self, datasheet: str, property_definition: PropertyDefinition) -> str:
+    def extract(self, datasheet: str, property_definition: PropertyDefinition) -> dict | None:
         raise NotImplementedError()
 
 
 class DummyPropertyLLM(PropertyLLM):
-    def extract(self, datasheet: str, property_definition: PropertyDefinition) -> str:
-        return '{"property_x":"12"}'
+    def empty_property_result(property_definition: PropertyDefinition):
+        return {
+                "property": None,
+                "value": None,
+                "unit": None,
+                "reference": "Empty Property",
+                "id": property_definition.id,
+                "name": property_definition.name.get('en')
+            }
+    def extract(self, datasheet: str, property_definition: PropertyDefinition) -> dict | None:
+        return DummyPropertyLLM.empty_property_result(property_definition)
