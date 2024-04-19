@@ -11,6 +11,7 @@ dependencies = [
   "beautifulsoup4",
   "requests",
   "python-dotenv",
+  "pypdfium2",
 ]
 name = "pdf2aas"
 requires-python = ">=3.10"
