@@ -13,7 +13,7 @@ def main():
     extractor = DummyPropertyLLM()
     properties = []
     for property_definition in property_definitions:
-        properties.append(extractor.extract(preprocessed_datasheet, property_definition))
+        properties.extend(extractor.extract(preprocessed_datasheet, property_definition))
 
     generator = DummyTechnicalDataSubmodel()
     result = generator.generate(properties)

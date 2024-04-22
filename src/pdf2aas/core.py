@@ -29,7 +29,7 @@ class PDF2AAS:
         property_definitions = self.dictionary.get_class_properties(classification)
         properties = []
         for property_definition in property_definitions:
-            properties.append(
+            properties.extend(
                 self.extractor.extract(preprocessed_datasheet, property_definition)
             )
         generator = CSV()
