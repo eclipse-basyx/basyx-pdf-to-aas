@@ -14,14 +14,15 @@ class CSV(Generator):
             csv_str,
             fieldnames=["name", "property", "value", "unit", "id", "reference"],
             extrasaction="ignore",
+            quoting=csv.QUOTE_ALL,
+            delimiter=';',
+            lineterminator='\n'
         )
         writer.writeheader()
         for row in properties:
             try:
                 writer.writerow(row)
             except AttributeError:
-                logger.warning(
-                    f"Couldn't write csv row for property {row.get('id')}: {row.get('name')}"
-                )
+                logger.warning(f"Couldn't write csv row for: {row}")
                 continue
         return csv_str.getvalue()
