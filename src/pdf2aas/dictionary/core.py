@@ -69,5 +69,5 @@ class ETIM(Dictionary):
 class DummyDictionary(Dictionary):
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         # e.g.: https://prod.etim-international.com/Feature/Details/EF003647?local=False
-        return [PropertyDefinition('EF003647', 'Switching distance', 'numeric')]
+        return [PropertyDefinition('EF003647', {'en': 'Switching distance'}, 'numeric')]
     

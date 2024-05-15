@@ -4,7 +4,7 @@ from pdf2aas.dictionary import ECLASS, DummyDictionary, PropertyDefinition
 def test_dummy_dictionary_get_class_properties():
     d = DummyDictionary()
     assert d.get_class_properties("EC002714") == [
-        PropertyDefinition("EF003647", "Switching distance", "numeric")
+        PropertyDefinition("EF003647", {"en": "Switching distance"}, "numeric")
     ]
 
 
