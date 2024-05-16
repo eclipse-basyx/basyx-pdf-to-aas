@@ -61,6 +61,9 @@ class Dictionary:
     def load_from_file(self, filepath: str = None):
         raise NotImplementedError()
     
+    def get_property(self, property_id: str) -> PropertyDefinition:
+        raise NotImplementedError()
+    
 class ETIM(Dictionary):
     pass
 

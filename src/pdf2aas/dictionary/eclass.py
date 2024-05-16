@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from urllib.parse import quote
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -28,6 +29,19 @@ eclass_datatype_to_type = {
     # TODO Map: DATE, RATIONAL, RATIONAL_MEASURE, REFERENCE, TIME, TIMESTAMP, AXIS1, AXIS2, AXIS3
 }
 
+def extract_attribute_from_eclass_property_soup(soup, search_text):
+    th = soup.find(lambda tag: tag.name == "th" and tag.text.strip() == search_text)
+    if th:
+        td = th.find_next_sibling('td')
+        if td:
+            return td.text
+    return None
+
+def extract_values_from_eclass_property_soup(soup):
+    values = []
+    for span in soup.find_all('span', attrs={"class": "proper", "data-props": True}):
+        values.append(span.text)
+    return values
 
 def parse_html_eclass_valuelist(property, span):
     valuelist_url = (
@@ -117,7 +131,7 @@ def download_html(url):
         response.raise_for_status()
         return response.text
     except requests.RequestException as e:
-        logger.error(f"Error downloading the HTML from the URL: {e}")
+        logger.error(f"Error ({e}) downloading the HTML from the URL: {url}")
         return None
 
 
@@ -162,7 +176,8 @@ class ECLASS(Dictionary):
                 dict[str, ClassDefinition]: A dictionary of class definitions for the current release.
     """
 
-    eclass_class_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
+    eclass_class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
+    eclass_property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     properties: dict[str, PropertyDefinition] = {}
     releases: dict[dict[str, ClassDefinition]] = {
         "14.0": {},
@@ -252,6 +267,39 @@ class ECLASS(Dictionary):
                 f"Found class and property definitions for {class_id} in release {self.release}."
             )
         return eclass_class.properties
+    
+    def get_property(self, property_id: str) -> PropertyDefinition:
+        """
+        Retrieves a single property definition from the dictionary.
+
+        It is returned directly, if the property definition is already stored in
+        the `properties` property. Otherwise, an HTML page is downloaded based on
+        the eclass_property_search_pattern and the parsed HTML is used to obtain
+        the definition. The definition is stored in the dictionary class.
+        
+        The eclass_property_search_pattern based search doesn't retrieve units.
+
+        Args:
+            property_id (str): The IRDI of the eCl@ss property, e.g. 0173-1#02-AAQ326#002.
+
+        Returns:
+            PropertyDefinition: The requested PropertyDefinition instance.
+        """
+        if ECLASS.check_property_irdi(property_id) is False:
+            logger.warning(f"Property id has wrong format, should be IRDI: 0173-1#02-([A-Z]{{3}}[0-9]{{3}})#([0-9]{{3}}), got instead: {property_id}")
+            return None
+        property = self.properties.get(property_id)
+        if property is None:
+            logger.info(f"Property definition not found, try download for {property_id}")
+            html_content = download_html(ECLASS.eclass_property_search_pattern.format(
+                property_id=quote(property_id), release=self.release, language="1"))
+            if html_content is None:
+                return None
+            property = ECLASS.__parse_html_eclass_property(html_content, property_id)
+            if property is not None:
+                logger.debug(f"Add new property {property_id} without class to dictionary: {property.name}")
+                ECLASS.properties[property_id] = property
+        return property    
 
     def __parse_html_eclass_class(self, html_content):
         soup = BeautifulSoup(html_content, "html.parser")
@@ -279,6 +327,23 @@ class ECLASS(Dictionary):
                 logger.debug(f"Found class {identifier}: {eclass_class.name}")
         eclass_class.properties = parse_html_eclass_properties(soup)
         return eclass_class
+
+    def __parse_html_eclass_property(html_content, property_id):
+        soup = BeautifulSoup(html_content, 'html.parser')
+        # with open("temp/property.html", 'w', encoding="utf-8") as file:
+        #     file.write(html_content)
+
+        if not soup.find(lambda tag: tag.name == "th" and tag.text.strip() == "Preferred name"):
+            logger.warning(f"Couldn't parse 'preferred name' for {property_id}")
+            return None
+        property = PropertyDefinition(
+            id=property_id,
+            name={'en': extract_attribute_from_eclass_property_soup(soup, "Preferred name")},
+            type=eclass_datatype_to_type.get(extract_attribute_from_eclass_property_soup(soup, "Data type"), "string"),
+            definition={'en':extract_attribute_from_eclass_property_soup(soup, "Definition")},
+            values=extract_values_from_eclass_property_soup(soup)
+        )
+        return property
 
     def save_to_file(self, filepath: str = None):
         if filepath is None:
@@ -327,3 +392,9 @@ class ECLASS(Dictionary):
                         for property_id in new_class.properties
                     ]
                     classes[id] = new_class
+
+    def check_property_irdi(property_id):
+        re_match = re.match(r"0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3})", property_id)
+        if re_match is None:
+            return False
+        return True
