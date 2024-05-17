@@ -34,7 +34,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_values = 'values' in property_keys_in_prompt
 
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> dict | list[dict] | None:
-        if os.getenv("OPENAI_API_KEY") is None:
+        if self.api_endpoint != "input" and os.getenv("OPENAI_API_KEY") is None:
             raise ValueError("No OpenAI API key found in environment")
 
         logger.info(f"Extracting {[p.id for p in property_definition] if isinstance(property_definition, list) else property_definition.id}")
