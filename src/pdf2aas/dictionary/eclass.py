@@ -263,7 +263,7 @@ class ECLASS(Dictionary):
                 return []
             eclass_class = self.__parse_html_eclass_class(html_content)
         else:
-            logger.info(
+            logger.debug(
                 f"Found class and property definitions for {class_id} in release {self.release}."
             )
         return eclass_class.properties

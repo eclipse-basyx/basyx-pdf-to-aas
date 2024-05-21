@@ -37,7 +37,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         if self.api_endpoint != "input" and os.getenv("OPENAI_API_KEY") is None:
             raise ValueError("No OpenAI API key found in environment")
 
-        logger.info(f"Extracting {[p.id for p in property_definition] if isinstance(property_definition, list) else property_definition.id}")
+        logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
 
         # TODO create Datasheet class and add information about char length
         if isinstance(datasheet, list):
