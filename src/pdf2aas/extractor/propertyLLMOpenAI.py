@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 
 import tiktoken
 from openai import OpenAI
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 class PropertyLLMOpenAI(PropertyLLM):
     system_prompt_template = """You act as an text API to extract technical properties from a given datasheet.
 Answer only in valid JSON format.
-Answer with a list objects, containing the keys 'property', 'value', 'unit', 'reference'.
+Answer with a ordered list of objects, containing the keys 'property', 'value', 'unit', 'reference'.
 The property field must contain the property id as provided in the datasheet.
 The value field must only contain the value you extracted.
 The unit field contains the physical unit of measurement, if applicable.
@@ -73,7 +74,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             client = OpenAI(base_url=self.api_endpoint)
             property_response = client.chat.completions.create(
                 model=self.model_identifier,
-                response_format={"type": "json_object"},
+                # response_format={"type": "json_object"},
                 messages=messages,
             )
             result = property_response.choices[0].message.content
@@ -82,12 +83,22 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         try:
             properties = json.loads(result)
         except json.decoder.JSONDecodeError:
-            logger.warning("Couldn't decode LLM result: " + result)
-            return None
+            md_block = re.search(r'```(?:json)?\s*(.*?)\s*```', result, re.DOTALL)
+            if md_block is None:
+                logger.warning("Couldn't decode LLM result: " + result)
+                return None
+            try:
+                properties = json.loads(md_block.group(1))
+                logger.debug("Extracted json markdown block via regex from LLM result.")
+            except json.decoder.JSONDecodeError:
+                logger.warning("Couldn't decode LLM markdown block: " + md_block.group(1))
+                return None
+        if isinstance(properties, dict) and properties.get('results') is not None:
+            properties = properties.get('results')
 
         if isinstance(property_definition, list):
             if len(properties) != len(property_definition):
-                logger.warning(f"Warning extracted property count {len(properties)} doesn't match expected: {len(property_definition)}")
+                logger.warning(f"Extracted property count {len(properties)} doesn't match expected: {len(property_definition)}")
                 return properties
             for idx, property_def in enumerate(property_definition):
                 properties[idx]["id"] = property_def.id
