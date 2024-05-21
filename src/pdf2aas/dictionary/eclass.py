@@ -131,7 +131,7 @@ def download_html(url):
         response.raise_for_status()
         return response.text
     except requests.RequestException as e:
-        logger.error(f"Error ({e}) downloading the HTML from the URL: {url}")
+        logger.error(f"HTML download failed: {e}")
         return None
 
 
@@ -394,7 +394,7 @@ class ECLASS(Dictionary):
                     classes[id] = new_class
 
     def check_property_irdi(property_id):
-        re_match = re.match(r"0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3})", property_id)
+        re_match = re.fullmatch(r"0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3})", property_id)
         if re_match is None:
             return False
         return True
