@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 class PropertyLLMOpenAI(PropertyLLM):
     system_prompt_template = """You act as an text API to extract technical properties from a given datasheet.
 Answer only in valid JSON format.
-Answer with a ordered list of objects, containing the keys 'property', 'value', 'unit', 'reference'.
+Answer with a list of objects, containing the keys 'property', 'value', 'unit', 'reference'.
 The property field must contain the property id as provided in the datasheet.
 The value field must only contain the value you extracted.
 The unit field contains the physical unit of measurement, if applicable.
 The reference field contains a small excerpt of maximum 100 characters from the datasheet surrounding the extracted value.
 Answer with null values if you don't find the information or if not applicable.
 Example result, when asked for "rated load torque" and "supply voltage" of the device:
-[{'property': 'rated load torque', 'value': 1000, 'unit': 'Nm', 'reference': 'the permissible torque is 1kNm'},
-{'property': 'supply voltage', 'value': null, 'unit': null, 'reference': null}]
+[{"property": "rated load torque", "value": 1000, "unit": "Nm", "reference": "the permissible torque is 1kNm"},
+{"property": "supply voltage", "value": null, "unit": null, "reference": null}]
 """
 
     def __init__(self, model_identifier: str, api_endpoint: str = None, property_keys_in_prompt: list[str] = ['definition', 'unit', 'values']) -> None:
@@ -74,7 +74,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             client = OpenAI(base_url=self.api_endpoint)
             property_response = client.chat.completions.create(
                 model=self.model_identifier,
-                # response_format={"type": "json_object"},
+                response_format={"type": "json_object"},
                 messages=messages,
             )
             result = property_response.choices[0].message.content
