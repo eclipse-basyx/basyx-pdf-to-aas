@@ -98,11 +98,20 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 
         if isinstance(property_definition, list):
             if len(properties) != len(property_definition):
-                logger.warning(f"Extracted property count {len(properties)} doesn't match expected: {len(property_definition)}")
+                logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Can't add 'id' and'name'")
                 return properties
+            if not isinstance(properties, list):
+                logger.warning(f"Extracted properties are is {type(properties)} instead of list. Can't add 'id' and'name'")
+                return properties
+            dict_error = False
             for idx, property_def in enumerate(property_definition):
+                if not isinstance(properties[idx], dict):
+                    dict_error = True
+                    continue
                 properties[idx]["id"] = property_def.id
                 properties[idx]["name"] = property_def.name["en"]
+            if dict_error:
+                logger.warning("Some or all extracted properties are not of type dict. Can't add 'id' and'name'")
         else:
             for property in properties:
                 property["id"] = property_definition.id
