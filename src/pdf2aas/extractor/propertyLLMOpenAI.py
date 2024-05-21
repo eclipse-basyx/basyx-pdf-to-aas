@@ -93,8 +93,17 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             except json.decoder.JSONDecodeError:
                 logger.warning("Couldn't decode LLM markdown block: " + md_block.group(1))
                 return None
-        if isinstance(properties, dict) and properties.get('results') is not None:
-            properties = properties.get('results')
+        if isinstance(properties, dict):
+            found_key = False
+            for key in ['result', 'results', 'items', 'data', 'properties']:
+                if key in properties:
+                    properties = properties.get(key)
+                    logger.debug(f"Heuristicly took '{key}' from LLM result.")
+                    found_key = True
+                    break
+            if not found_key and len(properties) == 1:
+                properties = properties.values()[0]
+                logger.debug(f"Took '{properties.keys()[0]}' from LLM result.")
 
         if isinstance(property_definition, list):
             if len(properties) != len(property_definition):
