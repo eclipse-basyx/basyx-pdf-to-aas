@@ -33,6 +33,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_definition = 'definition' in property_keys_in_prompt
         self.use_property_unit = 'unit' in property_keys_in_prompt
         self.use_property_values = 'values' in property_keys_in_prompt
+        self.temperature = 0
 
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> dict | list[dict] | None:
         if self.api_endpoint != "input" and os.getenv("OPENAI_API_KEY") is None:
@@ -75,6 +76,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             property_response = client.chat.completions.create(
                 model=self.model_identifier,
                 response_format={"type": "json_object"},
+                temperature=self.temperature,
                 messages=messages,
             )
             result = property_response.choices[0].message.content
