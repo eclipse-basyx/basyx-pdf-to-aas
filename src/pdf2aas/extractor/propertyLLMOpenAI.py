@@ -22,7 +22,7 @@ The unit field contains the physical unit of measurement, if applicable.
 The reference field contains a small excerpt of maximum 100 characters from the datasheet surrounding the extracted value.
 Answer with null values if you don't find the information or if not applicable.
 Example result, when asked for "rated load torque" and "supply voltage" of the device:
-[{"property": "rated load torque", "value": 1000, "unit": "Nm", "reference": "the permissible torque is 1kNm"},
+[{"property": "permissible torque", "value": 1000, "unit": "Nm", "reference": "the permissible torque is 1kNm"},
 {"property": "supply voltage", "value": null, "unit": null, "reference": null}]
 """
 
@@ -34,6 +34,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_unit = 'unit' in property_keys_in_prompt
         self.use_property_values = 'values' in property_keys_in_prompt
         self.temperature = 0
+        self.response_format = None #{"type": "json_object"}
 
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> dict | list[dict] | None:
         if self.api_endpoint != "input" and os.getenv("OPENAI_API_KEY") is None:
@@ -75,7 +76,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             client = OpenAI(base_url=self.api_endpoint)
             property_response = client.chat.completions.create(
                 model=self.model_identifier,
-                response_format={"type": "json_object"},
+                response_format=self.response_format,
                 temperature=self.temperature,
                 messages=messages,
             )
@@ -87,13 +88,13 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         except json.decoder.JSONDecodeError:
             md_block = re.search(r'```(?:json)?\s*(.*?)\s*```', result, re.DOTALL)
             if md_block is None:
-                logger.warning("Couldn't decode LLM result: " + result)
+                logger.error("Couldn't decode LLM result: " + result)
                 return None
             try:
                 properties = json.loads(md_block.group(1))
                 logger.debug("Extracted json markdown block via regex from LLM result.")
             except json.decoder.JSONDecodeError:
-                logger.warning("Couldn't decode LLM markdown block: " + md_block.group(1))
+                logger.error("Couldn't decode LLM markdown block: " + md_block.group(1))
                 return None
         if isinstance(properties, dict):
             found_key = False
