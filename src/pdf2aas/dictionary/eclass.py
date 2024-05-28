@@ -179,6 +179,7 @@ class ECLASS(Dictionary):
     eclass_class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     eclass_property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     properties: dict[str, PropertyDefinition] = {}
+    properties_download_failed: dict[str, set[str]] = {}
     releases: dict[dict[str, ClassDefinition]] = {
         "14.0": {},
         "13.0": {},
@@ -207,6 +208,8 @@ class ECLASS(Dictionary):
                            Defaults to '14.0'.
         """
         super().__init__()
+        if release not in self.releases:
+            logger.warning(f"Release {release} not supported by ECLASS dictionary. Supported are: {list(self.releases.keys())}")
         self.release = release
 
     @property
@@ -290,16 +293,24 @@ class ECLASS(Dictionary):
             return None
         property = self.properties.get(property_id)
         if property is None:
-            logger.info(f"Property definition not found, try download for {property_id}")
+            if (self.release in self.properties_download_failed and 
+                property_id in self.properties_download_failed.get(self.release)):
+                logger.debug(f"Property {property_id} definition download failed already. Skipping download.")
+                return None
+
+            logger.info(f"Property {property_id} definition not found, try download.")
             html_content = download_html(ECLASS.eclass_property_search_pattern.format(
                 property_id=quote(property_id), release=self.release, language="1"))
             if html_content is None:
+                if self.release not in self.properties_download_failed:
+                    self.properties_download_failed[self.release] = set()
+                self.properties_download_failed[self.release].add(property_id)
                 return None
             property = ECLASS.__parse_html_eclass_property(html_content, property_id)
             if property is not None:
                 logger.debug(f"Add new property {property_id} without class to dictionary: {property.name}")
                 ECLASS.properties[property_id] = property
-        return property    
+        return property
 
     def __parse_html_eclass_class(self, html_content):
         soup = BeautifulSoup(html_content, "html.parser")
