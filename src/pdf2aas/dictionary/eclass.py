@@ -142,38 +142,11 @@ class ECLASS(Dictionary):
     and retrieve their properties based on different releases of the standard.
 
     Attributes:
-        eclass_class_search_pattern (str): The URL pattern to search for eCl@ss classes.
-            The URL contains placeholders for class_id, language, and release which
-            are filled in dynamically when performing a search.
-        properties (dict[str, PropertyDefinition]): A dictionary that maps property
-            IDs to their PropertyDefinition instances.
-        releases (dict[str, dict[str, object]]): A dictionary that maps release versions
-            to another dictionary. This nested dictionary maps class IDs to their
-            corresponding class objects for that release version.
-
-    Args:
-        release (str): The release version of the eCl@ss standard to be used when
-            interacting with the eCl@ss database. Defaults to '14.0'.
-
-    Methods:
-        get_class_properties(class_id: str) -> list[PropertyDefinition]:
-            Retrieves a list of property definitions for a given eCl@ss class ID.
-            If the properties are already cached in the `properties` attribute, those
-            are returned. Otherwise, a web request is made to the eCl@ss website to
-            fetch and parse the properties.
-
-            Args:
-                class_id (str): The ID of the eCl@ss class for which to retrieve properties.
-
-            Returns:
-                list[PropertyDefinition]: A list of PropertyDefinition instances
-                associated with the specified class ID.
-        classes (property) -> dict[str, ClassDefinition]:
-            A property that retrieves the class definitions for the currently set release
-            version from the `releases` attribute.
-
-            Returns:
-                dict[str, ClassDefinition]: A dictionary of class definitions for the current release.
+        eclass_class_search_pattern (str): URL pattern for class search.
+        eclass_property_search_pattern (str): URL pattern for property search.
+        properties (dict[str, PropertyDefinition]): Maps property IDs to PropertyDefinition instances.
+        properties_download_failed (dict[str, set[str]]): Maps release versions to a set of property ids, that could not be downloaded.
+        releases (dict[str, dict[str, object]]): Maps release versions to class objects.
     """
 
     eclass_class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
@@ -279,6 +252,8 @@ class ECLASS(Dictionary):
         the `properties` property. Otherwise, an HTML page is downloaded based on
         the eclass_property_search_pattern and the parsed HTML is used to obtain
         the definition. The definition is stored in the dictionary class.
+        If the download fails, the property_id is saved in `properties_download_failed`.
+        The download is skipped next time.
         
         The eclass_property_search_pattern based search doesn't retrieve units.
 
@@ -405,6 +380,15 @@ class ECLASS(Dictionary):
                     classes[id] = new_class
 
     def check_property_irdi(property_id):
+        """
+        Checks the format of the property IRDI.
+        
+        Regex: 0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3})
+        IRDI must begin with 0173-1 to belong to ECLASS.
+        IRDI must represent a property (not a class, value, ...): #02
+        IRDI must have 3 upper letters and 3 digits as property id: ABC123
+        IRDI must have 3 digits as version, e.g. #005 
+        """
         re_match = re.fullmatch(r"0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3})", property_id)
         if re_match is None:
             return False
