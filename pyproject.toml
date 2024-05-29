@@ -21,6 +21,9 @@ version = "0.1.0"
 dev = [
   "pytest",
 ]
+eval = [
+  "matplotlib",
+]
 
 [build-system]
 build-backend = "setuptools.build_meta"
