@@ -41,8 +41,6 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             raise ValueError("No OpenAI API key found in environment")
 
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
-
-        # TODO create Datasheet class and add information about char length
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
         else:
@@ -55,15 +53,15 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 "content": self.create_prompt(datasheet, property_definition),
             },
         ]
+        result = self._prompt_llm(messages)
+        properties = self._parse_result(result)
+        self._add_name_id_from_definition(properties, property_definition)
+        return properties
+
+    def _prompt_llm(self, messages):
         try:
-            logger.debug(
-                "System prompt token count: %i"
-                % self.calculate_token_count(messages[0]["content"])
-            )
-            logger.debug(
-                "Prompt token count: %i"
-                % self.calculate_token_count(messages[1]["content"])
-            )
+            logger.debug("System prompt token count: %i", self.calculate_token_count(messages[0]['content']))
+            logger.debug("Prompt token count: %i", self.calculate_token_count(messages[1]['content']))
         except ValueError:
             logger.debug("System prompt char count: %i" % len(messages[0]["content"]))
             logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
@@ -71,18 +69,20 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         if self.api_endpoint == "input":
             logger.info("Systemprompt:\n"+ messages[0]["content"])
             logger.info("Prompt:\n"+ messages[1]["content"])
-            result = input("Enter dryrun result for LLM prompt:\n")
-        else:
-            client = OpenAI(base_url=self.api_endpoint)
-            property_response = client.chat.completions.create(
-                model=self.model_identifier,
-                response_format=self.response_format,
-                temperature=self.temperature,
-                messages=messages,
-            )
-            result = property_response.choices[0].message.content
-            logger.debug("Response from LLM:" + result)
+            return input("Enter dryrun result for LLM prompt:\n")
+        
+        client = OpenAI(base_url=self.api_endpoint)
+        property_response = client.chat.completions.create(
+            model=self.model_identifier,
+            response_format=self.response_format,
+            temperature=self.temperature,
+            messages=messages,
+        )
+        result = property_response.choices[0].message.content
+        logger.debug("Response from LLM:" + result)
+        return result
 
+    def _parse_result(self, result):
         try:
             properties = json.loads(result)
         except json.decoder.JSONDecodeError:
@@ -107,14 +107,18 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             if not found_key and len(properties) == 1:
                 properties = properties.values()[0]
                 logger.debug(f"Took '{properties.keys()[0]}' from LLM result.")
+        return properties
 
+    def _add_name_id_from_definition(self, properties, property_definition):
+        if properties is None:
+            return
         if isinstance(property_definition, list):
             if len(properties) != len(property_definition):
                 logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Can't add 'id' and'name'")
-                return properties
+                return
             if not isinstance(properties, list):
                 logger.warning(f"Extracted properties are is {type(properties)} instead of list. Can't add 'id' and'name'")
-                return properties
+                return
             dict_error = False
             for idx, property_def in enumerate(property_definition):
                 if not isinstance(properties[idx], dict):
@@ -128,8 +132,6 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             for property in properties:
                 property["id"] = property_definition.id
                 property["name"] = property_definition.name["en"]
-
-        return properties
 
     def create_property_prompt(self, property: PropertyDefinition, language: str = "en") -> str:
         if property.name is None:
