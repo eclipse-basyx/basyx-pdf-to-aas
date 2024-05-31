@@ -82,7 +82,7 @@ def parse_html_eclass_valuelist(property, span):
             }
             property.values.append(value)
         except json.decoder.JSONDecodeError:
-            logger.warning("Error, while decoding:" + valuelist_span["data-props"])
+            logger.warning("Couldn't parse eclass property value:" + valuelist_span["data-props"])
 
 
 def parse_html_eclass_property(span, data, id):
@@ -278,7 +278,7 @@ class ECLASS(Dictionary):
                 logger.debug(f"Property {property_id} definition download failed already. Skipping download.")
                 return None
 
-            logger.info(f"Property {property_id} definition not found, try download.")
+            logger.info(f"Property {property_id} definition not found in dictionary, try download.")
             html_content = download_html(ECLASS.eclass_property_search_pattern.format(
                 property_id=quote(property_id), release=self.release, language="1"))
             if html_content is None:
