@@ -59,17 +59,17 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return properties
 
     def _prompt_llm(self, messages):
+        if self.api_endpoint == "input":
+            logger.info("Systemprompt:\n"+ messages[0]["content"])
+            logger.info("Prompt:\n"+ messages[1]["content"])
+            return input("Enter result for LLM prompt via input:\n")
+
         try:
             logger.debug("System prompt token count: %i", self.calculate_token_count(messages[0]['content']))
             logger.debug("Prompt token count: %i", self.calculate_token_count(messages[1]['content']))
         except ValueError:
             logger.debug("System prompt char count: %i" % len(messages[0]["content"]))
             logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
-
-        if self.api_endpoint == "input":
-            logger.info("Systemprompt:\n"+ messages[0]["content"])
-            logger.info("Prompt:\n"+ messages[1]["content"])
-            return input("Enter dryrun result for LLM prompt:\n")
         
         client = OpenAI(base_url=self.api_endpoint)
         property_response = client.chat.completions.create(
