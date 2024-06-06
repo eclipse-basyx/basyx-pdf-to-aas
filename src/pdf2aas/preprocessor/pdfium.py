@@ -20,9 +20,9 @@ class PDFium(Preprocessor):
         Converts the content of a PDF file into a list of strings, where each string represents the text of a page.
             If an error occurs during the reading of the PDF file, it logs the error and returns None.
         """
-        logger.info(f"Converting to text from pdf: {filepath}")
+        logger.debug(f"Converting to text from pdf: {filepath}")
         try:
-            doc = PdfDocument(filepath)
+            doc = PdfDocument(filepath, autoclose=True)
         except (PdfiumError, FileNotFoundError) as e:
             logger.error(f"Error reading {filepath}: {e}")
             return None
