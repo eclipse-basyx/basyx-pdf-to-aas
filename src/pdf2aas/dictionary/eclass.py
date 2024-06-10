@@ -174,20 +174,25 @@ class ECLASS(Dictionary):
     properties_download_failed: dict[str, set[str]] = {}
     releases: dict[dict[str, ClassDefinition]] = {}
 
-    def __init__(self, release="14.0") -> None:
+    def __init__(self, release="14.0", temp_dir=None) -> None:
         """
         Initializes the ECLASS instance with a specified eCl@ss release version.
 
         Args:
             release (str): The release version of the eCl@ss standard to be used.
                            Defaults to '14.0'.
+            temp_dir (str): Set the temporary directory. Will be used to load
+                            releases from file, the first time the release is used.
         """
         super().__init__()
+        if temp_dir:
+            self.temp_dir=temp_dir
         if release not in eclass_releases:
             logger.warning(f"Release {release} unknown. Well known releases are {eclass_releases}")
         self.release = release
         if release not in ECLASS.releases:
             ECLASS.releases[release] = {}
+            self.load_from_file()
         if release not in ECLASS.properties_download_failed:
             ECLASS.properties_download_failed[release] = set()
 
@@ -400,3 +405,12 @@ class ECLASS(Dictionary):
         if re_match is None:
             return False
         return True
+    
+    def save_all_releases(self, filepath: str = None):
+        original_release = self.release
+        for release, classes in self.releases.items():
+            if len(classes) == 0:
+                continue
+            self.release = release
+            self.save_to_file(filepath=filepath)
+        self.release = original_release
