@@ -4,7 +4,7 @@ import os
 import re
 
 import tiktoken
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 
 from ..dictionary import PropertyDefinition
 from . import PropertyLLM
@@ -26,16 +26,24 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 {"property": "supply voltage", "value": null, "unit": null, "reference": null}]
 """
 
-    def __init__(self, model_identifier: str, api_endpoint: str = None, property_keys_in_prompt: list[str] = ['definition', 'unit', 'values']) -> None:
+    def __init__(
+            self,
+            model_identifier: str,
+            api_endpoint: str = None,
+            property_keys_in_prompt: list[str] = ['definition', 'unit', 'values'],
+            client: OpenAI | AzureOpenAI | None = None,
+    ) -> None:
         super().__init__()
         self.model_identifier = model_identifier
-        self.api_endpoint = api_endpoint
         self.use_property_definition = 'definition' in property_keys_in_prompt
         self.use_property_unit = 'unit' in property_keys_in_prompt
         self.use_property_values = 'values' in property_keys_in_prompt
         self.temperature = 0
         self.max_tokens = None
         self.response_format = None #{"type": "json_object"}
+        if client is None and api_endpoint != "input":
+            client = OpenAI(base_url=api_endpoint)
+        self.client = client
 
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> dict | list[dict] | None:
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
@@ -57,7 +65,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return properties
 
     def _prompt_llm(self, messages):
-        if self.api_endpoint == "input":
+        if self.client is None:
             logger.info("Systemprompt:\n"+ messages[0]["content"])
             logger.info("Prompt:\n"+ messages[1]["content"])
             return input("Enter result for LLM prompt via input:\n")
@@ -69,7 +77,21 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             logger.debug("System prompt char count: %i" % len(messages[0]["content"]))
             logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
         
+        if self.response_format is None:
+            property_response = self.client.chat.completions.create(
+                model=self.model_identifier,
+                temperature=self.temperature,
+                messages=messages,
                 max_tokens=self.max_tokens,
+            )
+        else: # response format = None is not equal to NotGiven, e.g. AzureOpenAI won't work with it
+            property_response = self.client.chat.completions.create(
+                model=self.model_identifier,
+                temperature=self.temperature,
+                messages=messages,
+                max_tokens=self.max_tokens,
+                response_format=self.response_format,
+            )
         result = property_response.choices[0].message.content
         logger.debug("Response from LLM:" + result)
         return result
