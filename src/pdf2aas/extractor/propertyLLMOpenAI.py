@@ -189,7 +189,10 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             if self.use_property_unit and property.unit:
                 prompt += f'  * Unit: "{property.unit}"\n'
             if self.use_property_values and property.values:
-                prompt += f'  * Possible values: "{[v["value"] for v in property.values]}"\n'
+                if isinstance(next(iter(property.values)), dict):
+                    prompt += f'  * Possible values: "{[v["value"] for v in property.values]}"\n'
+                else:
+                    prompt += f'  * Possible values: "{property.values}"\n'
         return prompt
 
 
