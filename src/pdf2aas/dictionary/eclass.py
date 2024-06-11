@@ -135,7 +135,7 @@ def split_keywords(li_keywords):
     keywords = li_keywords.get("title").strip().split(":")[1].split()
     keyphrases = []
     for keyword in keywords:
-        if keyword[0].isupper():
+        if len(keyphrases) == 0 or keyword[0].isupper():
             keyphrases.append(keyword)
         else:
             keyphrases[len(keyphrases) - 1] = (
