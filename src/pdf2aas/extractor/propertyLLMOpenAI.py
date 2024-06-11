@@ -34,6 +34,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_unit = 'unit' in property_keys_in_prompt
         self.use_property_values = 'values' in property_keys_in_prompt
         self.temperature = 0
+        self.max_tokens = None
         self.response_format = None #{"type": "json_object"}
 
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> dict | list[dict] | None:
@@ -68,13 +69,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             logger.debug("System prompt char count: %i" % len(messages[0]["content"]))
             logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
         
-        client = OpenAI(base_url=self.api_endpoint)
-        property_response = client.chat.completions.create(
-            model=self.model_identifier,
-            response_format=self.response_format,
-            temperature=self.temperature,
-            messages=messages,
-        )
+                max_tokens=self.max_tokens,
         result = property_response.choices[0].message.content
         logger.debug("Response from LLM:" + result)
         return result
