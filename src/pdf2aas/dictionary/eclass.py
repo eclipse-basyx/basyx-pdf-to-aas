@@ -406,11 +406,11 @@ class ECLASS(Dictionary):
             return False
         return True
     
-    def save_all_releases(self, filepath: str = None):
+    def save_all_releases(self):
         original_release = self.release
         for release, classes in self.releases.items():
             if len(classes) == 0:
                 continue
             self.release = release
-            self.save_to_file(filepath=filepath)
+            self.save_to_file()
         self.release = original_release
