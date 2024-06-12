@@ -1,7 +1,7 @@
 import json
 import logging
-import os
 import re
+import unicodedata
 
 import tiktoken
 from openai import OpenAI, AzureOpenAI
@@ -40,7 +40,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_values = 'values' in property_keys_in_prompt
         self.temperature = 0
         self.max_tokens = None
-        self.response_format = None #{"type": "json_object"}
+        self.response_format = {"type": "json_object"}
         if client is None and api_endpoint != "input":
             client = OpenAI(base_url=api_endpoint)
         self.client = client
@@ -61,7 +61,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         ]
         result = self._prompt_llm(messages)
         properties = self._parse_result(result)
-        self._add_name_id_from_definition(properties, property_definition)
+        properties = self._add_name_id_from_definition(properties, property_definition)
         return properties
 
     def _prompt_llm(self, messages):
@@ -98,7 +98,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 
     def _parse_result(self, result):
         try:
-            properties = json.loads(result)
+            properties = json.loads("".join(ch for ch in result if unicodedata.category(ch)[0]!="C"))
         except json.decoder.JSONDecodeError:
             md_block = re.search(r'```(?:json)?\s*(.*?)\s*```', result, re.DOTALL)
             if md_block is None:
@@ -119,20 +119,31 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                     found_key = True
                     break
             if not found_key and len(properties) == 1:
-                properties = properties.values()[0]
-                logger.debug(f"Took '{properties.keys()[0]}' from LLM result.")
+                logger.debug(f"Took '{next(iter(properties.keys()))}' from LLM result.")
+                properties = next(iter(properties.values()))
         return properties
 
     def _add_name_id_from_definition(self, properties, property_definition):
         if properties is None:
-            return
+            return properties
+        if isinstance(properties, dict): # and len(property_definition) == 1
+            properties = [properties]
+            logger.debug(f"Extracted properties are a dict, try to encapsulate them in a list.")
         if isinstance(property_definition, list):
+            if len(property_definition) == 1:
+                if len(properties) > 1:
+                    logger.warning(f"Extracted multiple properties {len(properties)} for one definition. Add same 'id' and 'name'")
+                for property in properties:
+                    property["id"] = property_definition[0].id
+                    property["name"] = property_definition[0].name["en"]
+                return properties
+
             if len(properties) != len(property_definition):
                 logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Can't add 'id' and'name'")
-                return
+                return None
             if not isinstance(properties, list):
-                logger.warning(f"Extracted properties are is {type(properties)} instead of list. Can't add 'id' and'name'")
-                return
+                logger.warning(f"Extraction result is {type(properties)} instead of list. Can't add 'id' and 'name'")
+                return None
             dict_error = False
             for idx, property_def in enumerate(property_definition):
                 if not isinstance(properties[idx], dict):
@@ -141,11 +152,12 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 properties[idx]["id"] = property_def.id
                 properties[idx]["name"] = property_def.name["en"]
             if dict_error:
-                logger.warning("Some or all extracted properties are not of type dict. Can't add 'id' and'name'")
+                logger.warning("Some or all extracted properties are not of type dict. Can't add 'id' and 'name'")
         else:
             for property in properties:
                 property["id"] = property_definition.id
                 property["name"] = property_definition.name["en"]
+        return properties
 
     def create_property_prompt(self, property: PropertyDefinition, language: str = "en") -> str:
         if property.name is None:
