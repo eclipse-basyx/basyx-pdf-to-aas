@@ -45,7 +45,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             client = OpenAI(base_url=api_endpoint)
         self.client = client
 
-    def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> dict | list[dict] | None:
+    def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition], raw_results: list[str] | None = None) -> dict | list[dict] | None:
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
@@ -60,6 +60,8 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             },
         ]
         result = self._prompt_llm(messages)
+        if isinstance(raw_results, list):
+            raw_results.append(result)
         properties = self._parse_result(result)
         properties = self._add_name_id_from_definition(properties, property_definition)
         return properties
