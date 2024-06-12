@@ -23,6 +23,7 @@ dev = [
 ]
 eval = [
   "matplotlib",
+  "openpyxl",
 ]
 
 [build-system]
