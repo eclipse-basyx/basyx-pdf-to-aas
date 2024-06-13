@@ -58,7 +58,7 @@ class Dictionary:
     def save_to_file(self, filepath: str = None):
         raise NotImplementedError()
 
-    def load_from_file(self, filepath: str = None):
+    def load_from_file(self, filepath: str = None) -> bool:
         raise NotImplementedError()
     
     def get_property(self, property_id: str) -> PropertyDefinition:

@@ -357,14 +357,14 @@ class ECLASS(Dictionary):
                 default=dictionary_serializer,
             )
 
-    def load_from_file(self, filepath: str = None):
+    def load_from_file(self, filepath: str = None) -> bool:
         if filepath is None:
             filepath = os.path.join(self.temp_dir, "ECLASS-" + self.release + ".json")
         if not os.path.exists(filepath):
-            logger.warn(
+            logger.debug(
                 f"Couldn't load ECLASS dictionary from file. File does not exist: {filepath}"
             )
-            return
+            return False
         logger.info(f"Load ECLASS dictionary from file: {filepath}")
         with open(filepath, "r") as file:
             dict = json.load(file)
@@ -390,6 +390,7 @@ class ECLASS(Dictionary):
                         for property_id in new_class.properties
                     ]
                     classes[id] = new_class
+        return True
 
     def check_property_irdi(property_id):
         """
