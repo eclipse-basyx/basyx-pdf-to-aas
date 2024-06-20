@@ -141,8 +141,19 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 return properties
 
             if len(properties) != len(property_definition):
-                logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Can't add 'id' and'name'")
-                return None
+                if len(properties) <= 1:
+                    logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Can't add 'id' and'name'")
+                    return None
+
+                logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Try to add 'id' and 'name' by extracted property name.")
+                property_definition_dict = {p.name: p.id for p in property_definition}
+                for property in properties:
+                    name = property.get('property')
+                    if name is not None and name in property_definition_dict:
+                        property['name'] = name
+                        property['id'] = property_definition_dict.get(name)
+                return properties
+            
             if not isinstance(properties, list):
                 logger.warning(f"Extraction result is {type(properties)} instead of list. Can't add 'id' and 'name'")
                 return None
