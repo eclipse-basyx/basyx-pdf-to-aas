@@ -45,7 +45,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             client = OpenAI(base_url=api_endpoint)
         self.client = client
 
-    def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition], raw_results: list[str] | None = None) -> dict | list[dict] | None:
+    def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition], raw_results: list[str] | None = None, prompt_hint: str | None = None) -> dict | list[dict] | None:
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
@@ -56,7 +56,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             {"role": "system", "content": self.system_prompt_template},
             {
                 "role": "user",
-                "content": self.create_prompt(datasheet, property_definition),
+                "content": self.create_prompt(datasheet, property_definition, hint=prompt_hint),
             },
         ]
         result = self._prompt_llm(messages)
@@ -222,13 +222,16 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 
 
     def create_prompt(
-        self, datasheet: str, property: PropertyDefinition | list[PropertyDefinition], language: str = "en"
+        self, datasheet: str, property: PropertyDefinition | list[PropertyDefinition], language: str = "en", hint: str | None = None
     ) -> str:
 
         if isinstance(property, list):
             prompt = self.create_property_list_prompt(property, language)
         else: 
             prompt = self.create_property_prompt(property, language)
+
+        if hint:
+            prompt+= "\n" + hint
         
         prompt+= f"\nThe following text in triple # is the datasheet of the technical device. It was converted from pdf.\n###\n{datasheet}\n###"
         return prompt
