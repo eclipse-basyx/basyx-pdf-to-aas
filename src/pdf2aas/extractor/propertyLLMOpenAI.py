@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import unicodedata
+from typing import Literal
 
 import tiktoken
 from openai import OpenAI, AzureOpenAI
@@ -30,7 +31,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             self,
             model_identifier: str,
             api_endpoint: str = None,
-            property_keys_in_prompt: list[str] = ['definition', 'unit', 'values'],
+            property_keys_in_prompt: list[Literal["definition", "unit", "values", "datatype"]] = [],
             client: OpenAI | AzureOpenAI | None = None,
     ) -> None:
         super().__init__()
@@ -38,6 +39,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_definition = 'definition' in property_keys_in_prompt
         self.use_property_unit = 'unit' in property_keys_in_prompt
         self.use_property_values = 'values' in property_keys_in_prompt
+        self.use_property_datatype = 'datatype' in property_keys_in_prompt
         self.temperature = 0
         self.max_tokens = None
         self.response_format = {"type": "json_object"}
@@ -199,7 +201,9 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         prompt = ""
         property_definition = property.definition.get(language)
         if self.use_property_definition and property_definition:
-            prompt += f'The "{property_name}" is defined as "{property_definition}".\n' 
+            prompt += f'The "{property_name}" is defined as "{property_definition}".\n'
+        if self.use_property_datatype and property.type:
+            prompt += f'The "{property_name}" has the datatype "{property.type}".\n'
         if self.use_property_unit and property.unit:
             prompt += f'The "{property_name}" has the unit of measure "{property.unit}".\n'
         if self.use_property_values and property.values:
@@ -224,7 +228,9 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             prompt +=f'* Property: "{property_name}"\n'
             property_definition = property.definition.get(language)
             if self.use_property_definition and property_definition:
-                prompt += f'  * Definition: "{property_definition}"\n' 
+                prompt += f'  * Definition: "{property_definition}"\n'
+            if self.use_property_datatype and property.type:
+                prompt += f'  * Datatype: "{property.type}"\n'
             if self.use_property_unit and property.unit:
                 prompt += f'  * Unit: "{property.unit}"\n'
             if self.use_property_values and property.values:
