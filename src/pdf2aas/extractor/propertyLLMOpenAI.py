@@ -45,7 +45,14 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             client = OpenAI(base_url=api_endpoint)
         self.client = client
 
-    def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition], raw_results: list[str] | None = None, prompt_hint: str | None = None) -> dict | list[dict] | None:
+    def extract(
+            self,
+            datasheet: str,
+            property_definition: PropertyDefinition | list[PropertyDefinition],
+            raw_prompts: list[str] | None = None,
+            raw_results: list[str] | None = None,
+            prompt_hint: str | None = None,
+    ) -> dict | list[dict] | None:
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
@@ -59,18 +66,21 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 "content": self.create_prompt(datasheet, property_definition, hint=prompt_hint),
             },
         ]
-        result = self._prompt_llm(messages)
-        if isinstance(raw_results, list):
-            raw_results.append(result)
+        if isinstance(raw_prompts, list):
+            raw_prompts.append(messages)
+        result = self._prompt_llm(messages, raw_results)
         properties = self._parse_result(result)
         properties = self._add_name_id_from_definition(properties, property_definition)
         return properties
 
-    def _prompt_llm(self, messages):
+    def _prompt_llm(self, messages, raw_results):
         if self.client is None:
             logger.info("Systemprompt:\n"+ messages[0]["content"])
             logger.info("Prompt:\n"+ messages[1]["content"])
-            return input("Enter result for LLM prompt via input:\n")
+            result = input("Enter result for LLM prompt via input:\n")
+            if isinstance(raw_results, list):
+                raw_results.append(result)
+            return result
 
         try:
             logger.debug("System prompt token count: %i", self.calculate_token_count(messages[0]['content']))
@@ -96,6 +106,8 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             )
         result = property_response.choices[0].message.content
         logger.debug("Response from LLM:" + result)
+        if isinstance(raw_results, list):
+            raw_results.append(property_response.to_dict(mode="json"))
         return result
 
     def _parse_result(self, result):
