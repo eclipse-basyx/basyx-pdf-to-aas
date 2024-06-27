@@ -90,24 +90,26 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
         
         if self.response_format is None:
-            property_response = self.client.chat.completions.create(
+            chat_completion = self.client.chat.completions.create(
                 model=self.model_identifier,
                 temperature=self.temperature,
                 messages=messages,
                 max_tokens=self.max_tokens,
             )
         else: # response format = None is not equal to NotGiven, e.g. AzureOpenAI won't work with it
-            property_response = self.client.chat.completions.create(
+            chat_completion = self.client.chat.completions.create(
                 model=self.model_identifier,
                 temperature=self.temperature,
                 messages=messages,
                 max_tokens=self.max_tokens,
                 response_format=self.response_format,
             )
-        result = property_response.choices[0].message.content
+        result = chat_completion.choices[0].message.content
         logger.debug("Response from LLM:" + result)
+        if chat_completion.choices[0].finish_reason != 'stop':
+            logger.warning(f"Chat completion finished with reason '{chat_completion.choices[0].finish_reason}'. (max_tokens={self.max_tokens})")
         if isinstance(raw_results, list):
-            raw_results.append(property_response.to_dict(mode="json"))
+            raw_results.append(chat_completion.to_dict(mode="json"))
         return result
 
     def _parse_result(self, result):
