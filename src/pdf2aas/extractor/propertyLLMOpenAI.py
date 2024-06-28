@@ -162,10 +162,10 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                     return None
 
                 logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Try to add 'id' and 'name' by extracted property name.")
-                property_definition_dict = {next(iter(p.name.values())): p.id for p in property_definition}
+                property_definition_dict = {next(iter(p.name.values()), '').lower(): p.id for p in property_definition}
                 for property in properties:
                     name = property.get('property')
-                    if name is not None and name in property_definition_dict:
+                    if name is not None and name.lower() in property_definition_dict:
                         property['name'] = name
                         property['id'] = property_definition_dict.get(name)
                 return properties
