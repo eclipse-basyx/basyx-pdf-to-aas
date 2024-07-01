@@ -223,16 +223,8 @@ class ECLASS(Dictionary):
             list[PropertyDefinition]: A list of PropertyDefinition instances
                                       associated with the specified class ID.
         """
-        if len(class_id) != 8 or not class_id.isdigit():
-            logger.warning(
-                f"Class id has unknown format. Should be 8 digits, but got: {class_id}"
-            )
-            return []
-        if class_id.endswith("00"):
-            logger.warning(
-                f"No properties for {class_id}. Currently only concrete (level 4) classes are supported."
-            )
-            # Because the eclass content-search only lists properties in level 4 for classes
+        class_id = ECLASS.parse_class_id(class_id)
+        if class_id is None:
             return []
         eclass_class = self.classes.get(class_id)
         if eclass_class is None:
@@ -406,6 +398,32 @@ class ECLASS(Dictionary):
         if re_match is None:
             return False
         return True
+
+    def parse_class_id(class_id):
+        """
+        Checks the format of the eclass class id and returns it in 8 digit format.
+        
+        Must be an 8 digit number (underscores, dash and whitespace alike chars are ignored).
+        Only concrete (level 4) classes will be returned.
+        """
+        #TODO also support eclass IRDIs and prefix "ECLASS" or Postfix "(BASIC)" etc.
+        #https://eclass.eu/support/content-creation/release-process/release-numbers-and-versioning
+        if class_id is None:
+            return None
+        class_id = str(class_id) 
+        class_id = re.sub('[-_]|\s', '', class_id.strip())
+        if len(class_id) != 8 or not class_id.isdigit():
+            logger.warning(
+                f"Class id has unknown format. Should be 8 digits, but got: {class_id}"
+            )
+            return None
+        if class_id.endswith("00"):
+            logger.warning(
+                f"No properties for {class_id}. Currently only concrete (level 4) classes are supported."
+            )
+            # Because the eclass content-search only lists properties in level 4 for classes
+            return None
+        return class_id
     
     def save_all_releases(self):
         original_release = self.release
