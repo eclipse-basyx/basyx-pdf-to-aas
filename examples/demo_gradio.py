@@ -19,6 +19,12 @@ logger = logging.getLogger()
 
 load_dotenv()
 
+def change_pdf(pdf_upload, definitions):
+    return gr.Button(interactive=pdf_upload is not None and definitions is not None)
+
+def change_eclass_class(eclass_id):
+    return ECLASS.parse_class_id(eclass_id)
+
 def get_class_property_definitions(
         eclass_id,
         eclass_release,
@@ -28,14 +34,13 @@ def get_class_property_definitions(
     if eclass_id is None:
         #TODO try to get id from pdf_upload
         return None, None
-    eclass_id = re.sub('[-_]', '', eclass_id.strip())
+        return None, None, None, gr.Button(interactive=False)
     dictionary = ECLASS(eclass_release)
     progress(0.5, desc=f"Loading ECLASS definitions for {eclass_id} in release {dictionary.release}")
     dictionary.load_from_file()
     definitions = dictionary.get_class_properties(eclass_id)
     if definitions is None or len(definitions) == 0:
-        return None, None
-    dictionary.save_to_file()
+        return eclass_id, None, None, gr.Button(interactive=False)
 
     definitions_df = pd.DataFrame([
         {
@@ -48,7 +53,7 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return eclass_id, definitions, definitions_df
+    return eclass_id, definitions, definitions_df, gr.Button(interactive=pdf_upload is not None)
 
 def extract(
         pdf_upload,
@@ -191,7 +196,10 @@ def main():
                         value='unit'
                     )
                 with gr.Row():
-                    extract_button = gr.Button("Extract Technical Data")
+                    extract_button = gr.Button(
+                        "Extract Technical Data",
+                        interactive=False
+                    )
             with gr.Column():
                 with gr.Row():
                     eclass_class = gr.Dropdown(
@@ -225,8 +233,12 @@ def main():
                 label="Raw Results",
             )
     
+        pdf_upload.change(
+            fn=change_pdf,
+            inputs=[pdf_upload, property_defintions_list],
+            outputs=[extract_button]
         )
-    
+
         extract_button.click(
             fn=extract,
             inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt],
@@ -234,14 +246,18 @@ def main():
         )
 
         eclass_class.change(
+            fn=change_eclass_class,
+            inputs=eclass_class,
+            outputs=eclass_class
+        ).success(
             fn=get_class_property_definitions,
             inputs=[eclass_class, eclass_release, pdf_upload],
-            outputs=[eclass_class, property_defintions_list, property_defintions]
+            outputs=[eclass_class, property_defintions_list, property_defintions, extract_button]
         )
         eclass_release.change(
             fn=get_class_property_definitions,
             inputs=[eclass_class, eclass_release, pdf_upload],
-            outputs=[eclass_class, property_defintions_list, property_defintions]
+            outputs=[eclass_class, property_defintions_list, property_defintions, extract_button]
         )
 
     demo.launch()
