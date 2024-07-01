@@ -122,18 +122,6 @@ def extract(
     if properties is None or len(properties) == 0:
         return None, datasheet_txt, raw_prompts, raw_results
 
-    #TODO parse \t \n in raw_prompt and results
-    for result in raw_results:
-        try:
-            result = json.dumps(result, indent=2)
-        except Exception:
-            pass
-    for prompt in raw_prompts:
-        try:
-            prompt = json.dumps(prompt, indent=2)
-        except Exception:
-            pass
-
     progress(1, desc=f"Postprocessing {len(properties)} extracted properties.")
     for property in properties:
         property_id = property.get('id')
@@ -226,18 +214,17 @@ def main():
             headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
             col_count=(6, "fixed")
         )
-
-        with gr.Row():
-            raw_prompts = gr.Textbox(
-                label="Raw Prompts",
-                lines=10
-            )
-            raw_results = gr.Textbox(
-                label="Raw Results",
-                lines=10
-            )
         datasheet_text_highlighted = gr.HighlightedText(
             label="Preprocessed Datasheet with References"
+        )
+        with gr.Row():
+            raw_prompts = gr.JSON(
+                label="Raw Prompts",
+            )
+            raw_results = gr.JSON(
+                label="Raw Results",
+            )
+    
         )
     
         extract_button.click(
