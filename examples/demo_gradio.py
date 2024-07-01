@@ -28,19 +28,24 @@ def change_eclass_class(eclass_id):
 def get_class_property_definitions(
         eclass_id,
         eclass_release,
-        pdf_upload,
-        progress=gr.Progress()
+        pdf_upload
     ):
     if eclass_id is None:
         #TODO try to get id from pdf_upload
-        return None, None
+        gr.Warning("Search for ECLASS id in pdf currently not supported. Please provide eclass class id, e.g. '27-27-40-01'.")
         return None, None, None, gr.Button(interactive=False)
     dictionary = ECLASS(eclass_release)
-    progress(0.5, desc=f"Loading ECLASS definitions for {eclass_id} in release {dictionary.release}")
     dictionary.load_from_file()
+    download = False
+    if eclass_id not in dictionary.classes.keys():
+        download = True
+        gr.Info("ECLASS class not in dictionary file. Try downloading from website. This may take some time.")
     definitions = dictionary.get_class_properties(eclass_id)
     if definitions is None or len(definitions) == 0:
+        gr.Warning(f"No property definitions found for class {eclass_id} in release {eclass_release}.")
         return eclass_id, None, None, gr.Button(interactive=False)
+    if download:
+        dictionary.save_to_file()
 
     definitions_df = pd.DataFrame([
         {
@@ -74,20 +79,24 @@ def extract(
     preprocessor = PDFium()
     preprocessed_datasheet = preprocessor.convert(pdf_upload)
     if preprocessed_datasheet is None:
+        gr.Warning("Error while preprocessing datasheet.")
         logger.error(f"Preprocessed datasheet is none.")
         return None, None, None, None
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     
     if definitions is None or len(definitions) == 0:
+        gr.Warning("No property definitions to search for. Try to specify eclass class.")
         return None, datasheet_txt, None, None
 
     if endpoint == "openai":
         if api_key == None or len(api_key.strip()) == 0:
             api_key = os.environ.get('OPENAI_API_KEY')
         if api_key == None or len(api_key.strip()) == 0:
+            gr.Warning("Missing api key for openai endpoint.")
             return None, datasheet_txt, None, None
         endpoint=None
         client= openai.Client(api_key=api_key)
+        #TODO set client from endpoint selection dropdown and reuse as gr.State
     extractor = PropertyLLMOpenAI(
         model_identifier=model,
         api_endpoint=endpoint,
@@ -125,6 +134,7 @@ def extract(
                 continue
             properties.extend(extracted)
     if properties is None or len(properties) == 0:
+        gr.Warning("No properties extracted or LLM result not parseable.")
         return None, datasheet_txt, raw_prompts, raw_results
 
     progress(1, desc=f"Postprocessing {len(properties)} extracted properties.")
@@ -137,6 +147,7 @@ def extract(
         start = datasheet_txt['text'].find(reference)
         if start == -1:
             logger.info(f"Reference not found: {reference}")
+            # TODO mark red in properties dataframe
             continue
         unit = f" [{property.get('unit')}]" if property.get('unit') else ''
         datasheet_txt['entities'].append({
