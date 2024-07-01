@@ -18,21 +18,21 @@ logger = logging.getLogger()
 
 def get_class_property_definitions(
         eclass_id,
+        eclass_release,
         pdf_upload,
         progress=gr.Progress()
     ):
     if eclass_id is None:
         #TODO try to get id from pdf_upload
         return None, None
-    eclass_id = re.sub('[-_]', '', eclass_id)
-    dictionary = ECLASS()
+    eclass_id = re.sub('[-_]', '', eclass_id.strip())
+    dictionary = ECLASS(eclass_release)
     progress(0.5, desc=f"Loading ECLASS definitions for {eclass_id} in release {dictionary.release}")
     dictionary.load_from_file()
     definitions = dictionary.get_class_properties(eclass_id)
     if definitions is None or len(definitions) == 0:
         return None, None
     dictionary.save_to_file()
-
 
     definitions_df = pd.DataFrame([
         {
@@ -45,7 +45,7 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return definitions, definitions_df
+    return eclass_id, definitions, definitions_df
 
 def extract(
         pdf_upload,
@@ -201,10 +201,17 @@ def main():
                 with gr.Row():
                     extract_button = gr.Button("Extract Technical Data")
             with gr.Column():
-                eclass_class = gr.Dropdown(
-                    label="ECLASS Class",
-                    allow_custom_value=True
-                )
+                with gr.Row():
+                    eclass_class = gr.Dropdown(
+                        label="ECLASS Class",
+                        allow_custom_value=True,
+                        scale=2
+                    )
+                    eclass_release = gr.Dropdown(
+                        label="ECLASS Release",
+                        choices=["14.0", "13.0", "12.0", "11.1", "11.0", "10.1", "10.0.1", "9.1", "9.0", "8.1", "8.0", "7.1", "7.0", "6.2", "6.1", "5.1.4"],
+                        value="14.0"
+                    )
                 property_defintions = gr.DataFrame(
                     label="Property Definitions",
                     headers=['id', 'name', 'type', 'definition', 'values'],
@@ -237,8 +244,13 @@ def main():
 
         eclass_class.change(
             fn=get_class_property_definitions,
-            inputs=[eclass_class, pdf_upload],
-            outputs=[property_defintions_list, property_defintions]
+            inputs=[eclass_class, eclass_release, pdf_upload],
+            outputs=[eclass_class, property_defintions_list, property_defintions]
+        )
+        eclass_release.change(
+            fn=get_class_property_definitions,
+            inputs=[eclass_class, eclass_release, pdf_upload],
+            outputs=[eclass_class, property_defintions_list, property_defintions]
         )
 
     demo.launch()
