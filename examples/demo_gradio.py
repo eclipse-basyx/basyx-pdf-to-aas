@@ -1,3 +1,4 @@
+import os
 import logging
 import re
 import json
@@ -15,6 +16,8 @@ from pdf2aas.extractor import PropertyLLMOpenAI
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 logger = logging.getLogger()
+
+load_dotenv()
 
 def get_class_property_definitions(
         eclass_id,
@@ -74,8 +77,9 @@ def extract(
         return None, datasheet_txt, None, None
 
     if endpoint == "openai":
-        if api_key == None:
-            logger.error(f"Missing api key for openai")
+        if api_key == None or len(api_key.strip()) == 0:
+            api_key = os.environ.get('OPENAI_API_KEY')
+        if api_key == None or len(api_key.strip()) == 0:
             return None, datasheet_txt, None, None
         endpoint=None
         client= openai.Client(api_key=api_key)
