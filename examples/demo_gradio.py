@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -70,26 +71,26 @@ def extract(
     ):
 
     if pdf_upload is None:
-        return None, None, None, None
+        return None, None, None, None, None
     progress(0, desc="Preprocessing data sheet.")
     preprocessor = PDFium()
     preprocessed_datasheet = preprocessor.convert(pdf_upload)
     if preprocessed_datasheet is None:
         gr.Warning("Error while preprocessing datasheet.")
         logger.error(f"Preprocessed datasheet is none.")
-        return None, None, None, None
+        return None, None, None, None, None
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     
     if definitions is None or len(definitions) == 0:
         gr.Warning("No property definitions to search for. Try to specify eclass class.")
-        return None, datasheet_txt, None, None
+        return None, None, datasheet_txt, None, None
 
     if endpoint == "openai":
         if api_key == None or len(api_key.strip()) == 0:
             api_key = os.environ.get('OPENAI_API_KEY')
         if api_key == None or len(api_key.strip()) == 0:
             gr.Warning("Missing api key for openai endpoint.")
-            return None, datasheet_txt, None, None
+            return None, None, datasheet_txt, None, None
         endpoint=None
         client= openai.Client(api_key=api_key)
         #TODO set client from endpoint selection dropdown and reuse as gr.State
@@ -104,7 +105,7 @@ def extract(
     raw_results=[]
     raw_prompts=[]
     if batch_size <= 0:
-        progress(0.5, desc=f"Extracting {len(definitions)} properties from datasheet with {len(preprocessed_datasheet)} pages/chars.")
+        progress(0, desc=f"Extracting {len(definitions)} properties from datasheet with {len(preprocessed_datasheet)} pages/chars.")
         properties = extractor.extract(
             preprocessed_datasheet,
             definitions,
@@ -131,7 +132,7 @@ def extract(
             properties.extend(extracted)
     if properties is None or len(properties) == 0:
         gr.Warning("No properties extracted or LLM result not parseable.")
-        return None, datasheet_txt, raw_prompts, raw_results
+        return None, None, datasheet_txt, raw_prompts, raw_results
 
     progress(1, desc=f"Postprocessing {len(properties)} extracted properties.")
     for property in properties:
@@ -151,8 +152,22 @@ def extract(
             'start': start,
             'end': start + len(reference)
         })
-    return pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
+    dataframe = pd.DataFrame(properties)
 
+    try:
+        os.makedirs("temp/demo", exist_ok=True)
+        excel_path = os.path.join("temp/demo", datetime.now().strftime("%Y-%m-%d_%H-%M-%S_extracted.xlsx"))
+        dataframe.to_excel(
+            excel_path,
+            index=False,
+            sheet_name='extracted',
+            freeze_panes=(1,1)
+        )
+    except OSError as e:
+        gr.Warning(f"Couldn't export excel: {e}")
+        excel_path = None
+
+    return dataframe, excel_path, datasheet_txt, raw_prompts, raw_results
 
 def main():
 
@@ -229,6 +244,9 @@ def main():
             headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
             col_count=(6, "fixed")
         )
+        extracted_values_excel = gr.File(
+            label="Extracted Values Export",
+        )
         datasheet_text_highlighted = gr.HighlightedText(
             label="Preprocessed Datasheet with References"
         )
@@ -249,7 +267,7 @@ def main():
         extract_button.click(
             fn=extract,
             inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt],
-            outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results]
+            outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
         )
 
         eclass_class.change(
