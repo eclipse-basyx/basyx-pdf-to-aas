@@ -1,16 +1,12 @@
 import os
 import logging
-import re
-import json
 
 import gradio as gr
-from gradio_pdf import PDF
-import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import openai
 import pandas as pd
 
-from pdf2aas.dictionary import ECLASS, dictionary_serializer
+from pdf2aas.dictionary import ECLASS
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLMOpenAI
 
