@@ -67,6 +67,7 @@ def extract(
         batch_size,
         temperature,
         use_in_prompt,
+        max_definition_chars,
         progress=gr.Progress()
     ):
 
@@ -101,6 +102,7 @@ def extract(
         client=client
     )
     extractor.temperature = temperature
+    extractor.max_definition_chars = max_definition_chars
 
     raw_results=[]
     raw_prompts=[]
@@ -211,12 +213,18 @@ def main():
                             maximum=2,
                             step=0.1
                         )
-                    use_in_prompt = gr.Dropdown(
-                        label="Use in prompt",
-                        choices=['definition','unit','datatype', 'values'],
-                        multiselect=True,
-                        value='unit'
-                    )
+                    with gr.Row():
+                        use_in_prompt = gr.Dropdown(
+                            label="Use in prompt",
+                            choices=['definition','unit','datatype', 'values'],
+                            multiselect=True,
+                            value='unit',
+                            scale=3,
+                        )
+                        max_definition_chars = gr.Number(
+                            label="Max. Definition / Values Chars",
+                            value=0,
+                        )
                 with gr.Row():
                     extract_button = gr.Button(
                         "Extract Technical Data",
@@ -266,7 +274,7 @@ def main():
 
         extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt],
+            inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt, max_definition_chars],
             outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
         )
 
