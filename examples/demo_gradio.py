@@ -17,19 +17,30 @@ logger = logging.getLogger()
 load_dotenv()
 
 def check_extract_ready(pdf_upload, definitions):
-    return gr.Button(interactive=pdf_upload is not None and definitions is not None)
+    return gr.Button(interactive=pdf_upload is not None and definitions is not None and len(definitions) > 0)
+
+def get_class_choices(dictionary: ECLASS):
+    return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
+
+def change_eclass_release(release):
+    dictionary = ECLASS(release)
+    dictionary.load_from_file()
+    return dictionary, gr.Dropdown(choices=get_class_choices(dictionary))
 
 def change_eclass_class(eclass_id):
-    return ECLASS.parse_class_id(eclass_id)
+    if eclass_id is None:
+        return None
+    eclass_id_parsed = ECLASS.parse_class_id(eclass_id)
+    if eclass_id_parsed is None:
+        gr.Warning(f"Class id has wrong format. Should be 8 digits, e.g. 27-27-40-01.")
+    return eclass_id_parsed
 
 def get_class_property_definitions(
         eclass_id,
-        eclass_release,
+        dictionary,
     ):
     if eclass_id is None:
         return None, None, None, None
-    dictionary = ECLASS(eclass_release)
-    dictionary.load_from_file()
     download = False
     if eclass_id not in dictionary.classes.keys():
         download = True
@@ -37,11 +48,12 @@ def get_class_property_definitions(
     definitions = dictionary.get_class_properties(eclass_id)
     class_info = dictionary.classes.get(eclass_id)
     if class_info:
-        class_info = f"# {class_info.name} ({class_info.id})\n* {class_info.description}\n* keywords: {', '.join(class_info.keywords)}\n* properties: {len(class_info.properties)}"
+        class_info = f"# {class_info.name} ({class_info.id})\n* definition: {class_info.description}\n* keywords: {', '.join(class_info.keywords)}\n* properties: {len(class_info.properties)}"
     if definitions is None or len(definitions) == 0:
-        gr.Warning(f"No property definitions found for class {eclass_id} in release {eclass_release}.")
+        gr.Warning(f"No property definitions found for class {eclass_id} in release {dictionary.release}.")
         return eclass_id, class_info, None, None
     if download:
+        eclass_id = gr.update(choices=get_class_choices(dictionary))
         dictionary.save_to_file()
 
     definitions_df = pd.DataFrame([
@@ -55,11 +67,12 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return eclass_id, class_info, definitions, definitions_df
+    return eclass_id, class_info, definitions_df
 
 def extract(
         pdf_upload,
-        definitions,
+        eclass_id,
+        dictionary,
         prompt_hint,
         endpoint,
         model,
@@ -82,6 +95,7 @@ def extract(
         return None, None, None, None, None
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     
+    definitions = dictionary.get_class_properties(eclass_id)
     if definitions is None or len(definitions) == 0:
         gr.Warning("No property definitions to search for. Try to specify eclass class.")
         return None, None, datasheet_txt, None, None
@@ -145,6 +159,8 @@ def extract(
     
         start = datasheet_txt['text'].find(reference)
         if start == -1:
+            start = datasheet_txt['text'].replace('\n',' ').find(reference.replace('\n',' '))
+        if start == -1:
             logger.info(f"Reference not found: {reference}")
             # TODO mark red in properties dataframe
             continue
@@ -174,7 +190,8 @@ def extract(
 def main():
 
     with gr.Blocks(title="BaSys4Transfer PDF to AAS") as demo:
-        property_defintions_list = gr.State()
+        dictionary = gr.State(ECLASS())
+        dictionary.value.load_from_file()
         with gr.Row():
             with gr.Column():
                 pdf_upload = gr.File(
@@ -235,17 +252,19 @@ def main():
                     eclass_class = gr.Dropdown(
                         label="ECLASS Class",
                         allow_custom_value=True,
-                        scale=2
+                        scale=2,
+                        choices=get_class_choices(dictionary.value),
                     )
                     eclass_release = gr.Dropdown(
                         label="ECLASS Release",
                         choices=ECLASS.supported_releases,
-                        value="14.0"
+                        value=dictionary.value.release
                     )
                 eclass_class_info = gr.Markdown()
                 property_defintions = gr.DataFrame(
                     label="Property Definitions",
                     headers=['id', 'name', 'type', 'definition', 'values'],
+                    interactive=False,
                     # column_widths=['20%', '20%', '20%', '20%', '20%']
                 )
         extracted_values = gr.DataFrame(
@@ -267,6 +286,11 @@ def main():
                 label="Raw Results",
             )
     
+        eclass_release.change(
+            fn=change_eclass_release,
+            inputs=eclass_release,
+            outputs=[dictionary, eclass_class]
+        )
         gr.on(
             triggers=[eclass_class.change, eclass_release.change],
             fn=change_eclass_class,
@@ -274,19 +298,19 @@ def main():
             outputs=eclass_class
         ).success(
             fn=get_class_property_definitions,
-            inputs=[eclass_class, eclass_release],
-            outputs=[eclass_class, eclass_class_info, property_defintions_list, property_defintions]
+            inputs=[eclass_class, dictionary],
+            outputs=[eclass_class, eclass_class_info, property_defintions]
         )
 
         gr.on(
-            triggers=[pdf_upload.change, property_defintions_list.change],
+            triggers=[pdf_upload.change, property_defintions.change],
             fn=check_extract_ready,
-            inputs=[pdf_upload, property_defintions_list],
+            inputs=[pdf_upload, property_defintions],
             outputs=[extract_button]
         )
         extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt, max_definition_chars],
+            inputs=[pdf_upload, eclass_class, dictionary, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt, max_definition_chars],
             outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
         )
 
