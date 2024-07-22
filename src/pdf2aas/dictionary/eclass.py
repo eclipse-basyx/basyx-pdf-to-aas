@@ -29,25 +29,6 @@ eclass_datatype_to_type = {
     # TODO Map: DATE, RATIONAL, RATIONAL_MEASURE, REFERENCE, TIME, TIMESTAMP, AXIS1, AXIS2, AXIS3
 }
 
-eclass_releases = [
-    "14.0",
-    "13.0",
-    "12.0",
-    "11.1",
-    "11.0",
-    "10.1",
-    "10.0.1",
-    "9.1",
-    "9.0",
-    "8.1",
-    "8.0",
-    "7.1",
-    "7.0",
-    "6.2",
-    "6.1",
-    "5.14",
-]
-
 def extract_attribute_from_eclass_property_soup(soup, search_text):
     th = soup.find(lambda tag: tag.name == "th" and tag.text.strip() == search_text)
     if th:
@@ -173,6 +154,24 @@ class ECLASS(Dictionary):
     properties: dict[str, PropertyDefinition] = {}
     properties_download_failed: dict[str, set[str]] = {}
     releases: dict[dict[str, ClassDefinition]] = {}
+    supported_releases = [
+        "14.0",
+        "13.0",
+        "12.0",
+        "11.1",
+        "11.0",
+        "10.1",
+        "10.0.1",
+        "9.1",
+        "9.0",
+        "8.1",
+        "8.0",
+        "7.1",
+        "7.0",
+        "6.2",
+        "6.1",
+        "5.14",
+    ]
 
     def __init__(self, release="14.0", temp_dir=None) -> None:
         """
@@ -187,8 +186,8 @@ class ECLASS(Dictionary):
         super().__init__()
         if temp_dir:
             self.temp_dir=temp_dir
-        if release not in eclass_releases:
-            logger.warning(f"Release {release} unknown. Well known releases are {eclass_releases}")
+        if release not in self.supported_releases:
+            logger.warning(f"Release {release} unknown. Supported releases are {self.supported_releases}")
         self.release = release
         if release not in ECLASS.releases:
             ECLASS.releases[release] = {}

@@ -242,7 +242,7 @@ def main():
                     )
                     eclass_release = gr.Dropdown(
                         label="ECLASS Release",
-                        choices=["14.0", "13.0", "12.0", "11.1", "11.0", "10.1", "10.0.1", "9.1", "9.0", "8.1", "8.0", "7.1", "7.0", "6.2", "6.1", "5.1.4"],
+                        choices=ECLASS.supported_releases,
                         value="14.0"
                     )
                 eclass_class_info = gr.Markdown()
