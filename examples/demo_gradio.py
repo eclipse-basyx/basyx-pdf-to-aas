@@ -16,7 +16,7 @@ logger = logging.getLogger()
 
 load_dotenv()
 
-def change_pdf(pdf_upload, definitions):
+def check_extract_ready(pdf_upload, definitions):
     return gr.Button(interactive=pdf_upload is not None and definitions is not None)
 
 def change_eclass_class(eclass_id):
@@ -25,12 +25,9 @@ def change_eclass_class(eclass_id):
 def get_class_property_definitions(
         eclass_id,
         eclass_release,
-        pdf_upload
     ):
     if eclass_id is None:
-        #TODO try to get id from pdf_upload
-        gr.Warning("Search for ECLASS id in pdf currently not supported. Please provide eclass class id, e.g. '27-27-40-01'.")
-        return None, None, None, None, gr.Button(interactive=False)
+        return None, None, None, None
     dictionary = ECLASS(eclass_release)
     dictionary.load_from_file()
     download = False
@@ -43,7 +40,7 @@ def get_class_property_definitions(
         class_info = f"# {class_info.name} ({class_info.id})\n* {class_info.description}\n* keywords: {', '.join(class_info.keywords)}\n* properties: {len(class_info.properties)}"
     if definitions is None or len(definitions) == 0:
         gr.Warning(f"No property definitions found for class {eclass_id} in release {eclass_release}.")
-        return eclass_id, class_info, None, None, gr.Button(interactive=False)
+        return eclass_id, class_info, None, None
     if download:
         dictionary.save_to_file()
 
@@ -58,7 +55,7 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return eclass_id, class_info, definitions, definitions_df, gr.Button(interactive=pdf_upload is not None)
+    return eclass_id, class_info, definitions, definitions_df
 
 def extract(
         pdf_upload,
@@ -270,31 +267,27 @@ def main():
                 label="Raw Results",
             )
     
-        pdf_upload.change(
-            fn=change_pdf,
-            inputs=[pdf_upload, property_defintions_list],
-            outputs=[extract_button]
-        )
-
-        extract_button.click(
-            fn=extract,
-            inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt, max_definition_chars],
-            outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
-        )
-
-        eclass_class.change(
+        gr.on(
+            triggers=[eclass_class.change, eclass_release.change],
             fn=change_eclass_class,
             inputs=eclass_class,
             outputs=eclass_class
         ).success(
             fn=get_class_property_definitions,
-            inputs=[eclass_class, eclass_release, pdf_upload],
-            outputs=[eclass_class, eclass_class_info, property_defintions_list, property_defintions, extract_button]
+            inputs=[eclass_class, eclass_release],
+            outputs=[eclass_class, eclass_class_info, property_defintions_list, property_defintions]
         )
-        eclass_release.change(
-            fn=get_class_property_definitions,
-            inputs=[eclass_class, eclass_release, pdf_upload],
-            outputs=[eclass_class, property_defintions_list, property_defintions, extract_button]
+
+        gr.on(
+            triggers=[pdf_upload.change, property_defintions_list.change],
+            fn=check_extract_ready,
+            inputs=[pdf_upload, property_defintions_list],
+            outputs=[extract_button]
+        )
+        extract_button.click(
+            fn=extract,
+            inputs=[pdf_upload, property_defintions_list, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt, max_definition_chars],
+            outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
         )
 
     demo.launch()
