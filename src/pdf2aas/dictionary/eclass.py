@@ -411,7 +411,8 @@ class ECLASS(Dictionary):
         if class_id is None:
             return None
         class_id = str(class_id) 
-        class_id = re.sub('[-_]|\s', '', class_id.strip())
+        class_id = re.sub(r'[-_]|\s', '', class_id.strip())
+        class_id = class_id[:8]
         if len(class_id) != 8 or not class_id.isdigit():
             logger.warning(
                 f"Class id has unknown format. Should be 8 digits, but got: {class_id}"
