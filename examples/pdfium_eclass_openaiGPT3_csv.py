@@ -62,7 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--datasheet', type=str, help="Path to datasheet", default="tests/assets/dummy-test-datasheet.pdf")
     parser.add_argument('--eclass', type=str, help="ECLASS class id, e.g. 27274001", default="27274001")
     parser.add_argument('--range', type=int, nargs=2, help="Lower and upper range of properties to be send to the extractor. E.g. 0 1 extracts the first property only", default=[0, 1])
-    parser.add_argument('--model', type=str, help="Model for the llm extractor, e.g. gpt-3.5-turbo. Use 'dummy' to mockup the extraction with dummy extractor.", default='gpt-3.5-turbo')
+    parser.add_argument('--model', type=str, help="Model for the llm extractor, e.g. gpt-4o-mini. Use 'dummy' to mockup the extraction with dummy extractor.", default='gpt-4o-mini')
     parser.add_argument('--endpoint', type=str, help="Endpoint, if a local endpoint should be used for the LLM extractor or 'input' for dryrun with console input")
     parser.add_argument('--batch_mode', action="store_true", help="Create a single prompt for all properties per datasheet.")
     parser.add_argument('--debug', action="store_true", help="Print debug information.")

@@ -193,8 +193,8 @@ def main():
                         )
                         model = gr.Dropdown(
                             label="Model",
-                            choices=["gpt-3.5-turbo", "gpt-4o"],
-                            value="gpt-3.5-turbo",
+                            choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
+                            value="gpt-4o-mini",
                             allow_custom_value=True
                         )
                     api_key = gr.Text(

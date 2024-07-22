@@ -13,7 +13,7 @@ class PDF2AAS:
         self,
         preprocessor=PDF2HTMLEX(ReductionLevel.STRUCTURE),
         dictionary=ECLASS(),
-        extractor=PropertyLLMOpenAI("gpt-3.5-turbo"),
+        extractor=PropertyLLMOpenAI("gpt-4o-mini"),
         generator=CSV(),
     ) -> None:
         self.preprocessor = preprocessor
