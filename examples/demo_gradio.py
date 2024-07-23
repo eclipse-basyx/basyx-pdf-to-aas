@@ -212,7 +212,7 @@ def extract(
 
 def main():
 
-    with gr.Blocks(title="BaSys4Transfer PDF to AAS") as demo:
+    with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:     
         dictionary = gr.State(ECLASS())
         dictionary.value.load_from_file()
         client = gr.State()
