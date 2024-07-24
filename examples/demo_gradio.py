@@ -16,7 +16,7 @@ logger = logging.getLogger()
 
 load_dotenv()
 
-def check_extract_ready(pdf_upload, definitions:pd.DataFrame, client):
+def check_extract_ready(pdf_upload, definitions):
     return gr.Button(
         interactive=
             pdf_upload is not None and
