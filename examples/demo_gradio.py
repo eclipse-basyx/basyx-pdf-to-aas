@@ -21,8 +21,7 @@ def check_extract_ready(pdf_upload, definitions:pd.DataFrame, client):
         interactive=
             pdf_upload is not None and
             definitions is not None and
-            len(definitions) > 1 and
-            client is not None
+            len(definitions) > 1
         )
 
 def get_class_choices(dictionary: ECLASS):
@@ -104,9 +103,6 @@ def change_client(endpoint_type, endpoint, api_key, azure_deployment, azure_api_
         )
     return None
 
-def init_client():
-    return OpenAI()
-
 def extract(
         pdf_upload,
         eclass_id,
@@ -132,8 +128,6 @@ def extract(
         logger.error(f"Preprocessed datasheet is none.")
         return None, None, None, None, None
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
-    
-    definitions = dictionary.get_class_properties(eclass_id)
 
     extractor = PropertyLLMOpenAI(
         model_identifier=model,
@@ -148,6 +142,7 @@ def extract(
 
     raw_results=[]
     raw_prompts=[]
+    definitions = dictionary.get_class_properties(eclass_id)
     if batch_size <= 0:
         progress(0, desc=f"Extracting {len(definitions)} properties from datasheet with {len(preprocessed_datasheet)} {'pages' if isinstance(preprocessed_datasheet, list) else 'chars'}.")
         properties = extractor.extract(
@@ -364,9 +359,9 @@ def main():
         )
 
         gr.on(
-            triggers=[pdf_upload.change, property_defintions.change, client.change],
+            triggers=[pdf_upload.change, property_defintions.change],
             fn=check_extract_ready,
-            inputs=[pdf_upload, property_defintions, client],
+            inputs=[pdf_upload, property_defintions],
             outputs=[extract_button]
         )
         extract_button.click(
