@@ -4,7 +4,7 @@ from datetime import datetime
 
 import gradio as gr
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI, AzureOpenAI
 import pandas as pd
 
 from pdf2aas.dictionary import ECLASS
@@ -16,8 +16,14 @@ logger = logging.getLogger()
 
 load_dotenv()
 
-def check_extract_ready(pdf_upload, definitions):
-    return gr.Button(interactive=pdf_upload is not None and definitions is not None and len(definitions) > 0)
+def check_extract_ready(pdf_upload, definitions:pd.DataFrame, client):
+    return gr.Button(
+        interactive=
+            pdf_upload is not None and
+            definitions is not None and
+            len(definitions) > 1 and
+            client is not None
+        )
 
 def get_class_choices(dictionary: ECLASS):
     return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
@@ -69,16 +75,48 @@ def get_class_property_definitions(
 
     return eclass_id, class_info, definitions_df
 
+def check_azure_fields_active(endpoint_type):
+    return gr.update(visible=endpoint_type=="azure"), gr.update(visible=endpoint_type=="azure")
+
+def get_from_var_or_env(var, env_keys):
+    if var is not None and len(var.strip()) > 0:
+        return var
+    for key in env_keys:
+        value = os.environ.get(key)
+        if value and len(value.strip()) > 0:
+            return value
+    return None
+        
+def change_client(endpoint_type, endpoint, api_key, azure_deployment, azure_api_version):
+    if len(endpoint.strip()) == 0:
+        endpoint = None
+    if endpoint_type == "openai":
+        return OpenAI(
+            api_key=get_from_var_or_env(api_key, ['OPENAI_API_KEY']),
+            base_url=endpoint
+        )
+    elif endpoint_type == "azure":
+        return AzureOpenAI(
+            api_key=get_from_var_or_env(api_key, ['AZURE_OPENAI_API_KEY','OPENAI_API_KEY']),
+            azure_endpoint=get_from_var_or_env(endpoint, ['AZURE_ENDPOINT']),
+            azure_deployment=get_from_var_or_env(azure_deployment, ['AZURE_DEPLOYMENT']),
+            api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
+        )
+    return None
+
+def init_client():
+    return OpenAI()
+
 def extract(
         pdf_upload,
         eclass_id,
         dictionary,
+        client,
         prompt_hint,
-        endpoint,
         model,
-        api_key,
         batch_size,
         temperature,
+        max_tokens,
         use_in_prompt,
         max_definition_chars,
         progress=gr.Progress()
@@ -96,32 +134,22 @@ def extract(
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     
     definitions = dictionary.get_class_properties(eclass_id)
-    if definitions is None or len(definitions) == 0:
-        gr.Warning("No property definitions to search for. Try to specify eclass class.")
-        return None, None, datasheet_txt, None, None
 
-    if endpoint == "openai":
-        if api_key == None or len(api_key.strip()) == 0:
-            api_key = os.environ.get('OPENAI_API_KEY')
-        if api_key == None or len(api_key.strip()) == 0:
-            gr.Warning("Missing api key for openai endpoint.")
-            return None, None, datasheet_txt, None, None
-        endpoint=None
-        client= openai.Client(api_key=api_key)
-        #TODO set client from endpoint selection dropdown and reuse as gr.State
     extractor = PropertyLLMOpenAI(
         model_identifier=model,
-        api_endpoint=endpoint,
         property_keys_in_prompt=use_in_prompt,
-        client=client
+        client=client,
     )
     extractor.temperature = temperature
+    extractor.max_tokens = max_tokens if max_tokens > 0 else None
     extractor.max_definition_chars = max_definition_chars
+    if isinstance(client, AzureOpenAI):
+        extractor.response_format = None
 
     raw_results=[]
     raw_prompts=[]
     if batch_size <= 0:
-        progress(0, desc=f"Extracting {len(definitions)} properties from datasheet with {len(preprocessed_datasheet)} pages/chars.")
+        progress(0, desc=f"Extracting {len(definitions)} properties from datasheet with {len(preprocessed_datasheet)} {'pages' if isinstance(preprocessed_datasheet, list) else 'chars'}.")
         properties = extractor.extract(
             preprocessed_datasheet,
             definitions,
@@ -192,6 +220,7 @@ def main():
     with gr.Blocks(title="BaSys4Transfer PDF to AAS") as demo:
         dictionary = gr.State(ECLASS())
         dictionary.value.load_from_file()
+        client = gr.State()
         with gr.Row():
             with gr.Column():
                 pdf_upload = gr.File(
@@ -202,9 +231,9 @@ def main():
                         label="Optional Prompt Hint",
                     )
                     with gr.Row():
-                        endpoint = gr.Dropdown(
+                        endpoint_type = gr.Dropdown(
                             label="Endpoint Type",
-                            choices=["openai", "azure", "input"],
+                            choices=["openai", "azure"],
                             value="openai",
                             allow_custom_value=True
                         )
@@ -214,9 +243,37 @@ def main():
                             value="gpt-4o-mini",
                             allow_custom_value=True
                         )
-                    api_key = gr.Text(
-                        label="API Key",
-                    )
+                    with gr.Row():
+                        endpoint = gr.Text(
+                            label="Endpoint",
+                            lines=1,
+                        )
+                        api_key = gr.Text(
+                            label="API Key",
+                            lines=1,
+                        )
+                    with gr.Row():
+                        azure_deployment = gr.Text(
+                            label="Azure Deplyoment",
+                            visible=False,
+                            lines=1,
+                        )
+                        azure_api_version = gr.Text(
+                            label="Azure API version",
+                            visible=False,
+                            lines=1,
+                        )
+                    with gr.Row():
+                        temperature = gr.Slider(
+                            label="Temperature",
+                            minimum=0,
+                            maximum=2,
+                            step=0.1
+                        )
+                        max_tokens = gr.Number(
+                            label="Max. Tokens",
+                            value=0,
+                        )
                     with gr.Row():
                         batch_size = gr.Slider(
                             label="Batch Size",
@@ -224,19 +281,11 @@ def main():
                             maximum=100,
                             step=1
                         )
-                        temperature = gr.Slider(
-                            label="Temperature",
-                            minimum=0,
-                            maximum=2,
-                            step=0.1
-                        )
-                    with gr.Row():
                         use_in_prompt = gr.Dropdown(
                             label="Use in prompt",
                             choices=['definition','unit','datatype', 'values'],
                             multiselect=True,
                             value='unit',
-                            scale=3,
                         )
                         max_definition_chars = gr.Number(
                             label="Max. Definition / Values Chars",
@@ -303,14 +352,26 @@ def main():
         )
 
         gr.on(
-            triggers=[pdf_upload.change, property_defintions.change],
+            triggers=[endpoint_type.change, endpoint.change, api_key.change, azure_deployment.change, azure_api_version.change],
+            fn=change_client,
+            inputs=[endpoint_type, endpoint, api_key, azure_deployment, azure_api_version],
+            outputs=client
+        )
+        endpoint_type.change(
+            fn=check_azure_fields_active,
+            inputs=[endpoint_type],
+            outputs=[azure_deployment, azure_api_version]
+        )
+
+        gr.on(
+            triggers=[pdf_upload.change, property_defintions.change, client.change],
             fn=check_extract_ready,
-            inputs=[pdf_upload, property_defintions],
+            inputs=[pdf_upload, property_defintions, client],
             outputs=[extract_button]
         )
         extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, eclass_class, dictionary, prompt_hint, endpoint, model, api_key, batch_size, temperature, use_in_prompt, max_definition_chars],
+            inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars],
             outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
         )
 
