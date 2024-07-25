@@ -24,6 +24,8 @@ dev = [
 eval = [
   "matplotlib",
   "openpyxl",
+  "gradio",
+  "pandas",
 ]
 
 [build-system]
