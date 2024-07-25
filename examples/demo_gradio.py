@@ -103,6 +103,27 @@ def change_client(endpoint_type, endpoint, api_key, azure_deployment, azure_api_
         )
     return None
 
+def mark_extracted_references(datasheet, properties):
+    for property in properties:
+        property_id = property.get('id')
+        reference = property.get('reference')
+        if property_id is None or reference is None or len(reference.strip()) == 0:
+            continue
+    
+        start = datasheet['text'].find(reference)
+        if start == -1:
+            start = datasheet['text'].replace('\n',' ').find(reference.replace('\n',' '))
+        if start == -1:
+            logger.info(f"Reference not found: {reference}")
+            # TODO mark red in properties dataframe
+            continue
+        unit = f" [{property.get('unit')}]" if property.get('unit') else ''
+        datasheet['entities'].append({
+            'entity': f"{property.get('name','')} ({property_id}): {property.get('value','')}{unit}",
+            'start': start,
+            'end': start + len(reference)
+        })
+
 def extract(
         pdf_upload,
         eclass_id,
@@ -115,18 +136,16 @@ def extract(
         max_tokens,
         use_in_prompt,
         max_definition_chars,
-        progress=gr.Progress()
     ):
 
     if pdf_upload is None:
-        return None, None, None, None, None
-    progress(0, desc="Preprocessing data sheet.")
+        return None, None, None, None
     preprocessor = PDFium()
     preprocessed_datasheet = preprocessor.convert(pdf_upload)
     if preprocessed_datasheet is None:
         gr.Warning("Error while preprocessing datasheet.")
         logger.error(f"Preprocessed datasheet is none.")
-        return None, None, None, None, None
+        return None, None, None, None
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
 
     extractor = PropertyLLMOpenAI(
@@ -144,7 +163,6 @@ def extract(
     raw_prompts=[]
     definitions = dictionary.get_class_properties(eclass_id)
     if batch_size <= 0:
-        progress(0, desc=f"Extracting {len(definitions)} properties from datasheet with {len(preprocessed_datasheet)} {'pages' if isinstance(preprocessed_datasheet, list) else 'chars'}.")
         properties = extractor.extract(
             preprocessed_datasheet,
             definitions,
@@ -152,63 +170,41 @@ def extract(
             prompt_hint=prompt_hint,
             raw_results=raw_results
         )
+        mark_extracted_references(datasheet_txt, properties)
     else:
         properties = []
         for chunk_pos in range(0, len(definitions), batch_size):
-            #TODO allow stop extraction
             property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
-            progress((chunk_pos, len(definitions)),
-                     unit='properties',
-                     desc=f"Extracting {len(property_definition_batch)} properties from datasheet with {len(preprocessed_datasheet)} pages/chars.")
             extracted = extractor.extract(
                     preprocessed_datasheet,
                     property_definition_batch,
                     raw_results=raw_results,
                     prompt_hint=prompt_hint,
                     raw_prompts=raw_prompts)
-            if extracted is None:
-                continue
-            properties.extend(extracted)
+            if extracted is not None:
+                properties.extend(extracted)
+                mark_extracted_references(datasheet_txt, extracted)
+            yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
     if properties is None or len(properties) == 0:
         gr.Warning("No properties extracted or LLM result not parseable.")
-        return None, None, datasheet_txt, raw_prompts, raw_results
+        return None, datasheet_txt, raw_prompts, raw_results
+    return pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
 
-    progress(1, desc=f"Postprocessing {len(properties)} extracted properties.")
-    for property in properties:
-        property_id = property.get('id')
-        reference = property.get('reference')
-        if property_id is None or reference is None or len(reference.strip()) == 0:
-            continue
-    
-        start = datasheet_txt['text'].find(reference)
-        if start == -1:
-            start = datasheet_txt['text'].replace('\n',' ').find(reference.replace('\n',' '))
-        if start == -1:
-            logger.info(f"Reference not found: {reference}")
-            # TODO mark red in properties dataframe
-            continue
-        unit = f" [{property.get('unit')}]" if property.get('unit') else ''
-        datasheet_txt['entities'].append({
-            'entity': f"{property.get('name','')} ({property_id}): {property.get('value','')}{unit}",
-            'start': start,
-            'end': start + len(reference)
-        })
-    dataframe = pd.DataFrame(properties)
-
+def create_extracted_properties_excel(properties):
     try:
         os.makedirs("temp/demo", exist_ok=True)
         excel_path = os.path.join("temp/demo", datetime.now().strftime("%Y-%m-%d_%H-%M-%S_extracted.xlsx"))
-        dataframe.to_excel(
+        properties.to_excel(
             excel_path,
             index=False,
             sheet_name='extracted',
-            freeze_panes=(1,1)
+            freeze_panes=(1,1),
         )
     except OSError as e:
         gr.Warning(f"Couldn't export excel: {e}")
         excel_path = None
 
-    return dataframe, excel_path, datasheet_txt, raw_prompts, raw_results
+    return excel_path
 
 def main():
 
@@ -291,6 +287,9 @@ def main():
                         "Extract Technical Data",
                         interactive=False
                     )
+                    cancel_extract_button = gr.Button(
+                        "Cancel Extraction",
+                    )
             with gr.Column():
                 with gr.Row():
                     eclass_class = gr.Dropdown(
@@ -364,10 +363,16 @@ def main():
             inputs=[pdf_upload, property_defintions],
             outputs=[extract_button]
         )
-        extract_button.click(
+        extraction_started = extract_button.click(
             fn=extract,
             inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars],
-            outputs=[extracted_values, extracted_values_excel, datasheet_text_highlighted, raw_prompts, raw_results]
+            outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results],
+        )
+        cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM"), cancels=[extraction_started])
+        extracted_values.change(
+            fn=create_extracted_properties_excel,
+            inputs=[extracted_values],
+            outputs=[extracted_values_excel]
         )
 
     demo.launch()
