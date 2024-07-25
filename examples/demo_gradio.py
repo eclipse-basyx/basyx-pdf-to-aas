@@ -212,84 +212,8 @@ def main():
         dictionary = gr.State(ECLASS())
         dictionary.value.load_from_file()
         client = gr.State()
-        with gr.Row():
-            with gr.Column():
-                pdf_upload = gr.File(
-                    label="Upload PDF Datasheet"
-                )
-                with gr.Accordion(label="Settings", open=False):
-                    prompt_hint = gr.Text(
-                        label="Optional Prompt Hint",
-                    )
-                    with gr.Row():
-                        endpoint_type = gr.Dropdown(
-                            label="Endpoint Type",
-                            choices=["openai", "azure"],
-                            value="openai",
-                            allow_custom_value=True
-                        )
-                        model = gr.Dropdown(
-                            label="Model",
-                            choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
-                            value="gpt-4o-mini",
-                            allow_custom_value=True
-                        )
-                    with gr.Row():
-                        endpoint = gr.Text(
-                            label="Endpoint",
-                            lines=1,
-                        )
-                        api_key = gr.Text(
-                            label="API Key",
-                            lines=1,
-                        )
-                    with gr.Row():
-                        azure_deployment = gr.Text(
-                            label="Azure Deplyoment",
-                            visible=False,
-                            lines=1,
-                        )
-                        azure_api_version = gr.Text(
-                            label="Azure API version",
-                            visible=False,
-                            lines=1,
-                        )
-                    with gr.Row():
-                        temperature = gr.Slider(
-                            label="Temperature",
-                            minimum=0,
-                            maximum=2,
-                            step=0.1
-                        )
-                        max_tokens = gr.Number(
-                            label="Max. Tokens",
-                            value=0,
-                        )
-                    with gr.Row():
-                        batch_size = gr.Slider(
-                            label="Batch Size",
-                            minimum=0,
-                            maximum=100,
-                            step=1
-                        )
-                        use_in_prompt = gr.Dropdown(
-                            label="Use in prompt",
-                            choices=['definition','unit','datatype', 'values'],
-                            multiselect=True,
-                            value='unit',
-                        )
-                        max_definition_chars = gr.Number(
-                            label="Max. Definition / Values Chars",
-                            value=0,
-                        )
-                with gr.Row():
-                    extract_button = gr.Button(
-                        "Extract Technical Data",
-                        interactive=False
-                    )
-                    cancel_extract_button = gr.Button(
-                        "Cancel Extraction",
-                    )
+        
+        with gr.Tab(label="ECLASS"):
             with gr.Column():
                 with gr.Row():
                     eclass_class = gr.Dropdown(
@@ -310,24 +234,106 @@ def main():
                     interactive=False,
                     # column_widths=['20%', '20%', '20%', '20%', '20%']
                 )
-        extracted_values = gr.DataFrame(
-            label="Extracted Values",
-            headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
-            col_count=(6, "fixed")
-        )
-        extracted_values_excel = gr.File(
-            label="Extracted Values Export",
-        )
-        datasheet_text_highlighted = gr.HighlightedText(
-            label="Preprocessed Datasheet with References"
-        )
-        with gr.Row():
-            raw_prompts = gr.JSON(
-                label="Raw Prompts",
+
+        with gr.Tab("Extract"):
+            with gr.Row():
+                with gr.Row():
+                    pdf_upload = gr.File(
+                        label="Upload PDF Datasheet"
+                    )
+                    extract_button = gr.Button(
+                        "Extract Technical Data",
+                        interactive=False
+                    )
+                    cancel_extract_button = gr.Button(
+                        "Cancel Extraction",
+                    )
+
+            extracted_values = gr.DataFrame(
+                label="Extracted Values",
+                headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
+                col_count=(6, "fixed")
             )
-            raw_results = gr.JSON(
-                label="Raw Results",
+            extracted_values_excel = gr.File(
+                label="Extracted Values Export",
             )
+            datasheet_text_highlighted = gr.HighlightedText(
+                label="Preprocessed Datasheet with References"
+            )
+        with gr.Tab("Raw Results"):
+            with gr.Row():
+                raw_prompts = gr.JSON(
+                    label="Prompts",
+                )
+                raw_results = gr.JSON(
+                    label="Results",
+                )
+
+        with gr.Tab(label="Settings"):
+            prompt_hint = gr.Text(
+                label="Optional Prompt Hint",
+            )
+            with gr.Row():
+                endpoint_type = gr.Dropdown(
+                    label="Endpoint Type",
+                    choices=["openai", "azure"],
+                    value="openai",
+                    allow_custom_value=True
+                )
+                model = gr.Dropdown(
+                    label="Model",
+                    choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
+                    value="gpt-4o-mini",
+                    allow_custom_value=True
+                )
+            with gr.Row():
+                endpoint = gr.Text(
+                    label="Endpoint",
+                    lines=1,
+                )
+                api_key = gr.Text(
+                    label="API Key",
+                    lines=1,
+                )
+            with gr.Row():
+                azure_deployment = gr.Text(
+                    label="Azure Deplyoment",
+                    visible=False,
+                    lines=1,
+                )
+                azure_api_version = gr.Text(
+                    label="Azure API version",
+                    visible=False,
+                    lines=1,
+                )
+            with gr.Row():
+                temperature = gr.Slider(
+                    label="Temperature",
+                    minimum=0,
+                    maximum=2,
+                    step=0.1
+                )
+                max_tokens = gr.Number(
+                    label="Max. Tokens",
+                    value=0,
+                )
+            with gr.Row():
+                batch_size = gr.Slider(
+                    label="Batch Size",
+                    minimum=0,
+                    maximum=100,
+                    step=1
+                )
+                use_in_prompt = gr.Dropdown(
+                    label="Use in prompt",
+                    choices=['definition','unit','datatype', 'values'],
+                    multiselect=True,
+                    value='unit',
+                )
+                max_definition_chars = gr.Number(
+                    label="Max. Definition / Values Chars",
+                    value=0,
+                )
     
         eclass_release.change(
             fn=change_eclass_release,
@@ -368,7 +374,7 @@ def main():
             inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars],
             outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results],
         )
-        cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM"), cancels=[extraction_started])
+        cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extracted_values.change(
             fn=create_extracted_properties_excel,
             inputs=[extracted_values],
