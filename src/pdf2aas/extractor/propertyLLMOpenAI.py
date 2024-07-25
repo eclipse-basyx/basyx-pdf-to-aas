@@ -33,7 +33,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             model_identifier: str,
             api_endpoint: str = None,
             property_keys_in_prompt: list[Literal["definition", "unit", "values", "datatype"]] = [],
-            client: OpenAI | AzureOpenAI | None = None,
+            client: OpenAI | AzureOpenAI | CustomLLMClient | None = None,
     ) -> None:
         super().__init__()
         self.model_identifier = model_identifier
@@ -92,7 +92,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         else:
             result, raw_result = self._prompt_llm_openai(messages)
         
-        logger.debug("Response from LLM:" + result)
+        logger.debug(f"Response from LLM: {result}")
         if isinstance(raw_results, list):
             raw_results.append(raw_result)
         return result
@@ -119,6 +119,8 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return result, chat_completion.to_dict(mode="json")
 
     def _parse_result(self, result):
+        if result is None:
+            return None
         try:
             properties = json.loads("".join(ch for ch in result if unicodedata.category(ch)[0]!="C"))
         except json.decoder.JSONDecodeError:

@@ -1,5 +1,11 @@
 from .core import PropertyLLM, DummyPropertyLLM
+from .customLLMClient import CustomLLMClient, CustomLLMClientHTTP
 from .propertyLLMOpenAI import PropertyLLMOpenAI
-from .customLLMClient import CustomLLMClient
 
-__all__ = ["PropertyLLM", "DummyPropertyLLM", "PropertyLLMOpenAI", "CustomLLMClient"]
+__all__ = [
+    "PropertyLLM",
+    "DummyPropertyLLM",
+    "PropertyLLMOpenAI",
+    "CustomLLMClient",
+    "CustomLLMClientHTTP"
+]

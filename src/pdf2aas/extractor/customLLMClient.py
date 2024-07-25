@@ -1,35 +1,7 @@
-import string
 import logging
 import requests
 
 logger = logging.getLogger(__name__)
-
-# class CustomLLMClient():
-#     def create_completions(
-#             self,
-#             messages: list[dict[str, str]],
-#             model: str,
-#             temperature: float,
-#             max_tokens: int,
-#             response_format: str
-#     ) -> tuple[str, str]:
-#         raise NotImplementedError()
-
-# class CustomLLMClientHTTP(CustomLLMClient):
-#     def __init__(self,
-#                  endpoint: str ,
-#                  api_key :str = None,
-#                  request_template : str = None,
-#                  response_template: str = None,
-#     ) -> None:
-#         super().__init__()
-#         self.endpoint = endpoint
-#         self.api_key = api_key
-#         self.request_template=request_template
-#         self.response_template=response_template
-    
-#     def create_completions(self, messages: list[dict[str, str]], model: str, temperature: float, max_tokens: int, response_format: str) -> tuple[str, str]:
-        
 
 class CustomLLMClient:
     """
@@ -64,6 +36,17 @@ class CustomLLMClient:
         """
         raise NotImplementedError()
 
+def evaluate_path(data, path):
+    try:
+        keys = path.replace('[', '.').replace(']', '').split('.')
+        for key in keys:
+            if isinstance(data, list):
+                key = int(key)
+            data = data[key]
+    except (KeyError, ValueError, TypeError): 
+        return None
+    return data
+
 class CustomLLMClientHTTP(CustomLLMClient):
     """
     Custom LLM client that communicates with an HTTP endpoint.
@@ -74,22 +57,38 @@ class CustomLLMClientHTTP(CustomLLMClient):
                  endpoint: str,
                  api_key: str = None,
                  request_template: str = None,
-                 response_template: str = None,
+                 result_path: str = None,
+                 headers: dict[str, str] = None,
     ) -> None:
         """
-        Initialize the CustomLLMClientHTTP instance.
+        A custom LLM client that uses http requests, which can be customized via string templates
         
         Parameters:
         - endpoint (str): The URL of the HTTP endpoint.
         - api_key (str, optional): The API key for authentication.
         - request_template (str, optional): The template for the request payload.
-        - response_template (str, optional): The template for extracting the result from the response.
+        - result_path (str, optional): A simple path for extracting the result from the response after parsing it with json.loads, e.g. "choices[0].message.content"
+        - headers (dict[str, str], optional): Overwrite headers. Default is "Content-Type": "application/json", "Accept": "application/json"
         """
         super().__init__()
         self.endpoint = endpoint
         self.api_key = api_key
+        if request_template is None:
+            request_template = """{
+    "model": "{model}",
+    "messages": {messages},
+    "max_tokens": {max_tokens},
+    "temperature": {temperature},
+    "response_format": {response_format},
+}"""
         self.request_template = request_template
-        self.response_template = response_template
+        self.result_path = result_path
+        if headers is None:
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        self.headers = headers
 
     def create_completions(self, messages: list[dict[str, str]], model: str, temperature: float, max_tokens: int, response_format: dict) -> tuple[str, str]:
         """
@@ -104,12 +103,8 @@ class CustomLLMClientHTTP(CustomLLMClient):
         
         Returns:
         - tuple[str, str]: A tuple containing the extracted response and the raw result.
-        
-        Raises:
-        - requests.exceptions.RequestException: If an error occurs during the HTTP request.
         """
-        # Prepare the request payload using the request_template
-        request_payload = string.Template(self.request_template).substitute(
+        request_payload = self.request_template.format(
             messages=messages,
             model=model,
             temperature=temperature,
@@ -119,20 +114,19 @@ class CustomLLMClientHTTP(CustomLLMClient):
         
         headers = {}
         if self.api_key:
-            headers['Authorization'] = f'Bearer {self.api_key}'
+            headers.get('Authorization', 'Bearer {api_key}').format(api_key=self.api_key)
         
         try:
             response = requests.post(self.endpoint, headers=headers, json=request_payload)
             response.raise_for_status()
             result = response.json()
-            
-            if self.response_template:
-                response_content = string.Template(self.response_template).substitute(result)
-            else:
-                response_content = result
-            
-            return response_content, result
-        
         except requests.exceptions.RequestException as e:
             logger.error(f"Error requesting the custom LLM endpoint: {e}")
             return None, None
+        
+        if self.result_path:
+            result_content = evaluate_path(result, self.result_path)
+        else:
+            result_content = result
+
+        return result_content, result
