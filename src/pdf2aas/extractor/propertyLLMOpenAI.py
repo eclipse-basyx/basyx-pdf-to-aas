@@ -9,6 +9,7 @@ from openai import OpenAI, AzureOpenAI
 
 from ..dictionary import PropertyDefinition
 from . import PropertyLLM
+from . import CustomLLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -77,21 +78,26 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return properties
 
     def _prompt_llm(self, messages, raw_results):
+        for message in messages:
+            token_count = self.calculate_token_count(message.get('content'))
+            logger.debug(f"Prompt ({message.get('role')}) {'token' if token_count > 0 else 'char'} count: {token_count if token_count > 0 else len(message.get("content"))}")
+        
         if self.client is None:
             logger.info("Systemprompt:\n"+ messages[0]["content"])
             logger.info("Prompt:\n"+ messages[1]["content"])
             result = input("Enter result for LLM prompt via input:\n")
-            if isinstance(raw_results, list):
-                raw_results.append(result)
-            return result
-
-        try:
-            logger.debug("System prompt token count: %i", self.calculate_token_count(messages[0]['content']))
-            logger.debug("Prompt token count: %i", self.calculate_token_count(messages[1]['content']))
-        except ValueError:
-            logger.debug("System prompt char count: %i" % len(messages[0]["content"]))
-            logger.debug("Prompt char count: %i" % len(messages[1]["content"]))
+            raw_result = result
+        elif isinstance(self.client, CustomLLMClient):
+            result, raw_result = self.client.create_completions(messages, self.model_identifier, self.temperature, self.max_tokens, self.response_format)
+        else:
+            result, raw_result = self._prompt_llm_openai(messages)
         
+        logger.debug("Response from LLM:" + result)
+        if isinstance(raw_results, list):
+            raw_results.append(raw_result)
+        return result
+
+    def _prompt_llm_openai(self, messages):
         if self.response_format is None:
             chat_completion = self.client.chat.completions.create(
                 model=self.model_identifier,
@@ -108,12 +114,9 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 response_format=self.response_format,
             )
         result = chat_completion.choices[0].message.content
-        logger.debug("Response from LLM:" + result)
         if chat_completion.choices[0].finish_reason != 'stop':
             logger.warning(f"Chat completion finished with reason '{chat_completion.choices[0].finish_reason}'. (max_tokens={self.max_tokens})")
-        if isinstance(raw_results, list):
-            raw_results.append(chat_completion.to_dict(mode="json"))
-        return result
+        return result, chat_completion.to_dict(mode="json")
 
     def _parse_result(self, result):
         try:
@@ -268,16 +271,15 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 
         Parameters:
         - text (str): The input text to encode.
-        - model_identifier (str): The identifier of the model to use for encoding.
 
         Returns:
-        - int: The number of tokens in the encoded text.
+        - int: The number of tokens in the encoded text. Returns -1 on unknown model or error.
 
-        Raises:
-        - ValueError: If the model_identifier does not correspond to any known model encoding.
         """
+        if self.model_identifier is None or len(self.model_identifier) == 0:
+            return -1
         try:
             encoding = tiktoken.encoding_for_model(self.model_identifier)
         except KeyError:
-            raise ValueError(f"Unknown model identifier: {self.model_identifier}")
+            return -1
         return len(encoding.encode(text))
