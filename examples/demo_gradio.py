@@ -46,7 +46,7 @@ def get_class_property_definitions(
         dictionary,
     ):
     if eclass_id is None:
-        return None, None, None, None
+        return None, None, None, None, None
     download = False
     if eclass_id not in dictionary.classes.keys():
         download = True
@@ -54,26 +54,42 @@ def get_class_property_definitions(
     definitions = dictionary.get_class_properties(eclass_id)
     class_info = dictionary.classes.get(eclass_id)
     if class_info:
-        class_info = f"# {class_info.name} ({class_info.id})\n* definition: {class_info.description}\n* keywords: {', '.join(class_info.keywords)}\n* properties: {len(class_info.properties)}"
+        class_info = f"""# {class_info.name}
+* ID: {class_info.id}
+* Definition: {class_info.description}
+* Keywords: {', '.join(class_info.keywords)}
+* Properties: {len(class_info.properties)}
+"""
     if definitions is None or len(definitions) == 0:
         gr.Warning(f"No property definitions found for class {eclass_id} in release {dictionary.release}.")
-        return eclass_id, class_info, None, None
+        return eclass_id, class_info, None, None, None
     if download:
         eclass_id = gr.update(choices=get_class_choices(dictionary))
         dictionary.save_to_file()
 
     definitions_df = pd.DataFrame([
         {
-            'id': definition.id,
-            'name': definition.name.get('en'),
-            'type': definition.type,
-            'defintion': definition.definition.get('en'),
-            'values': [v.get("value") for v in definition.values]
+            'ID': definition.id,
+            'Name': definition.name.get('en'),
+            'Type': definition.type,
         }
         for definition in definitions
     ])
 
-    return eclass_id, class_info, definitions_df
+    return eclass_id, class_info, definitions_df, "Select Property in Table for Details"
+
+def select_property_info(dictionary: ECLASS | None, definitions: pd.DataFrame | None, evt: gr.SelectData):
+    if dictionary is None or definitions is None:
+        return None
+    definition = dictionary.get_property(definitions.iloc[evt.index[0], 0])
+    if definition is None:
+        return "Select Property for Details"
+    return f"""## {definition.name.get('en')}
+* ID: {definition.id}
+* Type: {definition.type}
+* Definition: {definition.definition.get('en')}
+* Values:{"".join(["\n  * " + v.get("value") for v in definition.values])}
+"""
 
 def check_additional_client_settings(endpoint_type):
     azure = endpoint_type=="azure"
@@ -247,12 +263,15 @@ def main():
                         value=dictionary.value.release
                     )
                 eclass_class_info = gr.Markdown()
-                property_defintions = gr.DataFrame(
-                    label="Property Definitions",
-                    headers=['id', 'name', 'type', 'definition', 'values'],
-                    interactive=False,
-                    # column_widths=['20%', '20%', '20%', '20%', '20%']
-                )
+                with gr.Row():
+                    property_defintions = gr.DataFrame(
+                        label="Property Definitions",
+                        show_label=False,
+                        headers=['ID', 'Name', 'Type'],
+                        interactive=False,
+                        scale=3
+                    )
+                    eclass_property_info = gr.Markdown()
 
         with gr.Tab("Extract"):
             with gr.Row():
@@ -277,7 +296,8 @@ def main():
                 label="Extracted Values Export",
             )
             datasheet_text_highlighted = gr.HighlightedText(
-                label="Preprocessed Datasheet with References"
+                label="Preprocessed Datasheet with References",
+                combine_adjacent=True
             )
         with gr.Tab("Raw Results"):
             with gr.Row():
@@ -381,7 +401,12 @@ def main():
         ).success(
             fn=get_class_property_definitions,
             inputs=[eclass_class, dictionary],
-            outputs=[eclass_class, eclass_class_info, property_defintions]
+            outputs=[eclass_class, eclass_class_info, property_defintions, eclass_property_info]
+        )
+        property_defintions.select(
+            fn=select_property_info,
+            inputs=[dictionary, property_defintions],
+            outputs=[eclass_property_info]
         )
 
         gr.on(
