@@ -1,5 +1,6 @@
 import logging
 import requests
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +113,9 @@ class CustomLLMClientHTTP(CustomLLMClient):
             response_format=response_format
         )
         
-        headers = {}
+        headers = deepcopy(self.headers)
         if self.api_key:
-            headers.get('Authorization', 'Bearer {api_key}').format(api_key=self.api_key)
+            headers['Authorization']=headers.get('Authorization', 'Bearer {api_key}').format(api_key=self.api_key)
         
         try:
             response = requests.post(self.endpoint, headers=headers, json=request_payload)
