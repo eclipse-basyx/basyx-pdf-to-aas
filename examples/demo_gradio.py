@@ -1,6 +1,7 @@
 import os
 import logging
 from datetime import datetime
+import json
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -9,7 +10,7 @@ import pandas as pd
 
 from pdf2aas.dictionary import ECLASS
 from pdf2aas.preprocessor import PDFium
-from pdf2aas.extractor import PropertyLLMOpenAI
+from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 logger = logging.getLogger()
@@ -74,8 +75,10 @@ def get_class_property_definitions(
 
     return eclass_id, class_info, definitions_df
 
-def check_azure_fields_active(endpoint_type):
-    return gr.update(visible=endpoint_type=="azure"), gr.update(visible=endpoint_type=="azure")
+def check_additional_client_settings(endpoint_type):
+    azure = endpoint_type=="azure"
+    custom = endpoint_type=="custom"
+    return gr.update(visible=azure), gr.update(visible=azure), gr.update(visible=custom), gr.update(visible=custom), gr.update(visible=custom)
 
 def get_from_var_or_env(var, env_keys):
     if var is not None and len(var.strip()) > 0:
@@ -86,7 +89,15 @@ def get_from_var_or_env(var, env_keys):
             return value
     return None
         
-def change_client(endpoint_type, endpoint, api_key, azure_deployment, azure_api_version):
+def change_client(
+        endpoint_type,
+        endpoint,
+        api_key,
+        azure_deployment,
+        azure_api_version,
+        request_template,
+        result_path,
+        headers):
     if len(endpoint.strip()) == 0:
         endpoint = None
     if endpoint_type == "openai":
@@ -100,6 +111,14 @@ def change_client(endpoint_type, endpoint, api_key, azure_deployment, azure_api_
             azure_endpoint=get_from_var_or_env(endpoint, ['AZURE_ENDPOINT']),
             azure_deployment=get_from_var_or_env(azure_deployment, ['AZURE_DEPLOYMENT']),
             api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
+        )
+    elif endpoint_type == "custom":
+        return CustomLLMClientHTTP(
+            api_key=api_key,
+            endpoint=endpoint,
+            request_template=request_template,
+            result_path=result_path,
+            headers=json.loads(headers) if headers else None
         )
     return None
 
@@ -276,7 +295,7 @@ def main():
             with gr.Row():
                 endpoint_type = gr.Dropdown(
                     label="Endpoint Type",
-                    choices=["openai", "azure"],
+                    choices=["openai", "azure", "custom"],
                     value="openai",
                     allow_custom_value=True
                 )
@@ -294,6 +313,7 @@ def main():
                 api_key = gr.Text(
                     label="API Key",
                     lines=1,
+                    type='password'
                 )
             with gr.Row():
                 azure_deployment = gr.Text(
@@ -305,6 +325,19 @@ def main():
                     label="Azure API version",
                     visible=False,
                     lines=1,
+                )
+            with gr.Row():
+                custom_llm_request_template = gr.Text(
+                    label="Custom LLM Request Template",
+                    visible=False,
+                )
+                custom_llm_result_path = gr.Text(
+                    label="Custom LLM Result Path",
+                    visible=False,
+                )
+                custom_llm_headers = gr.Text(
+                    label="Custom LLM Headers",
+                    visible=False,
                 )
             with gr.Row():
                 temperature = gr.Slider(
@@ -352,15 +385,15 @@ def main():
         )
 
         gr.on(
-            triggers=[endpoint_type.change, endpoint.change, api_key.change, azure_deployment.change, azure_api_version.change],
+            triggers=[endpoint_type.change, endpoint.change, api_key.change, azure_deployment.change, azure_api_version.change, custom_llm_request_template.change, custom_llm_result_path.change, custom_llm_headers.change],
             fn=change_client,
-            inputs=[endpoint_type, endpoint, api_key, azure_deployment, azure_api_version],
+            inputs=[endpoint_type, endpoint, api_key, azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers],
             outputs=client
         )
         endpoint_type.change(
-            fn=check_azure_fields_active,
+            fn=check_additional_client_settings,
             inputs=[endpoint_type],
-            outputs=[azure_deployment, azure_api_version]
+            outputs=[azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers]
         )
 
         gr.on(
