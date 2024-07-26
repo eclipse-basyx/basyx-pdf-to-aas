@@ -118,7 +118,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
             headers['Authorization']=headers.get('Authorization', 'Bearer {api_key}').format(api_key=self.api_key)
         
         try:
-            response = requests.post(self.endpoint, headers=headers, json=request_payload)
+            response = requests.post(self.endpoint, headers=headers, data=request_payload)
             response.raise_for_status()
             result = response.json()
         except requests.exceptions.RequestException as e:
