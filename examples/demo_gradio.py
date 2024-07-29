@@ -1,6 +1,5 @@
 import os
 import logging
-from datetime import datetime
 import json
 import tempfile
 
@@ -404,7 +403,7 @@ def main():
                 )
             with gr.Row():
                 settings_save = gr.DownloadButton(
-                    "Save Settings"
+                    "Download Settings"
                 )
                 settings_load = gr.UploadButton(
                     "Load Settings"
@@ -461,7 +460,8 @@ def main():
             outputs=[extracted_values_excel]
         )
 
-        settings_save.click(
+        gr.on(
+            triggers=[prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change],
             fn=save_settings,
             inputs={tempdir,
                     prompt_hint,
@@ -473,6 +473,7 @@ def main():
                     batch_size, use_in_prompt, max_definition_chars},
             outputs=settings_save
         )
+        settings_save.postprocess=lambda path : gr.FileData(path=path, orig_name="settings.json")
         settings_load.upload(
             fn=load_settings,
             inputs=settings_load,
