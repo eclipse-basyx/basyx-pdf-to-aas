@@ -1,6 +1,7 @@
 import logging
 import requests
 from copy import deepcopy
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,8 @@ class CustomLLMClientHTTP(CustomLLMClient):
         Parameters:
         - endpoint (str): The URL of the HTTP endpoint.
         - api_key (str, optional): The API key for authentication.
-        - request_template (str, optional): The template for the request payload.
+        - request_template (str, optional): The string template for the request payload. Supported placeholders:
+          messages, message_system, message_user, model, temperature,max_tokens, response_format
         - result_path (str, optional): A simple path for extracting the result from the response after parsing it with json.loads, e.g. "choices[0].message.content"
         - headers (dict[str, str], optional): Overwrite headers. Default is "Content-Type": "application/json", "Accept": "application/json"
         """
@@ -106,7 +108,9 @@ class CustomLLMClientHTTP(CustomLLMClient):
         - tuple[str, str]: A tuple containing the extracted response and the raw result.
         """
         request_payload = self.request_template.format(
-            messages=messages,
+            messages=json.dumps(messages),
+            message_system=json.dumps(messages[0]['content']),
+            message_user=json.dumps(messages[1]['content']),
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
