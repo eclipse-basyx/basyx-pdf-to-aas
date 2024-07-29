@@ -206,7 +206,8 @@ def extract(
             prompt_hint=prompt_hint,
             raw_results=raw_results
         )
-        mark_extracted_references(datasheet_txt, properties)
+        if properties is not None:
+            mark_extracted_references(datasheet_txt, properties)
     else:
         properties = []
         for chunk_pos in range(0, len(definitions), batch_size):
