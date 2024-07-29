@@ -2,6 +2,7 @@ import os
 import logging
 from datetime import datetime
 import json
+import tempfile
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -225,21 +226,27 @@ def extract(
         return None, datasheet_txt, raw_prompts, raw_results
     return pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
 
-def create_extracted_properties_excel(properties):
-    try:
-        os.makedirs("temp/demo", exist_ok=True)
-        excel_path = os.path.join("temp/demo", datetime.now().strftime("%Y-%m-%d_%H-%M-%S_extracted.xlsx"))
-        properties.to_excel(
-            excel_path,
-            index=False,
-            sheet_name='extracted',
-            freeze_panes=(1,1),
-        )
-    except OSError as e:
-        gr.Warning(f"Couldn't export excel: {e}")
-        excel_path = None
-
+def create_extracted_properties_excel(properties, tempdir):
+    excel_path = os.path.join(tempdir.name, "properties_extracted.xlsx")
+    properties.to_excel(
+        excel_path,
+        index=False,
+        sheet_name='extracted',
+        freeze_panes=(1,1),
+    )
     return excel_path
+
+def save_settings(settings):
+    tempdir = next(iter(settings)) # Assume tempdir is first element
+    settings_path = os.path.join(tempdir.value.name, "settings.json")
+    settings.pop(tempdir)
+    with open(settings_path, 'w') as settings_file:
+        json.dump({c.label: v for c, v in settings.items()}, settings_file, indent=2)
+    return settings_path
+
+def load_settings(settings_file_path):
+    settings = json.load(open(settings_file_path)).values()
+    return tuple(settings)
 
 def main():
 
@@ -247,6 +254,7 @@ def main():
         dictionary = gr.State(ECLASS())
         dictionary.value.load_from_file()
         client = gr.State()
+        tempdir = gr.State(tempfile.TemporaryDirectory(prefix="pdf2aas_"))
         
         with gr.Tab(label="ECLASS"):
             with gr.Column():
@@ -285,6 +293,7 @@ def main():
                     )
                     cancel_extract_button = gr.Button(
                         "Cancel Extraction",
+                        variant="stop"
                     )
 
             extracted_values = gr.DataFrame(
@@ -293,7 +302,7 @@ def main():
                 col_count=(6, "fixed")
             )
             extracted_values_excel = gr.File(
-                label="Extracted Values Export",
+                label="Export Extracted Values",
             )
             datasheet_text_highlighted = gr.HighlightedText(
                 label="Preprocessed Datasheet with References",
@@ -387,6 +396,13 @@ def main():
                     label="Max. Definition / Values Chars",
                     value=0,
                 )
+            with gr.Row():
+                settings_save = gr.DownloadButton(
+                    "Save Settings"
+                )
+                settings_load = gr.UploadButton(
+                    "Load Settings"
+                )
     
         eclass_release.change(
             fn=change_eclass_release,
@@ -435,10 +451,33 @@ def main():
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extracted_values.change(
             fn=create_extracted_properties_excel,
-            inputs=[extracted_values],
+            inputs=[extracted_values, tempdir],
             outputs=[extracted_values_excel]
         )
 
+        settings_save.click(
+            fn=save_settings,
+            inputs={tempdir,
+                    prompt_hint,
+                    endpoint_type, model,
+                    endpoint, api_key,
+                    azure_deployment, azure_api_version,
+                    custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
+                    temperature, max_tokens,
+                    batch_size, use_in_prompt, max_definition_chars},
+            outputs=settings_save
+        )
+        settings_load.upload(
+            fn=load_settings,
+            inputs=settings_load,
+            outputs=[prompt_hint,
+                    endpoint_type, model,
+                    endpoint, api_key,
+                    azure_deployment, azure_api_version,
+                    custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
+                    temperature, max_tokens,
+                    batch_size, use_in_prompt, max_definition_chars],
+        )
     demo.launch()
 
 if __name__ == "__main__":
