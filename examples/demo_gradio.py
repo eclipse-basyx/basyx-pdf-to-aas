@@ -120,7 +120,7 @@ def change_client(
     if endpoint_type == "openai":
         return OpenAI(
             api_key=get_from_var_or_env(api_key, ['OPENAI_API_KEY']),
-            base_url=endpoint
+            base_url=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL'])
         )
     elif endpoint_type == "azure":
         return AzureOpenAI(
@@ -130,12 +130,17 @@ def change_client(
             api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
         )
     elif endpoint_type == "custom":
+        headers_json = None
+        try:
+            headers_json = json.loads(headers)
+        except json.JSONDecodeError:
+            pass
         return CustomLLMClientHTTP(
-            api_key=api_key,
-            endpoint=endpoint,
+            api_key=get_from_var_or_env(api_key, ['API_KEY','OPENAI_API_KEY', 'AZURE_OPENAI_API_KEY']),
+            endpoint=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL']),
             request_template=request_template,
             result_path=result_path,
-            headers=json.loads(headers) if headers else None
+            headers=headers_json
         )
     return None
 
