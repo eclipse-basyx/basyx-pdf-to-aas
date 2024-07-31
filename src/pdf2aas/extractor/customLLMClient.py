@@ -116,6 +116,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
             max_tokens=max_tokens,
             response_format=response_format
         )
+        logger.debug(f"Custom LLM Client Request: {request_payload}")
         
         headers = deepcopy(self.headers)
         if self.api_key:
