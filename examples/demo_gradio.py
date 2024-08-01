@@ -1,5 +1,6 @@
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 import json
 import tempfile
 
@@ -12,8 +13,7 @@ from pdf2aas.dictionary import ECLASS
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -488,4 +488,19 @@ def main():
     demo.launch()
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass --> LLM --> xlsx')
+    parser.add_argument('--debug', action="store_true", help="Print debug information.")
+    args = parser.parse_args()
+
+    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=10000, backupCount=1)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        file_handler.setLevel(logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
+    logger = logging.getLogger()
+    logger.addHandler(file_handler)
+
     main()
