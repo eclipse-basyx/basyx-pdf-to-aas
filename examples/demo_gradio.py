@@ -231,14 +231,31 @@ def extract(
         return None, datasheet_txt, raw_prompts, raw_results
     return pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
 
-def create_extracted_properties_excel(properties, tempdir):
+def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars):
+    if properties is None or len(properties) < 2:
+        return None
     excel_path = os.path.join(tempdir.name, "properties_extracted.xlsx")
-    properties.to_excel(
-        excel_path,
-        index=False,
-        sheet_name='extracted',
-        freeze_panes=(1,1),
-    )
+    with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+        properties.to_excel(
+            writer,
+            index=False,
+            sheet_name='extracted',
+            freeze_panes=(1, 1),
+        )
+        extracted_sheet = writer.sheets['extracted']
+        extracted_sheet.auto_filter.ref = extracted_sheet.dimensions
+        
+        settings_data = pd.DataFrame({
+            'prompt_hint': prompt_hint,
+            'model': model,
+            'temperature': temperature,
+            'batch_size': batch_size,
+            'use_in_prompt': use_in_prompt,
+            'max_definition_chars': max_definition_chars,
+        })
+        settings_data = settings_data.transpose().reset_index()
+        settings_data.columns = ['Setting', 'Value']
+        settings_data.to_excel(writer, index=False, sheet_name='settings')
     return excel_path
 
 def save_settings(settings):
@@ -308,7 +325,8 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             extracted_values = gr.DataFrame(
                 label="Extracted Values",
                 headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
-                col_count=(6, "fixed")
+                col_count=(6, "fixed"),
+                interactive=False
             )
             extracted_values_excel = gr.File(
                 label="Export Extracted Values",
@@ -460,7 +478,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extracted_values.change(
             fn=create_extracted_properties_excel,
-            inputs=[extracted_values, tempdir],
+            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars],
             outputs=[extracted_values_excel]
         )
 
