@@ -1,6 +1,6 @@
 [project]
 authors = [
-  {name = "Julian Grothoff", email = "julian.grothoff@sms-group.com"},
+  {name = "Julian Vogel", email = "julian.vogel@sms-group.com"},
   {name = "Christian Malek", email = "christian.malek@iese.fraunhofer.de"},
 ]
 dependencies = [
