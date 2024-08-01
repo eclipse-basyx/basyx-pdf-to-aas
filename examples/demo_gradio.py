@@ -250,10 +250,14 @@ def save_settings(settings):
     return settings_path
 
 def load_settings(settings_file_path):
-    settings = json.load(open(settings_file_path)).values()
+    try:
+        settings = json.load(open(settings_file_path)).values()
+    except (json.JSONDecodeError, OSError) as error:
+        gr.Error(f"Couldn't load settings from {settings_file_path}: {error.msg}")
+        return {}
     return tuple(settings)
 
-def main():
+def main(debug=False, init_settings_path=None, share=False, server_port=None):
 
     with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:     
         dictionary = gr.State(ECLASS())
@@ -485,11 +489,30 @@ def main():
                     temperature, max_tokens,
                     batch_size, use_in_prompt, max_definition_chars],
         )
-    demo.launch()
+        try:
+            demo.load(
+                fn=load_settings,
+                inputs=gr.File(init_settings_path, visible=False),
+                outputs=[prompt_hint,
+                        endpoint_type, model,
+                        endpoint, api_key,
+                        azure_deployment, azure_api_version,
+                        custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
+                        temperature, max_tokens,
+                        batch_size, use_in_prompt, max_definition_chars],
+            )
+        except FileNotFoundError:
+            logger.warning(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
+    
+    demo.queue(max_size=10)
+    demo.launch(quiet=not debug, share=share, server_port=server_port)
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass --> LLM --> xlsx')
+    parser.add_argument('--settings', type=str, help="Load settings from file. Defaults to settings.json", default='settings.json')
+    parser.add_argument('--port', type=str, help="Change server port (default 7860 if free)", default=None)
+    parser.add_argument('--share', action="store_true", help="Allow to use webserver outside localhost, aka. public.")
     parser.add_argument('--debug', action="store_true", help="Print debug information.")
     args = parser.parse_args()
 
@@ -503,4 +526,4 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.addHandler(file_handler)
 
-    main()
+    main(args.debug, args.settings, args.share, args.port)
