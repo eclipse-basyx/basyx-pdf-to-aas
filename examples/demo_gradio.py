@@ -259,7 +259,7 @@ def main():
         dictionary = gr.State(ECLASS())
         dictionary.value.load_from_file()
         client = gr.State()
-        tempdir = gr.State(tempfile.TemporaryDirectory(prefix="pdf2aas_"))
+        tempdir = gr.State(value=lambda : tempfile.TemporaryDirectory(prefix="pdf2aas_"))
         
         with gr.Tab(label="ECLASS"):
             with gr.Column():
