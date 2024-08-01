@@ -5,7 +5,7 @@ import unicodedata
 from typing import Literal
 
 import tiktoken
-from openai import OpenAI, AzureOpenAI
+from openai import OpenAI, AzureOpenAI, OpenAIError
 
 from ..dictionary import PropertyDefinition
 from . import PropertyLLM
@@ -46,7 +46,11 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.max_tokens = None
         self.response_format = {"type": "json_object"}
         if client is None and api_endpoint != "input":
-            client = OpenAI(base_url=api_endpoint)
+            try:
+                client = OpenAI(base_url=api_endpoint)
+            except OpenAIError as error:
+                logger.warning(f"Couldn't init OpenAI client, falling back to 'input'. {error.msg}")
+                client = None
         self.client = client
 
     def extract(
