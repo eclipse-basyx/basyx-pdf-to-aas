@@ -1,15 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
 
-datas = [('venv\\Lib\\site-packages\\pypdfium2_raw\\pdfium.dll', 'pypdfium2_raw'),
-        ('venv\\Lib\\site-packages\\pypdfium2_raw\\version.json', 'pypdfium2_raw'),
-        ('venv\\Lib\\site-packages\\pypdfium2\\version.json', 'pypdfium2')]
+# Needed for pypdfium2
+import os
+import sysconfig
+site_packages_dir = sysconfig.get_paths()["purelib"]
+pdfium_dll_path = os.path.join(site_packages_dir, 'pypdfium2_raw', 'pdfium.dll')
+
+datas = [(os.path.join(site_packages_dir, 'pypdfium2_raw', 'pdfium.dll'), 'pypdfium2_raw'),
+         (os.path.join(site_packages_dir, 'pypdfium2_raw', 'version.json'), 'pypdfium2_raw'),
+         (os.path.join(site_packages_dir, 'pypdfium2', 'version.json'), 'pypdfium2')]
 datas += collect_data_files('gradio_client')
 datas += collect_data_files('gradio')
 
 
 a = Analysis(
-    ['examples\\demo_gradio.py'],
+    ['demo_gradio.py'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -32,7 +38,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='demo_gradio',
+    name='PDF-to-AAS Demo',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
