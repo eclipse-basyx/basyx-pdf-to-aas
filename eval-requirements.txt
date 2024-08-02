@@ -6,15 +6,21 @@
 #
 aiofiles==23.2.1
     # via gradio
+altair==5.3.0
+    # via gradio
 annotated-types==0.7.0
     # via pydantic
 anyio==4.4.0
     # via
-    #   gradio
     #   httpx
     #   openai
     #   starlette
-    #   watchfiles
+attrs==23.2.0
+    # via
+    #   jsonschema
+    #   referencing
+basyx-python-sdk==1.0.0
+    # via pdf2aas (pyproject.toml)
 beautifulsoup4==4.12.3
     # via pdf2aas (pyproject.toml)
 certifi==2024.7.4
@@ -32,23 +38,16 @@ colorama==0.4.6
     # via
     #   click
     #   tqdm
-    #   uvicorn
 contourpy==1.2.1
     # via matplotlib
 cycler==0.12.1
     # via matplotlib
 distro==1.9.0
     # via openai
-dnspython==2.6.1
-    # via email-validator
-email-validator==2.2.0
-    # via fastapi
 et-xmlfile==1.1.0
     # via openpyxl
-fastapi==0.111.1
+fastapi==0.112.0
     # via gradio
-fastapi-cli==0.0.4
-    # via fastapi
 ffmpy==0.4.0
     # via gradio
 filelock==3.15.4
@@ -59,9 +58,9 @@ fsspec==2024.6.1
     # via
     #   gradio-client
     #   huggingface-hub
-gradio==4.40.0
+gradio==4.26.0
     # via pdf2aas (pyproject.toml)
-gradio-client==1.2.0
+gradio-client==0.15.1
     # via gradio
 h11==0.14.0
     # via
@@ -69,11 +68,8 @@ h11==0.14.0
     #   uvicorn
 httpcore==1.0.5
     # via httpx
-httptools==0.6.1
-    # via uvicorn
 httpx==0.27.0
     # via
-    #   fastapi
     #   gradio
     #   gradio-client
     #   openai
@@ -84,17 +80,24 @@ huggingface-hub==0.24.5
 idna==3.7
     # via
     #   anyio
-    #   email-validator
     #   httpx
     #   requests
 importlib-resources==6.4.0
     # via gradio
 jinja2==3.1.4
     # via
-    #   fastapi
+    #   altair
     #   gradio
+jsonschema==4.23.0
+    # via altair
+jsonschema-specifications==2023.12.1
+    # via jsonschema
 kiwisolver==1.4.5
     # via matplotlib
+lxml==4.9.4
+    # via
+    #   basyx-python-sdk
+    #   pyecma376-2
 markdown-it-py==3.0.0
     # via rich
 markupsafe==2.1.5
@@ -107,13 +110,14 @@ matplotlib==3.9.1
     #   pdf2aas (pyproject.toml)
 mdurl==0.1.2
     # via markdown-it-py
-numpy==2.0.1
+numpy==1.26.4
     # via
+    #   altair
     #   contourpy
     #   gradio
     #   matplotlib
     #   pandas
-openai==1.37.1
+openai==1.37.2
     # via pdf2aas (pyproject.toml)
 openpyxl==3.1.5
     # via pdf2aas (pyproject.toml)
@@ -121,12 +125,14 @@ orjson==3.10.6
     # via gradio
 packaging==24.1
     # via
+    #   altair
     #   gradio
     #   gradio-client
     #   huggingface-hub
     #   matplotlib
 pandas==2.2.2
     # via
+    #   altair
     #   gradio
     #   pdf2aas (pyproject.toml)
 pillow==10.4.0
@@ -146,6 +152,8 @@ pydantic-settings==2.4.0
     # via pdf2aas (pyproject.toml)
 pydub==0.25.1
     # via gradio
+pyecma376-2==1.0.0
+    # via basyx-python-sdk
 pygments==2.18.0
     # via rich
 pyparsing==3.1.2
@@ -154,24 +162,25 @@ pypdfium2==4.30.0
     # via pdf2aas (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
+    #   basyx-python-sdk
     #   matplotlib
     #   pandas
 python-dotenv==1.0.1
     # via
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-    #   uvicorn
 python-multipart==0.0.9
-    # via
-    #   fastapi
-    #   gradio
+    # via gradio
 pytz==2024.1
     # via pandas
 pyyaml==6.0.1
     # via
     #   gradio
     #   huggingface-hub
-    #   uvicorn
+referencing==0.35.1
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 regex==2024.7.24
     # via tiktoken
 requests==2.32.3
@@ -181,6 +190,10 @@ requests==2.32.3
     #   tiktoken
 rich==13.7.1
     # via typer
+rpds-py==0.19.1
+    # via
+    #   jsonschema
+    #   referencing
 ruff==0.5.5
     # via gradio
 semantic-version==2.10.0
@@ -202,14 +215,14 @@ tiktoken==0.7.0
     # via pdf2aas (pyproject.toml)
 tomlkit==0.12.0
     # via gradio
+toolz==0.12.1
+    # via altair
 tqdm==4.66.4
     # via
     #   huggingface-hub
     #   openai
-typer==0.12.3
-    # via
-    #   fastapi-cli
-    #   gradio
+typer[all]==0.12.3
+    # via gradio
 typing-extensions==4.12.2
     # via
     #   fastapi
@@ -222,17 +235,11 @@ typing-extensions==4.12.2
     #   typer
 tzdata==2024.1
     # via pandas
-urllib3==2.2.2
+urllib3==1.26.19
     # via
-    #   gradio
+    #   basyx-python-sdk
     #   requests
-uvicorn[standard]==0.30.4
-    # via
-    #   fastapi
-    #   gradio
-watchfiles==0.22.0
-    # via uvicorn
-websockets==12.0
-    # via
-    #   gradio-client
-    #   uvicorn
+uvicorn==0.30.5
+    # via gradio
+websockets==11.0.3
+    # via gradio-client
