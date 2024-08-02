@@ -61,6 +61,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
                  request_template: str = None,
                  result_path: str = None,
                  headers: dict[str, str] = None,
+                 retries: int  = 0,
     ) -> None:
         """
         A custom LLM client that uses http requests, which can be customized via string templates
@@ -72,6 +73,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
           messages, message_system, message_user, model, temperature,max_tokens, response_format
         - result_path (str, optional): A simple path for extracting the result from the response after parsing it with json.loads, e.g. "choices[0].message.content"
         - headers (dict[str, str], optional): Overwrite headers. Default is "Content-Type": "application/json", "Accept": "application/json"
+        - retries (int, optional): Number of retries, if request fails
         """
         super().__init__()
         self.endpoint = endpoint
@@ -92,6 +94,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
                 "Accept": "application/json"
             }
         self.headers = headers
+        self.retries = retries
 
     def create_completions(self, messages: list[dict[str, str]], model: str, temperature: float, max_tokens: int, response_format: dict) -> tuple[str, str]:
         """
@@ -122,12 +125,16 @@ class CustomLLMClientHTTP(CustomLLMClient):
         if self.api_key:
             headers['Authorization']=headers.get('Authorization', 'Bearer {api_key}').format(api_key=self.api_key)
         
-        try:
-            response = requests.post(self.endpoint, headers=headers, data=request_payload)
-            response.raise_for_status()
-            result = response.json()
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error requesting the custom LLM endpoint: {e}")
+        for attempt in range(self.retries+1):
+            try:
+                response = requests.post(self.endpoint, headers=headers, data=request_payload)
+                response.raise_for_status()
+                result = response.json()
+                break
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Error requesting the custom LLM endpoint (attempt {attempt}): {e}")
+                result = None
+        if result is None:
             return None, None
         
         if self.result_path:
