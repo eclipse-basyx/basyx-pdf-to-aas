@@ -235,6 +235,10 @@ def extract(
 def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars):
     if properties is None or len(properties) < 2:
         return None
+    
+    json_path = os.path.join(tempdir.name, 'properties_extracted.json')
+    properties.to_json(json_path, indent=2, orient='records')
+
     excel_path = os.path.join(tempdir.name, "properties_extracted.xlsx")
     with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
         properties.to_excel(
@@ -246,18 +250,14 @@ def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, t
         extracted_sheet = writer.sheets['extracted']
         extracted_sheet.auto_filter.ref = extracted_sheet.dimensions
         
-        settings_data = pd.DataFrame({
-            'prompt_hint': prompt_hint,
-            'model': model,
-            'temperature': temperature,
-            'batch_size': batch_size,
-            'use_in_prompt': use_in_prompt,
-            'max_definition_chars': max_definition_chars,
-        })
-        settings_data = settings_data.transpose().reset_index()
-        settings_data.columns = ['Setting', 'Value']
-        settings_data.to_excel(writer, index=False, sheet_name='settings')
-    return excel_path
+        settings = writer.book.create_sheet('settings')
+        settings.append(['prompt_hint', prompt_hint]),
+        settings.append(['model', model]),
+        settings.append(['temperature', temperature]),
+        settings.append(['batch_size', batch_size]),
+        settings.append(['use_in_prompt', " ".join(use_in_prompt)]),
+        settings.append(['max_definition_chars', max_definition_chars]),
+    return [excel_path, json_path]
 
 def save_settings(settings):
     tempdir = next(iter(settings)) # Assume tempdir is first element
