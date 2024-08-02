@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field, asdict
+from typing import Literal
 
 #TODO use ConceptDescription class from aas python package instead?
 #TODO define data types
@@ -17,7 +18,7 @@ class PropertyDefinition():
     """
     id: str
     name: dict[str, str] = field(default_factory= lambda: {})
-    type: str = 'string'
+    type: Literal['bool', 'numeric', 'string'] = 'string'
     definition: dict[str, str] = field(default_factory= lambda: {})
     unit: str = ''
     values: dict = field(default_factory= lambda: [])

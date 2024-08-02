@@ -1,4 +1,5 @@
-from .core import TechnicalDataSubmodel, DummyTechnicalDataSubmodel
+from .core import DummyTechnicalDataSubmodel
 from .csv import CSV
+from .aas import AASSubmodelTechnicalData
 
-__all__ = ["TechnicalDataSubmodel", "DummyTechnicalDataSubmodel", "CSV"]
+__all__ = ["AASSubmodelTechnicalData", "DummyTechnicalDataSubmodel", "CSV"]
