@@ -12,6 +12,7 @@ import pandas as pd
 from pdf2aas.dictionary import ECLASS
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP
+from pdf2aas.generator import AASSubmodelTechnicalData
 
 logger = logging.getLogger(__name__)
 
@@ -232,12 +233,12 @@ def extract(
     gr.Info('Extraction completed.', duration=3)
     yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
-def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars):
+def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, dictionary, class_id):
     if properties is None or len(properties) < 2:
         return None
     
-    json_path = os.path.join(tempdir.name, 'properties_extracted.json')
-    properties.to_json(json_path, indent=2, orient='records')
+    properties_path = os.path.join(tempdir.name, 'properties_extracted.json')
+    properties.to_json(properties_path, indent=2, orient='records')
 
     excel_path = os.path.join(tempdir.name, "properties_extracted.xlsx")
     with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
@@ -257,7 +258,14 @@ def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, t
         settings.append(['batch_size', batch_size]),
         settings.append(['use_in_prompt', " ".join(use_in_prompt)]),
         settings.append(['max_definition_chars', max_definition_chars]),
-    return [excel_path, json_path]
+    
+    submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
+    submodel = AASSubmodelTechnicalData().generate(properties=properties.to_dict(orient='records'), dictionary=dictionary, class_id=class_id)
+    #TODO set identifier and other properties --> load from a template, that can be specified in settings?
+    with open(submodel_path, 'w') as submodel_file:
+        submodel_file.write(submodel)
+
+    return [excel_path, properties_path, submodel_path]
 
 def save_settings(settings):
     tempdir = next(iter(settings)) # Assume tempdir is first element
@@ -499,9 +507,9 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
-        extracted_values.change(
+        extraction_started.then(
             fn=create_extracted_properties_excel,
-            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars],
+            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, dictionary, eclass_class],
             outputs=[extracted_values_excel]
         )
 
