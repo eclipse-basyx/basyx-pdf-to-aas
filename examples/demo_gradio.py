@@ -534,7 +534,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action="store_true", help="Print debug information.")
     args = parser.parse_args()
 
-    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=10000, backupCount=1)
+    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=1e6, backupCount=0)
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
     if args.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
