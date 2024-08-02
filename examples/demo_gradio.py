@@ -275,11 +275,22 @@ def load_settings(settings_file_path):
         return {}
     return tuple(settings)
 
+def init_tempdir():
+    tempdir =  tempfile.TemporaryDirectory(prefix="pdf2aas_")
+    logger.info(f"Created tempdir: {tempdir.name}")
+    return tempdir
+
+def init_dictionary():
+    dictionary = ECLASS()
+    dictionary.load_from_file()
+    return dictionary
+
 def main(debug=False, init_settings_path=None, share=False, server_port=None):
 
     with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:
+        dictionary = gr.State(value=init_dictionary)
         client = gr.State()
-        tempdir = gr.State(value=lambda : tempfile.TemporaryDirectory(prefix="pdf2aas_"))
+        tempdir = gr.State(value=init_tempdir)
         
         with gr.Tab(label="ECLASS"):
             with gr.Column():
