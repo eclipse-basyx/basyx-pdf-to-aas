@@ -179,14 +179,16 @@ def extract(
     ):
 
     if pdf_upload is None:
-        return None, None, None, None
+        yield None, None, None, None, gr.update(interactive=False)
+        return
     preprocessor = PDFium()
     preprocessed_datasheet = preprocessor.convert(pdf_upload)
     if preprocessed_datasheet is None:
         gr.Warning("Error while preprocessing datasheet.")
         logger.error(f"Preprocessed datasheet is none.")
-        return None, None, None, None
+        return
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
+    yield None, datasheet_txt, None, None, gr.update()
 
     extractor = PropertyLLMOpenAI(
         model_identifier=model,
@@ -214,6 +216,7 @@ def extract(
             mark_extracted_references(datasheet_txt, properties)
     else:
         properties = []
+        yield None, datasheet_txt, None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
             property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
@@ -225,11 +228,8 @@ def extract(
             if extracted is not None:
                 properties.extend(extracted)
                 mark_extracted_references(datasheet_txt, extracted)
-            yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
-    if properties is None or len(properties) == 0:
-        gr.Warning("No properties extracted or LLM result not parseable.")
-        return None, datasheet_txt, raw_prompts, raw_results
-    return pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results
+                yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update()
+    yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
 def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars):
     if properties is None or len(properties) < 2:
@@ -473,7 +473,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         extraction_started = extract_button.click(
             fn=extract,
             inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars],
-            outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results],
+            outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extracted_values.change(
