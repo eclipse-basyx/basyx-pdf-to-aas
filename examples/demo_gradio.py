@@ -50,7 +50,7 @@ def get_class_property_definitions(
     download = False
     if eclass_id not in dictionary.classes.keys():
         download = True
-        gr.Info("ECLASS class not in dictionary file. Try downloading from website. This may take some time.")
+        gr.Info("ECLASS class not in dictionary file. Try downloading from website.")
     definitions = dictionary.get_class_properties(eclass_id)
     class_info = dictionary.classes.get(eclass_id)
     if class_info:
@@ -70,13 +70,13 @@ def get_class_property_definitions(
     definitions_df = pd.DataFrame([
         {
             'ID': definition.id,
-            'Name': definition.name.get('en'),
             'Type': definition.type,
+            'Name': definition.name.get('en'),
         }
         for definition in definitions
     ])
 
-    return eclass_id, class_info, definitions_df, "Select Property in Table for Details"
+    return eclass_id, class_info, definitions_df, "## Select Property in Table for Details"
 
 def select_property_info(dictionary: ECLASS | None, definitions: pd.DataFrame | None, evt: gr.SelectData):
     if dictionary is None or definitions is None:
@@ -229,6 +229,7 @@ def extract(
                 properties.extend(extracted)
                 mark_extracted_references(datasheet_txt, extracted)
                 yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update()
+    gr.Info('Extraction completed.', duration=3)
     yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
 def create_extracted_properties_excel(properties, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars):
@@ -276,9 +277,7 @@ def load_settings(settings_file_path):
 
 def main(debug=False, init_settings_path=None, share=False, server_port=None):
 
-    with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:     
-        dictionary = gr.State(ECLASS())
-        dictionary.value.load_from_file()
+    with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:
         client = gr.State()
         tempdir = gr.State(value=lambda : tempfile.TemporaryDirectory(prefix="pdf2aas_"))
         
@@ -294,47 +293,60 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     eclass_release = gr.Dropdown(
                         label="ECLASS Release",
                         choices=ECLASS.supported_releases,
-                        value=dictionary.value.release
+                        value=dictionary.value.release,
                     )
-                eclass_class_info = gr.Markdown()
+                eclass_class_info = gr.Markdown(
+                    value="# Class Info",
+                    show_copy_button=True,
+                )
                 with gr.Row():
                     property_defintions = gr.DataFrame(
                         label="Property Definitions",
                         show_label=False,
-                        headers=['ID', 'Name', 'Type'],
+                        headers=['ID', 'Type', 'Name'],
                         interactive=False,
                         scale=3
                     )
-                    eclass_property_info = gr.Markdown()
+                    eclass_property_info = gr.Markdown(
+                        show_copy_button=True,
+                    )
 
         with gr.Tab("Extract"):
             with gr.Row():
                 with gr.Row():
                     pdf_upload = gr.File(
-                        label="Upload PDF Datasheet"
+                        label="Upload PDF Datasheet",
+                        scale=2,
+                        file_count='single',
+                        file_types=['.pdf'],
                     )
                     extract_button = gr.Button(
                         "Extract Technical Data",
-                        interactive=False
+                        interactive=False,
+                        scale=2,
                     )
                     cancel_extract_button = gr.Button(
                         "Cancel Extraction",
-                        variant="stop"
+                        variant="stop",
+                        interactive=False,
                     )
-
-            extracted_values = gr.DataFrame(
-                label="Extracted Values",
-                headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
-                col_count=(6, "fixed"),
-                interactive=False
-            )
-            extracted_values_excel = gr.File(
-                label="Export Extracted Values",
-            )
-            datasheet_text_highlighted = gr.HighlightedText(
-                label="Preprocessed Datasheet with References",
-                combine_adjacent=True
-            )
+                    extracted_values_excel = gr.File(
+                        label="Export Extracted Values",
+                        scale=2,
+                    )
+            with gr.Group():
+                extracted_values = gr.DataFrame(
+                    label="Extracted Values",
+                    headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
+                    col_count=(6, "fixed"),
+                    interactive=False,
+                    wrap=True,
+                )
+                datasheet_text_highlighted = gr.HighlightedText(
+                    label="Preprocessed Datasheet with References",
+                    combine_adjacent=True,
+                    
+                )
         with gr.Tab("Raw Results"):
             with gr.Row():
                 raw_prompts = gr.JSON(
