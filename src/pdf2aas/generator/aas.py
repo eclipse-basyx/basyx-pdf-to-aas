@@ -137,6 +137,16 @@ class AASSubmodelTechnicalData(Generator):
 
         technical_properties = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
         for property in properties:
+            if self.dictionary:
+                definition = self.dictionary.get_property(property.get('id',''))
+            
+            if definition is not None:
+                unit = property.get('unit')
+                if unit is not None and len(unit.strip()) > 0 and len(definition.unit) > 0 and unit != definition.unit:
+                    logger.warning(f"Unit of {property['id']} {unit} differs from definition {definition.unit}")
+                if len(definition.values) > 0 and property.get('value') is not None and str(property.get('value')) not in definition.values:
+                    logger.warning(f"Value of {property['id']} {property.get('value')} not found in defined values.")
+            
             aas_property = model.Property(
                 id_short = re.sub(r'[^a-zA-Z0-9]', '_', property.get('property')),
                 display_name = model.MultiLanguageNameType({'en': property.get('property')}),
