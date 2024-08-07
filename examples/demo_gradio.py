@@ -260,10 +260,10 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
         settings.append(['max_definition_chars', max_definition_chars]),
     
     submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
-    submodel = AASSubmodelTechnicalData().generate(properties=properties.to_dict(orient='records'), dictionary=dictionary, class_id=class_id)
     #TODO set identifier and other properties --> load from a template, that can be specified in settings?
-    with open(submodel_path, 'w') as submodel_file:
-        submodel_file.write(submodel)
+    submodel = AASSubmodelTechnicalData(dictionary=dictionary, class_id=class_id)
+    submodel.generate(properties=properties.to_dict(orient='records'))
+    submodel.save(submodel_path)
 
     return [excel_path, properties_path, submodel_path]
 
