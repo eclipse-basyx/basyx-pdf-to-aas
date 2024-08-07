@@ -4,6 +4,7 @@ from logging.handlers import RotatingFileHandler
 import json
 import tempfile
 from urllib.parse import quote
+from datetime import datetime
 
 import gradio as gr
 from dotenv import load_dotenv
@@ -271,21 +272,29 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
 
     return [excel_path, properties_path, submodel_path, aasx_path]
 
+__current_settings_version = 1
 def save_settings(settings):
     tempdir = next(iter(settings)) # Assume tempdir is first element
     settings_path = os.path.join(tempdir.value.name, "settings.json")
     settings.pop(tempdir)
     with open(settings_path, 'w') as settings_file:
-        json.dump({c.label: v for c, v in settings.items()}, settings_file, indent=2)
+        json.dump({
+            'version': __current_settings_version,
+            'date': str(datetime.now()),
+            'settings': {c.label: v for c, v in settings.items()},
+        }, settings_file, indent=2)
     return settings_path
 
 def load_settings(settings_file_path):
     try:
-        settings = json.load(open(settings_file_path)).values()
+        settings = json.load(open(settings_file_path))
     except (json.JSONDecodeError, OSError) as error:
         gr.Error(f"Couldn't load settings from {settings_file_path}: {error.msg}")
         return {}
-    return tuple(settings)
+    if settings.get('version', 0) < __current_settings_version:
+        gr.Error(f"Wrong settings version {settings.get('version')}. Please migrate settings file manually to {__current_settings_version}")
+    logger.info(f"Loading settings from {settings_file_path}")
+    return tuple(settings.get('settings').values())
 
 def init_tempdir():
     tempdir =  tempfile.TemporaryDirectory(prefix="pdf2aas_")
@@ -555,7 +564,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         batch_size, use_in_prompt, max_definition_chars],
             )
         except FileNotFoundError:
-            logger.warning(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
+            logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
     
     demo.queue(max_size=10)
     demo.launch(quiet=not debug, share=share, server_port=server_port)
