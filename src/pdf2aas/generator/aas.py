@@ -132,20 +132,23 @@ class AASSubmodelTechnicalData(Generator):
         )
         self.submodel.submodel_element.get('id_short', 'ProductClassifications').value.add(classification)
 
-    def generate(self, properties : list, ) -> str:       
+    def generate(self, properties : list) -> str:       
         #TODO fill general information if provided in properties
 
         technical_properties = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
         for property in properties:
-            property = model.Property(
-                id_short = re.sub(r'[^a-zA-Z0-9]|_', '', property.get('property')),
+            aas_property = model.Property(
+                id_short = re.sub(r'[^a-zA-Z0-9]', '_', property.get('property')),
                 display_name = model.MultiLanguageNameType({'en': property.get('property')}),
                 value_type = json_data_type_to_xsd(property.get('value')), #TODO get from definition?
                 value = property.get('value'),
                 semantic_id = semantic_id(property.get('id'))
-                #TODO unit?
             )
-            technical_properties.value.add(property)
+
+            try:
+                technical_properties.value.add(aas_property)
+            except AASConstraintViolation as error:
+                logger.warning("Couldn't add property to submodel: "+ error.message)
 
         return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder)
     
