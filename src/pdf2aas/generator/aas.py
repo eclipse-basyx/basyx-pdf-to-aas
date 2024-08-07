@@ -149,7 +149,7 @@ class AASSubmodelTechnicalData(Generator):
             
             aas_property = model.Property(
                 id_short = re.sub(r'[^a-zA-Z0-9]', '_', property.get('property')),
-                display_name = model.MultiLanguageNameType({'en': property.get('property')}),
+                display_name = model.MultiLanguageNameType({'en': property.get('property','')[:63]}), # MultiLanguageNameType has a maximum length of 64!
                 value_type = json_data_type_to_xsd(property.get('value')), #TODO get from definition?
                 value = property.get('value'),
                 semantic_id = semantic_id(property.get('id'))
