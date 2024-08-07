@@ -42,6 +42,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         self.use_property_values = 'values' in property_keys_in_prompt
         self.use_property_datatype = 'datatype' in property_keys_in_prompt
         self.max_definition_chars = 0
+        self.max_values_length = 0
         self.temperature = 0
         self.max_tokens = None
         self.response_format = {"type": "json_object"}
@@ -211,18 +212,21 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         prompt = ""
         property_definition = property.definition.get(language)
         if self.use_property_definition and property_definition:
-            if self.max_definition_length > 0 and len(property_definition) > self.max_definition_length:
-                property_definition = property_definition[:self.max_definition_length] + " ..."
-            prompt += f'The "{property_name}" is defined as "{property_definition[:self.max_definition_length]}".\n'
+            if self.max_definition_chars > 0 and len(property_definition) > self.max_definition_chars:
+                property_definition = property_definition[:self.max_definition_chars] + " ..."
+            prompt += f'The "{property_name}" is defined as "{property_definition[:self.max_definition_chars]}".\n'
         if self.use_property_datatype and property.type:
             prompt += f'The "{property_name}" has the datatype "{property.type}".\n'
         if self.use_property_unit and property.unit:
             prompt += f'The "{property_name}" has the unit of measure "{property.unit}".\n'
         if self.use_property_values and property.values:
-            values = str([v["value"] for v in property.values])
-            if self.max_definition_length > 0 and len(values) > self.max_definition_length:
-                values = values[:self.max_definition_length] + " ..."
-            prompt += f'The "{property_name}" can be one of these values: "{values}".\n'
+            if isinstance(next(iter(property.values)), dict):
+                property_values = [v["value"] for v in property.values]
+            else:
+                property_values = property.values
+            if self.max_values_length > 0 and len(property_values) > self.max_values_length:
+                property_values = property_values[:self.max_values_length] + ["..."]
+            prompt += f'The "{property_name}" can be one of these values: "{property_values}".\n'
 
         prompt +=f'What is the "{property_name}" of the device?\n'
         return prompt
@@ -243,6 +247,8 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             prompt +=f'* Property: "{property_name}"\n'
             property_definition = property.definition.get(language)
             if self.use_property_definition and property_definition:
+                if self.max_definition_chars > 0 and len(property_definition) > self.max_definition_chars:
+                    property_definition = property_definition[:self.max_definition_chars] + " ..."
                 prompt += f'  * Definition: "{property_definition}"\n'
             if self.use_property_datatype and property.type:
                 prompt += f'  * Datatype: "{property.type}"\n'
@@ -250,9 +256,12 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 prompt += f'  * Unit: "{property.unit}"\n'
             if self.use_property_values and property.values:
                 if isinstance(next(iter(property.values)), dict):
-                    prompt += f'  * Possible values: "{[v["value"] for v in property.values]}"\n'
+                    property_values = [v["value"] for v in property.values]
                 else:
-                    prompt += f'  * Possible values: "{property.values}"\n'
+                    property_values = property.values
+                if self.max_values_length > 0 and len(property_values) > self.max_values_length:
+                    property_values = property_values[:self.max_values_length] + ["..."]
+                prompt += f'  * Possible values: "{property_values}"\n'
         return prompt
 
 

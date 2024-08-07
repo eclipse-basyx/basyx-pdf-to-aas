@@ -179,6 +179,7 @@ def extract(
         max_tokens,
         use_in_prompt,
         max_definition_chars,
+        max_values_length,
     ):
 
     if pdf_upload is None:
@@ -200,6 +201,7 @@ def extract(
     )
     extractor.temperature = temperature
     extractor.max_tokens = max_tokens if max_tokens > 0 else None
+    extractor.max_values_length = max_values_length
     extractor.max_definition_chars = max_definition_chars
     if isinstance(client, AzureOpenAI):
         extractor.response_format = None
@@ -235,7 +237,7 @@ def extract(
     gr.Info('Extraction completed.', duration=3)
     yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
-def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, dictionary, class_id):
+def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, class_id):
     if properties is None or len(properties) < 2:
         return None
     
@@ -254,12 +256,13 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
         extracted_sheet.auto_filter.ref = extracted_sheet.dimensions
         
         settings = writer.book.create_sheet('settings')
-        settings.append(['prompt_hint', prompt_hint]),
-        settings.append(['model', model]),
-        settings.append(['temperature', temperature]),
-        settings.append(['batch_size', batch_size]),
-        settings.append(['use_in_prompt', " ".join(use_in_prompt)]),
-        settings.append(['max_definition_chars', max_definition_chars]),
+        settings.append(['prompt_hint', prompt_hint])
+        settings.append(['model', model])
+        settings.append(['temperature', temperature])
+        settings.append(['batch_size', batch_size])
+        settings.append(['use_in_prompt', " ".join(use_in_prompt)])
+        settings.append(['max_definition_chars', max_definition_chars])
+        settings.append(['max_values_length', max_values_length])
     
     submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
     #TODO set identifier and other properties --> load from a template, that can be specified in settings?
@@ -462,9 +465,14 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     choices=['definition','unit','datatype', 'values'],
                     multiselect=True,
                     value='unit',
+                    scale=2,
                 )
                 max_definition_chars = gr.Number(
-                    label="Max. Definition / Values Chars",
+                    label="Max. Definition Chars",
+                    value=0,
+                )
+                max_values_length = gr.Number(
+                    label="Max. Values Length",
                     value=0,
                 )
             with gr.Row():
@@ -516,18 +524,18 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
         extraction_started = extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars],
+            inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars, max_values_length],
             outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extraction_started.then(
             fn=create_extracted_properties_excel,
-            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, dictionary, eclass_class],
+            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, eclass_class],
             outputs=[results]
         )
 
         gr.on(
-            triggers=[prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change],
+            triggers=[prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change, max_values_length.change],
             fn=save_settings,
             inputs={tempdir,
                     prompt_hint,
@@ -536,7 +544,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     azure_deployment, azure_api_version,
                     custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
                     temperature, max_tokens,
-                    batch_size, use_in_prompt, max_definition_chars},
+                    batch_size, use_in_prompt, max_definition_chars, max_values_length},
             outputs=settings_save
         )
         settings_save.postprocess=lambda path : gr.FileData(path=path, orig_name="settings.json")
@@ -549,7 +557,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     azure_deployment, azure_api_version,
                     custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
                     temperature, max_tokens,
-                    batch_size, use_in_prompt, max_definition_chars],
+                    batch_size, use_in_prompt, max_definition_chars, max_values_length],
         )
         try:
             demo.load(
@@ -561,7 +569,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         azure_deployment, azure_api_version,
                         custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
                         temperature, max_tokens,
-                        batch_size, use_in_prompt, max_definition_chars],
+                        batch_size, use_in_prompt, max_definition_chars, max_values_length],
             )
         except FileNotFoundError:
             logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
