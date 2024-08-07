@@ -2,9 +2,12 @@ import logging
 import json
 from datetime import date
 import re
+import uuid
 
 from basyx.aas import model
-from basyx.aas.adapter.json import json_deserialization, json_serialization
+from basyx.aas.model.base import AASConstraintViolation
+from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
+from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
 from ..dictionary import ECLASS
@@ -21,7 +24,7 @@ def semantic_id(reference):
 
 def create_submodel_template(identifier:str=None):
     submodel = model.Submodel(
-        id_= "https://eclipse.dev/basyx/pdf-to-aas/technical-data-submodel" if identifier is None else identifier,
+        id_= f"https://eclipse.dev/basyx/pdf-to-aas/submodel/{uuid.uuid4()}" if identifier is None else identifier,
         id_short = "TechnicalData",
         semantic_id = semantic_id("https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2")
     )
@@ -90,6 +93,8 @@ class AASSubmodelTechnicalData(Generator):
     ) -> None:
         super().__init__()
         self.submodel = create_submodel_template(identifier)
+        self.dictionary = dictionary
+        self.class_id = class_id
         if dictionary is not None and class_id is not None:
             self._add_classification(dictionary, class_id)
 
@@ -145,5 +150,24 @@ class AASSubmodelTechnicalData(Generator):
         return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder)
     
     def save(self, filepath:str):
-        with open(filepath, 'w', encoding="utf-8") as submodel_file:
-            json.dump(self.submodel, submodel_file, cls=json_serialization.AASToJsonEncoder, indent=2)
+        with open(filepath, 'w', encoding="utf-8") as file:
+            json.dump(self.submodel, file, cls=json_serialization.AASToJsonEncoder, indent=2)      
+    
+    def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
+        if aas is None:
+            aas = model.AssetAdministrationShell(
+                id_= f"https://eclipse.dev/basyx/pdf-to-aas/aas/{uuid.uuid4()}",
+                asset_information=model.AssetInformation(
+                    asset_kind=model.AssetKind.TYPE,
+                    global_asset_id=f"https://eclipse.dev/basyx/pdf-to-aas/asset/{uuid.uuid4()}"
+                    )
+            )
+        aas.submodel.add(model.ModelReference.from_referable(self.submodel))
+        #TODO add pdf file (to handover documentation submodel) if given?
+
+        with AASXWriter(filepath) as writer:
+            writer.write_aas(
+                aas_ids=aas.id,
+                object_store=model.DictObjectStore([aas, self.submodel]),
+                file_store=DictSupplementaryFileContainer(),
+                write_json=True)

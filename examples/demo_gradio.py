@@ -266,7 +266,10 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
     submodel.generate(properties=properties.to_dict(orient='records'))
     submodel.save(submodel_path)
 
-    return [excel_path, properties_path, submodel_path]
+    aasx_path = os.path.join(tempdir.name, 'technical_data.aasx')
+    submodel.save_as_aasx(aasx_path)
+
+    return [excel_path, properties_path, submodel_path, aasx_path]
 
 def save_settings(settings):
     tempdir = next(iter(settings)) # Assume tempdir is first element
@@ -350,8 +353,8 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         variant="stop",
                         interactive=False,
                     )
-                    extracted_values_excel = gr.File(
-                        label="Export Extracted Values",
+                    results = gr.File(
+                        label="Download Results",
                         scale=2,
                     )
             with gr.Group():
@@ -511,7 +514,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         extraction_started.then(
             fn=create_extracted_properties_excel,
             inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, dictionary, eclass_class],
-            outputs=[extracted_values_excel]
+            outputs=[results]
         )
 
         gr.on(
