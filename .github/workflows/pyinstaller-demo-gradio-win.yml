@@ -2,7 +2,7 @@ name: Package gradio example with PyInstaller - Windows
 on:
   workflow_dispatch:
   push:
-    branches: [ main, demo ]
+    branches: main
 jobs:
   build-win-exe:
     runs-on: windows-latest
@@ -14,6 +14,8 @@ jobs:
         cache: 'pip'
     - name: Install dependencies
       run: pip install -r eval-requirements.txt -r dev-requirements.txt
+    - name: Install pdf2aas
+      run: pip install -e .
     - name: Build executable
       run: pyinstaller .\examples\demo_gradio.spec
     - uses: actions/upload-artifact@v4
