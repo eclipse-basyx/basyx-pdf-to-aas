@@ -6,20 +6,21 @@ from .core import Generator
 
 logger = logging.getLogger(__name__)
 
-
 class CSV(Generator):
-    def generate(self, properties: list) -> str:
+    header = ["name", "property", "value", "unit", "id", "reference"]
+
+    def dumps(self) -> str:
         csv_str = io.StringIO()
         writer = csv.DictWriter(
             csv_str,
-            fieldnames=["name", "property", "value", "unit", "id", "reference"],
+            fieldnames=self.header,
             extrasaction="ignore",
             quoting=csv.QUOTE_ALL,
             delimiter=';',
             lineterminator='\n'
         )
         writer.writeheader()
-        for row in properties:
+        for row in self.properties:
             try:
                 writer.writerow(row)
             except AttributeError:

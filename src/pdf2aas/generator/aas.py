@@ -84,19 +84,21 @@ def json_data_type_to_xsd(value):
     return model.datatypes.String
 
 class AASSubmodelTechnicalData(Generator):
-
     def __init__(
-            self,
-            identifier: str = None,
-            dictionary: ECLASS = None ,
-            class_id: str = None
+        self,
+        identifier: str = None,
+        dictionary: ECLASS = None,
+        class_id: str = None
     ) -> None:
-        super().__init__()
-        self.submodel = create_submodel_template(identifier)
+        self.identifier = identifier
         self.dictionary = dictionary
         self.class_id = class_id
-        if dictionary is not None and class_id is not None:
-            self._add_classification(dictionary, class_id)
+        self.reset()
+        
+    def reset(self): 
+        self.submodel = create_submodel_template(self.identifier)
+        if self.dictionary is not None and self.class_id is not None:
+            self._add_classification(self.dictionary, self.class_id)
 
     def _add_classification(self, dictionary, class_id):
         classification = model.SubmodelElementCollection(
@@ -132,7 +134,7 @@ class AASSubmodelTechnicalData(Generator):
         )
         self.submodel.submodel_element.get('id_short', 'ProductClassifications').value.add(classification)
 
-    def generate(self, properties : list) -> str:       
+    def add_properties(self, properties : list):       
         #TODO fill general information if provided in properties
 
         technical_properties : model.SubmodelElementCollection = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
@@ -141,9 +143,9 @@ class AASSubmodelTechnicalData(Generator):
             if definition is not None:
                 unit = property.get('unit')
                 if unit is not None and len(unit.strip()) > 0 and len(definition.unit) > 0 and unit != definition.unit:
-                    logger.warning(f"Unit of {property['id']} {unit} differs from definition {definition.unit}")
+                    logger.warning(f"Unit of {property['id']} '{unit}' differs from definition '{definition.unit}'")
                 if len(definition.values) > 0 and property.get('value') is not None and str(property.get('value')) not in definition.values:
-                    logger.warning(f"Value of {property['id']} {property.get('value')} not found in defined values.")
+                    logger.warning(f"Value of {property['id']} '{property.get('value')}' not found in defined values.")
             
             if property.get('property') is not None and len(property['property']) > 0:
                 id_short = property['property']
@@ -170,12 +172,9 @@ class AASSubmodelTechnicalData(Generator):
                 technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
                 logger.warning("Couldn't add property to submodel: "+ error.message)
-
-        return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder)
     
-    def save(self, filepath:str):
-        with open(filepath, 'w', encoding="utf-8") as file:
-            json.dump(self.submodel, file, cls=json_serialization.AASToJsonEncoder, indent=2)      
+    def dumps(self):
+        return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
     
     def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
         if aas is None:

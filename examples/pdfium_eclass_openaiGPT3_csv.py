@@ -51,10 +51,9 @@ def main(datasheet, eclass_class_id, property_range, model, endpoint, batch_mode
         logger.info("Extracted properties written to: temp/properties.json")
 
     generator = CSV()
-    csv = generator.generate(properties)
-    with open("temp/properties.csv", "w") as file:
-        file.write(csv)
-        logger.info("Generated csv written to: temp/properties.csv")
+    generator.add_properties(properties)
+    generator.dump(filepath="temp/properties.csv")
+    logger.info("Generated csv written to: temp/properties.csv")
 
 if __name__ == "__main__":
     import argparse

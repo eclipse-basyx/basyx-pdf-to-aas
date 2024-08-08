@@ -1,6 +1,6 @@
 from pdf2aas.dictionary import DummyDictionary
 from pdf2aas.extractor import DummyPropertyLLM
-from pdf2aas.generator import DummyTechnicalDataSubmodel
+from pdf2aas.generator import Generator
 from pdf2aas.preprocessor import DummyPDF2HTML
 
 def main():
@@ -11,12 +11,11 @@ def main():
     property_definitions = dictionary.get_class_properties("EC002714")
 
     extractor = DummyPropertyLLM()
-    properties = []
-    for property_definition in property_definitions:
-        properties.extend(extractor.extract(preprocessed_datasheet, property_definition))
+    properties = extractor.extract(preprocessed_datasheet, property_definitions)
 
-    generator = DummyTechnicalDataSubmodel()
-    result = generator.generate(properties)
+    generator = Generator()
+    generator.add_properties(properties)
+    result = generator.dumps(properties)
 
     print(result)
 
