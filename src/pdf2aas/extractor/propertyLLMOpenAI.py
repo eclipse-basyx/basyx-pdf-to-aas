@@ -50,7 +50,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             try:
                 client = OpenAI(base_url=api_endpoint)
             except OpenAIError as error:
-                logger.warning(f"Couldn't init OpenAI client, falling back to 'input'. {error.msg}")
+                logger.warning(f"Couldn't init OpenAI client, falling back to 'input'. {error}")
                 client = None
         self.client = client
 
