@@ -3,7 +3,17 @@ on:
   workflow_dispatch:
   push:
     branches: main
+    paths: 
+      - 'src/**'
+      - 'tests/**'
+      - '*requirements.txt'
+      - '.github/workflows/test.yml'
   pull_request:
+    paths: 
+      - 'src/**'
+      - 'tests/**'
+      - '*requirements.txt'
+      - '.github/workflows/test.yml'
 jobs:
   run-tests:
     runs-on: ubuntu-latest

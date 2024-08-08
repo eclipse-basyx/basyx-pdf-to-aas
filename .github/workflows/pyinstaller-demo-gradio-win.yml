@@ -3,6 +3,11 @@ on:
   workflow_dispatch:
   push:
     branches: main
+    paths: 
+      - 'src/**'
+      - 'examples/demo_gradio.py'
+      - '*requirements.txt'
+      - '.github/workflows/pyinstaller-demo-gradio-win.yml'
 jobs:
   build-win-exe:
     runs-on: windows-latest
