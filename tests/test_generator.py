@@ -1,12 +1,9 @@
 import json
+import filecmp
 
-from pdf2aas.generator import DummyTechnicalDataSubmodel, CSV, AASSubmodelTechnicalData
+from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData
 from pdf2aas.extractor import DummyPropertyLLM
 from pdf2aas.dictionary import PropertyDefinition
-
-def test_dummy_technical_data_submodel_generate():
-    g = DummyTechnicalDataSubmodel()
-    assert g.generate([]) == "<AASSubmodel>DUMMY</AASSubmodel>"
 
 test_property_list = DummyPropertyLLM.empty_property_result(PropertyDefinition("id1", {'en': 'name1'})) + [{
     "property": "property2",
@@ -17,14 +14,21 @@ test_property_list = DummyPropertyLLM.empty_property_result(PropertyDefinition("
     "name": "name2"
 }]
 
-def test_csv_generate():
+def test_generator_dumps():
+    g = Generator()
+    assert g.dumps() == "[]"
+    g.add_properties(test_property_list)
+    assert g.dumps() == str(test_property_list)
+
+def test_csv_dumps():
     g = CSV()
-    csv = g.generate(test_property_list)
+    assert g.dumps() == f'"{'";"'.join(CSV.header)}"\n'
+    g.add_properties(test_property_list)
     with(open('tests/assets/dummy-result.csv') as file):
-        assert csv == file.read()
+        assert g.dumps() == file.read()
 
 def test_submodel_technical_data_generate():
     g = AASSubmodelTechnicalData("id1")
-    submodel = g.generate(test_property_list)
+    g.add_properties(test_property_list)
     with(open('tests/assets/dummy-result-technical-data-submodel.json') as file):
-        assert json.load(file) == json.loads(submodel)
+        assert json.load(file) == json.loads(g.dumps())
