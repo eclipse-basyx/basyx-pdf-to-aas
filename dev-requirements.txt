@@ -42,11 +42,13 @@ idna==3.7
     #   requests
 iniconfig==2.0.0
     # via pytest
+jiter==0.5.0
+    # via openai
 lxml==4.9.4
     # via
     #   basyx-python-sdk
     #   pyecma376-2
-openai==1.37.2
+openai==1.40.1
     # via pdf2aas (pyproject.toml)
 packaging==24.1
     # via
@@ -101,7 +103,7 @@ soupsieve==2.5
     # via beautifulsoup4
 tiktoken==0.7.0
     # via pdf2aas (pyproject.toml)
-tqdm==4.66.4
+tqdm==4.66.5
     # via openai
 typing-extensions==4.12.2
     # via

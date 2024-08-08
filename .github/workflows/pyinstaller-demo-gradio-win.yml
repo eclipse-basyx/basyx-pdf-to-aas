@@ -7,7 +7,7 @@ jobs:
   build-win-exe:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -16,7 +16,7 @@ jobs:
       run: pip install -r eval-requirements.txt -r dev-requirements.txt
     - name: Build executable
       run: pyinstaller .\examples\demo_gradio.spec
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: pdf-to-aas-gradio-demo
         path: dist/*.exe
