@@ -43,9 +43,9 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
 ## Modules
 
 * **preprocessor**: converts the PDF to a text format that can be processed by LLMs, keeping layout and table information.
+  * **PDFium**: Uses [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) based on PDFium to extract text from pdf without layout information
   * **PDF2HTML**: Uses [pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX) to convert the PDF data sheets to HTML.
     The converted html is preprocessed further to reduce token usage for the llms.
-  * **PDFium**: Uses [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) based on PDFium to extract text from pdf without layout information
 * **dictionary**: defines classes and properties semantically.
   * **ECLASS**: downloads property definitions from [ECLASS website](https://eclass.eu/en/eclass-standard/search-content) for a given ECLASS class.
   * **ETIM**: downloads property definitions from [ETIM model releases](https://www.etim-international.com/downloads/?_sft_downloadcategory=model-releases) or via the [ETIM API](https://etimapi.etim-international.com/)
@@ -69,14 +69,19 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
 * To run the GPT models via the OpenAI API an API key needs to be set as environment variable `OPENAI_API_KEY` or via `.env` file and the `python-dotenv` package.
 * To run a local model, the extractor needs to be initialised or configured with an openai API conform api_endpoint.
 
-Example using default toolchain (results in csv):
+## Usage
+
+This will save the submodel in json format to the given path, using the default toolchain:
+
+* pypdfium2 preprocessor
+* ECLASS dictionary
+* OpenAI LLM extractor
+* AAS Technical Data Submodel generator
 
 ```py
 from pdf2aas import PDF2AAS
-
 pdf2aas = PDF2AAS()
-result = pdf2aas.convert('path/to/datasheet.pdf', 'eclass id, e.g. 27274001')
-print(result)
+pdf2aas.convert('path/to/datasheet.pdf', 'eclass id e.g. 27274001', 'path/to/submodel.json')
 ```
 
 ## Examples
