@@ -41,5 +41,5 @@ def test_get_class_properties():
     assert switching_distance in properties
     assert ECLASS.properties["0173-1#02-BAD815#009"] == switching_distance
 
-    d.release = "13.0"
-    assert "27274001" not in d.classes.keys()
+    d2 = ECLASS(release="13.0")
+    assert "27274001" not in d2.classes.keys()
