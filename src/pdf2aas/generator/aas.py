@@ -135,11 +135,9 @@ class AASSubmodelTechnicalData(Generator):
     def generate(self, properties : list) -> str:       
         #TODO fill general information if provided in properties
 
-        technical_properties = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
+        technical_properties : model.SubmodelElementCollection = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
         for property in properties:
-            if self.dictionary:
-                definition = self.dictionary.get_property(property.get('id',''))
-            
+            definition = self.dictionary.get_property(property.get('id','')) if self.dictionary else None
             if definition is not None:
                 unit = property.get('unit')
                 if unit is not None and len(unit.strip()) > 0 and len(definition.unit) > 0 and unit != definition.unit:
@@ -147,9 +145,22 @@ class AASSubmodelTechnicalData(Generator):
                 if len(definition.values) > 0 and property.get('value') is not None and str(property.get('value')) not in definition.values:
                     logger.warning(f"Value of {property['id']} {property.get('value')} not found in defined values.")
             
+            if property.get('property') is not None and len(property['property']) > 0:
+                id_short = property['property']
+            elif property.get('name') is not None and len(property['name']) > 0:
+                id_short = property['name']
+            elif property.get('id') is not None:
+                id_short = property['id']
+            else:
+                continue
+
+            display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
+            if technical_properties.value.contains_id('id_short', id_short):
+                id_short += str(uuid.uuid4())
+            
             aas_property = model.Property(
-                id_short = re.sub(r'[^a-zA-Z0-9]', '_', property.get('property')),
-                display_name = model.MultiLanguageNameType({'en': property.get('property','')[:63]}), # MultiLanguageNameType has a maximum length of 64!
+                id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short),
+                display_name = model.MultiLanguageNameType({'en': display_name}),
                 value_type = json_data_type_to_xsd(property.get('value')), #TODO get from definition?
                 value = property.get('value'),
                 semantic_id = semantic_id(property.get('id'))
