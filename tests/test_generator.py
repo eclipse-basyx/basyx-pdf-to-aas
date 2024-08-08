@@ -1,7 +1,8 @@
-from pdf2aas.generator import DummyTechnicalDataSubmodel, CSV
+import json
+
+from pdf2aas.generator import DummyTechnicalDataSubmodel, CSV, AASSubmodelTechnicalData
 from pdf2aas.extractor import DummyPropertyLLM
 from pdf2aas.dictionary import PropertyDefinition
-
 
 def test_dummy_technical_data_submodel_generate():
     g = DummyTechnicalDataSubmodel()
@@ -21,3 +22,9 @@ def test_csv_generate():
     csv = g.generate(test_property_list)
     with(open('tests/assets/dummy-result.csv') as file):
         assert csv == file.read()
+
+def test_submodel_technical_data_generate():
+    g = AASSubmodelTechnicalData("id1")
+    submodel = g.generate(test_property_list)
+    with(open('tests/assets/dummy-result-technical-data-submodel.json') as file):
+        assert json.load(file) == json.loads(submodel)

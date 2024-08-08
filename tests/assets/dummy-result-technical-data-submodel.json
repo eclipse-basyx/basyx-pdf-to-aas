@@ -1,0 +1,145 @@
+{
+  "idShort": "TechnicalData",
+  "modelType": "Submodel",
+  "id": "id1",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "idShort": "GeneralInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1"
+          }
+        ]
+      }
+    },
+    {
+      "idShort": "ProductClassifications",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1"
+          }
+        ]
+      }
+    },
+    {
+      "idShort": "TechnicalProperties",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1"
+          }
+        ]
+      },
+      "value": [
+        {
+          "idShort": "name1",
+          "displayName": [
+            {
+              "language": "en",
+              "text": "name1"
+            }
+          ],
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "id1"
+              }
+            ]
+          },
+          "valueType": "xs:string"
+        },
+        {
+          "idShort": "property2",
+          "displayName": [
+            {
+              "language": "en",
+              "text": "property2"
+            }
+          ],
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "id2"
+              }
+            ]
+          },
+          "value": "1",
+          "valueType": "xs:integer"
+        }
+      ]
+    },
+    {
+      "idShort": "FurtherInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1"
+          }
+        ]
+      },
+      "value": [
+        {
+          "idShort": "TextStatement",
+          "category": "PARAMETER",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1"
+              }
+            ]
+          },
+          "value": "Created with basyx pdf-to-aas. We assume no liability for the accuracy of the information.",
+          "valueType": "xs:string"
+        },
+        {
+          "idShort": "ValidDate",
+          "category": "PARAMETER",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1"
+              }
+            ]
+          },
+          "value": "2024-08-08",
+          "valueType": "xs:date"
+        }
+      ]
+    }
+  ]
+}
