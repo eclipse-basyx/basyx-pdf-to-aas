@@ -88,8 +88,8 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             logger.debug(f"Prompt ({message.get('role')}) {'token' if token_count > 0 else 'char'} count: {token_count if token_count > 0 else len(message.get("content"))}")
         
         if self.client is None:
-            logger.info("Systemprompt:\n"+ messages[0]["content"])
-            logger.info("Prompt:\n"+ messages[1]["content"])
+            print("Systemprompt:\n"+ messages[0]["content"])
+            print("Prompt:\n"+ messages[1]["content"])
             result = input("Enter result for LLM prompt via input:\n")
             raw_result = result
         elif isinstance(self.client, CustomLLMClient):
