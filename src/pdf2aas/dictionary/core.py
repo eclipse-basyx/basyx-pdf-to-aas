@@ -124,6 +124,7 @@ class Dictionary(ABC):
         with open(filepath, "w") as file:
             json.dump(
                 {
+                    "type": self.__class__.__name__,
                     "release": self.release,
                     "properties": self.properties,
                     "classes": self.classes,
@@ -160,10 +161,16 @@ class Dictionary(ABC):
                         f"Load class {class_['id']}: {class_['name']}"
                     )
                     new_class = ClassDefinition(**class_)
-                    new_class.properties = [
-                        self.properties[property_id]
-                        for property_id in new_class.properties
-                    ]
+                    if dict.get('type','') == "ETIM":
+                        new_class.properties = [
+                            self.properties[f"{property_id}/{id}"]
+                            for property_id in new_class.properties
+                        ]
+                    else:
+                        new_class.properties = [
+                            self.properties[property_id]
+                            for property_id in new_class.properties
+                        ]
                     classes[id] = new_class
         return True
     
