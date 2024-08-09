@@ -330,7 +330,7 @@ class ECLASS(Dictionary):
         if class_id is None:
             return None
         class_id = str(class_id) 
-        class_id = re.sub(r'[-_]|\s', '', class_id.strip())
+        class_id = re.sub(r'[-_]|\s', '', class_id)
         class_id = class_id[:8]
         if len(class_id) != 8 or not class_id.isdigit():
             logger.warning(
