@@ -1,18 +1,12 @@
 import json
 import logging
-import os
 from urllib.parse import quote
 import re
 
 import requests
 from bs4 import BeautifulSoup
 
-from .core import (
-    ClassDefinition,
-    Dictionary,
-    PropertyDefinition,
-    dictionary_serializer,
-)
+from .core import Dictionary, ClassDefinition, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -144,16 +138,12 @@ class ECLASS(Dictionary):
     Attributes:
         eclass_class_search_pattern (str): URL pattern for class search.
         eclass_property_search_pattern (str): URL pattern for property search.
-        properties (dict[str, PropertyDefinition]): Maps property IDs to PropertyDefinition instances.
         properties_download_failed (dict[str, set[str]]): Maps release versions to a set of property ids, that could not be downloaded.
-        releases (dict[str, dict[str, object]]): Maps release versions to class objects.
     """
 
     eclass_class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     eclass_property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
-    properties: dict[str, PropertyDefinition] = {}
     properties_download_failed: dict[str, set[str]] = {}
-    releases: dict[dict[str, ClassDefinition]] = {}
     supported_releases = [
         "14.0",
         "13.0",
@@ -183,27 +173,9 @@ class ECLASS(Dictionary):
             temp_dir (str): Set the temporary directory. Will be used to load
                             releases from file, the first time the release is used.
         """
-        super().__init__()
-        if temp_dir:
-            self.temp_dir=temp_dir
-        if release not in self.supported_releases:
-            logger.warning(f"Release {release} unknown. Supported releases are {self.supported_releases}")
-        self.release = release
-        if release not in ECLASS.releases:
-            ECLASS.releases[release] = {}
-            self.load_from_file()
+        super().__init__(release, temp_dir)
         if release not in ECLASS.properties_download_failed:
             ECLASS.properties_download_failed[release] = set()
-
-    @property
-    def classes(self) -> dict[str, ClassDefinition]:
-        """
-        Retrieves the class definitions for the currently set eCl@ss release version.
-
-        Returns:
-            dict[str, ClassDefinition]: A dictionary of class definitions for the current release, with their class id as key.
-        """
-        return self.releases.get(self.release)
 
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """
@@ -332,57 +304,6 @@ class ECLASS(Dictionary):
         )
         return property
 
-    def save_to_file(self, filepath: str = None):
-        if filepath is None:
-            filepath = os.path.join(self.temp_dir, "ECLASS-" + self.release + ".json")
-        logger.info(f"Save ECLASS dictionary to file: {filepath}")
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, "w") as file:
-            json.dump(
-                {
-                    "release": self.release,
-                    "properties": self.properties,
-                    "classes": self.classes,
-                },
-                file,
-                default=dictionary_serializer,
-            )
-
-    def load_from_file(self, filepath: str = None) -> bool:
-        if filepath is None:
-            filepath = os.path.join(self.temp_dir, "ECLASS-" + self.release + ".json")
-        if not os.path.exists(filepath):
-            logger.debug(
-                f"Couldn't load ECLASS dictionary from file. File does not exist: {filepath}"
-            )
-            return False
-        logger.info(f"Load ECLASS dictionary from file: {filepath}")
-        with open(filepath, "r") as file:
-            dict = json.load(file)
-            if dict["release"] != self.release:
-                logger.warning(
-                    f"Loading eclass release {dict['release']} for dictionary with release {self.release}."
-                )
-            for id, property in dict["properties"].items():
-                if id not in self.properties.keys():
-                    logger.debug(f"Load property {property['id']}: {property['name']}")
-                    self.properties[id] = PropertyDefinition(**property)
-            if dict["release"] not in ECLASS.releases:
-                ECLASS.releases[dict["release"]] = {}
-            for id, eclass_class in dict["classes"].items():
-                classes = self.releases[dict["release"]]
-                if id not in classes.keys():
-                    logger.debug(
-                        f"Load eclass class {eclass_class['id']}: {eclass_class['name']}"
-                    )
-                    new_class = ClassDefinition(**eclass_class)
-                    new_class.properties = [
-                        self.properties[property_id]
-                        for property_id in new_class.properties
-                    ]
-                    classes[id] = new_class
-        return True
-
     def check_property_irdi(property_id):
         """
         Checks the format of the property IRDI.
@@ -424,12 +345,3 @@ class ECLASS(Dictionary):
             # Because the eclass content-search only lists properties in level 4 for classes
             return None
         return class_id
-    
-    def save_all_releases(self):
-        original_release = self.release
-        for release, classes in self.releases.items():
-            if len(classes) == 0:
-                continue
-            self.release = release
-            self.save_to_file()
-        self.release = original_release

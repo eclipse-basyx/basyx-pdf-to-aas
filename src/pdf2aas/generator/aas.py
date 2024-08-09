@@ -10,7 +10,7 @@ from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
 from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
-from ..dictionary import ECLASS
+from ..dictionary import Dictionary
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ class AASSubmodelTechnicalData(Generator):
     def __init__(
         self,
         identifier: str = None,
-        dictionary: ECLASS = None,
+        dictionary: Dictionary = None,
         class_id: str = None
     ) -> None:
         self.identifier = identifier
@@ -100,7 +100,7 @@ class AASSubmodelTechnicalData(Generator):
         if self.dictionary is not None and self.class_id is not None:
             self._add_classification(self.dictionary, self.class_id)
 
-    def _add_classification(self, dictionary, class_id):
+    def _add_classification(self, dictionary:Dictionary, class_id:str):
         classification = model.SubmodelElementCollection(
             id_short = "ProductClassificationItem01",
             semantic_id = semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationItem/1/1")
@@ -109,7 +109,7 @@ class AASSubmodelTechnicalData(Generator):
             model.Property(
                 id_short = 'ProductClassificationSystem',
                 value_type = model.datatypes.String,
-                value = 'ECLASS',
+                value = dictionary.__class__.__name__,
                 category = "PARAMETER",
                 semantic_id = semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationSystem/1/1")
             )
