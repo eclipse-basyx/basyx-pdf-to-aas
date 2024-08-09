@@ -8,6 +8,13 @@ from .core import Dictionary, ClassDefinition, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
+etim_datatype_to_type = {
+    "Logical": "bool",
+    "Numeric": "numeric",
+    "Range": "string",
+    "Alphanumeric": "string",
+}
+
 class ETIM(Dictionary):
     releases: dict[dict[str, ClassDefinition]] = {}
     properties: dict[str, PropertyDefinition] = {}
@@ -53,6 +60,65 @@ class ETIM(Dictionary):
     def get_property_url(self, property_id: str) -> str:
         return f"https://prod.etim-international.com/Feature/Details/{property_id}"
     
+    def _download_etim_class(self, etim_class_code, language = "EN") -> dict:
+        logger.debug(f"Download etim class details for {etim_class_code} in {language} and release {self.release}")
+        access_token = self.__get_access_token()
+        if access_token is None:
+            return None
+        url = f"{self.base_url}/api/v2/Class/DetailsForRelease"
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "include": {
+                "descriptions": True,
+                "translations": False,
+                "fields": [
+                    "features"
+                ]
+            },
+            "languagecode": language,
+            "code": etim_class_code,
+            "release": f"ETIM-{self.release}" if self.release[0].isdigit() else self.release 
+        }
+        try:
+            response = requests.post(url, json=data, headers=headers)
+            response.raise_for_status()
+            logger.debug(f"ETIM API Response: {response}")
+            return response.json()
+        except requests.HTTPError as http_err:
+            logger.error(f"Can't find class {etim_class_code}. HTTP error occurred: {http_err}")
+        except Exception as err:
+            logger.error(f"Can't find class {etim_class_code}. An error occurred: {err}")
+        return None
+
+    def _parse_etim_class(self, etim_class: dict) -> ClassDefinition:
+        class_ = ClassDefinition(
+            id=etim_class['code'],
+            name=etim_class['description'],
+            keywords=etim_class['synonyms'],
+        )
+        for feature in etim_class['features']:
+            property_ = PropertyDefinition(
+                id=feature['code'],
+                name=feature['description'],
+                type=etim_datatype_to_type.get(feature['type'], 'string'),
+            )
+            if 'unit' in feature:
+                property_.unit = feature['unit']['abbreviation']
+            if 'values' in feature:
+                property_.values = [
+                    {
+                        'value': value['description'],
+                        'id': value['code']
+                    }
+                    for value in feature['values']]
+            self.properties[f'{feature['code']}/{etim_class['code']}'] = property_
+            class_.properties.append(property_)
+        self.classes[etim_class['code']] = class_
+        return class_
+
     def __get_access_token(self) -> str:
         if (self.__access_token is not None) and (time.time() < self.__expire_time):
             return self.__access_token
