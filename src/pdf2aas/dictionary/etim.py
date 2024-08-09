@@ -28,10 +28,10 @@ class ETIM(Dictionary):
         scope: str = "EtimApi",
     ) -> None:
         super().__init__(release, temp_dir)
-        self.client_id = client_id,
-        self.client_secret = client_secret,
-        self.auth_url = auth_url,
-        self.base_url = base_url,
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.auth_url = auth_url
+        self.base_url = base_url
         self.scope = scope
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
