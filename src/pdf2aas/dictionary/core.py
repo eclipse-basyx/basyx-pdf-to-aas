@@ -73,7 +73,6 @@ class Dictionary(ABC):
             self.releases[release] = {}
             self.load_from_file()
 
-    @abstractmethod
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """
         Retrieves a list of property definitions associated with a given class.
@@ -84,14 +83,15 @@ class Dictionary(ABC):
         Returns:
             list[PropertyDefinition]: A list of PropertyDefinition instances associated with the class.
         """
-        raise NotImplementedError()
+        class_ = self.classes.get(class_id)
+        if class_ is None:
+            return []
+        return class_.properties
 
     @abstractmethod
     def get_property(self, property_id: str) -> PropertyDefinition:
         """
         Retrieve a single property definition for the given property ID from the dictionary.
-
-        May try to download the property from the dictionary source, which may take some time.
 
         Args:
             property_id (str): The unique identifier of the property.
@@ -99,7 +99,7 @@ class Dictionary(ABC):
         Returns:
             PropertyDefinition: The definition of the property associated with the given ID.
         """
-        raise NotImplementedError()
+        return self.properties.get(property_id)
 
     @property
     def classes(self) -> dict[str, ClassDefinition]:
