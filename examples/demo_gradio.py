@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from openai import OpenAI, AzureOpenAI
 import pandas as pd
 
-from pdf2aas.dictionary import ECLASS
+from pdf2aas.dictionary import Dictionary, ECLASS, ETIM
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP
 from pdf2aas.generator import AASSubmodelTechnicalData
@@ -27,34 +27,50 @@ def check_extract_ready(pdf_upload, definitions):
             len(definitions) > 1
         )
 
-def get_class_choices(dictionary: ECLASS):
-    return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
+def get_class_choices(dictionary: Dictionary):
+    if dictionary.__class__.__name__ == "ECLASS":
+        return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
+    return [(f"{class_.id} {class_.name}", class_.id) for class_ in dictionary.classes.values()]
 
-def change_eclass_release(release):
-    dictionary = ECLASS(release)
+def change_dictionary_type(dictionary_type):
+    if dictionary_type == "ECLASS":
+        dictionary = ECLASS()
+    elif dictionary_type == "ETIM":
+        dictionary = ETIM()
+    return (
+        dictionary,
+        gr.Dropdown(label=f"{dictionary.__class__.__name__} Class", choices=get_class_choices(dictionary)),
+        gr.Dropdown(label=f"{dictionary.__class__.__name__} Release", choices=dictionary.supported_releases, value=dictionary.release)
+    )
+
+def change_dictionary_release(dictionary_type, release):
+    if dictionary_type == "ECLASS":
+        dictionary = ECLASS(release)
+    elif dictionary_type == "ETIM":
+        dictionary = ETIM(release)
     dictionary.load_from_file()
     return dictionary, gr.Dropdown(choices=get_class_choices(dictionary))
 
-def change_eclass_class(eclass_id):
-    if eclass_id is None:
+def change_dictionary_class(dictionary, class_id):
+    if class_id is None:
         return None
-    eclass_id_parsed = ECLASS.parse_class_id(eclass_id)
-    if eclass_id_parsed is None:
-        gr.Warning(f"Class id has wrong format. Should be 8 digits, e.g. 27-27-40-01.")
-    return eclass_id_parsed
+    id_parsed = dictionary.parse_class_id(class_id)
+    if id_parsed is None:
+        gr.Warning(f"Class id has wrong format. Should be 8 digits for eclass (e.g. 27-27-40-01) or EC plus 6 digits for ETIM (e.g. EC002714).")
+    return id_parsed
 
 def get_class_property_definitions(
-        eclass_id,
+        class_id,
         dictionary,
     ):
-    if eclass_id is None:
+    if class_id is None:
         return None, None, None, None, None
     download = False
-    if eclass_id not in dictionary.classes.keys():
+    if class_id not in dictionary.classes.keys():
         download = True
-        gr.Info("ECLASS class not in dictionary file. Try downloading from website.")
-    definitions = dictionary.get_class_properties(eclass_id)
-    class_info = dictionary.classes.get(eclass_id)
+        gr.Info("Class not in dictionary file. Try downloading from website.", duration=3)
+    definitions = dictionary.get_class_properties(class_id)
+    class_info = dictionary.classes.get(class_id)
     if class_info:
         class_info = f"""# {class_info.name}
 * ID: [{class_info.id}]({dictionary.get_class_url(class_info.id)})
@@ -63,10 +79,10 @@ def get_class_property_definitions(
 * Properties: {len(class_info.properties)}
 """
     if definitions is None or len(definitions) == 0:
-        gr.Warning(f"No property definitions found for class {eclass_id} in release {dictionary.release}.")
-        return eclass_id, class_info, None, None, None
+        gr.Warning(f"No property definitions found for class {class_id} in release {dictionary.release}.")
+        return class_id, class_info, None, None, None
     if download:
-        eclass_id = gr.update(choices=get_class_choices(dictionary))
+        class_id = gr.update(choices=get_class_choices(dictionary))
         dictionary.save_to_file()
 
     definitions_df = pd.DataFrame([
@@ -78,18 +94,19 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return eclass_id, class_info, definitions_df, "## Select Property in Table for Details"
+    return class_id, class_info, definitions_df, "## Select Property in Table for Details"
 
-def select_property_info(dictionary: ECLASS | None, definitions: pd.DataFrame | None, evt: gr.SelectData):
+def select_property_info(dictionary: Dictionary | None, class_id: str, definitions: pd.DataFrame | None, evt: gr.SelectData):
     if dictionary is None or definitions is None:
         return None
     definition = dictionary.get_property(definitions.iloc[evt.index[0], 0])
+    # TODO use class_id, get class and then the property instead? may be faster for ETIM
     if definition is None:
         return "Select Property for Details"
     return f"""## {definition.name.get('en')}
 * ID: [{definition.id}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
-* Definition: {definition.definition.get('en')}
+* Definition: {definition.definition.get('en', '')}
 * Values:{"".join(["\n  * " + v.get("value") for v in definition.values])}
 """
 
@@ -168,7 +185,7 @@ def mark_extracted_references(datasheet, properties):
 
 def extract(
         pdf_upload,
-        eclass_id,
+        class_id,
         dictionary,
         client,
         prompt_hint,
@@ -207,7 +224,7 @@ def extract(
 
     raw_results=[]
     raw_prompts=[]
-    definitions = dictionary.get_class_properties(eclass_id)
+    definitions = dictionary.get_class_properties(class_id)
     if batch_size <= 0:
         properties = extractor.extract(
             preprocessed_datasheet,
@@ -315,21 +332,28 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         client = gr.State()
         tempdir = gr.State(value=init_tempdir)
         
-        with gr.Tab(label="ECLASS"):
+        with gr.Tab(label="Definitions"):
             with gr.Column():
                 with gr.Row():
-                    eclass_class = gr.Dropdown(
+                    dictionary_type = gr.Dropdown(
+                        label="Dictionary",
+                        allow_custom_value=False,
+                        scale=1,
+                        choices=['ECLASS', 'ETIM'],
+                        value='ECLASS'
+                    )
+                    dictionary_class = gr.Dropdown(
                         label="ECLASS Class",
                         allow_custom_value=True,
                         scale=2,
                         choices=get_class_choices(dictionary.value),
                     )
-                    eclass_release = gr.Dropdown(
+                    dictionary_release = gr.Dropdown(
                         label="ECLASS Release",
-                        choices=ECLASS.supported_releases,
+                        choices=dictionary.value.supported_releases,
                         value=dictionary.value.release,
                     )
-                eclass_class_info = gr.Markdown(
+                class_info = gr.Markdown(
                     value="# Class Info",
                     show_copy_button=True,
                 )
@@ -341,7 +365,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         interactive=False,
                         scale=3
                     )
-                    eclass_property_info = gr.Markdown(
+                    property_info = gr.Markdown(
                         show_copy_button=True,
                     )
 
@@ -481,26 +505,31 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                 settings_load = gr.UploadButton(
                     "Load Settings"
                 )
-    
-        eclass_release.change(
-            fn=change_eclass_release,
-            inputs=eclass_release,
-            outputs=[dictionary, eclass_class]
+        dictionary_type.change(
+            fn=change_dictionary_type,
+            inputs=dictionary_type,
+            outputs=[dictionary, dictionary_class, dictionary_release]
+        )
+
+        dictionary_release.change(
+            fn=change_dictionary_release,
+            inputs=[dictionary_type, dictionary_release],
+            outputs=[dictionary, dictionary_class]
         )
         gr.on(
-            triggers=[eclass_class.change, eclass_release.change],
-            fn=change_eclass_class,
-            inputs=eclass_class,
-            outputs=eclass_class
+            triggers=[dictionary_class.change, dictionary_release.change, dictionary_type.change],
+            fn=change_dictionary_class,
+            inputs=[dictionary, dictionary_class],
+            outputs=dictionary_class
         ).success(
             fn=get_class_property_definitions,
-            inputs=[eclass_class, dictionary],
-            outputs=[eclass_class, eclass_class_info, property_defintions, eclass_property_info]
+            inputs=[dictionary_class, dictionary],
+            outputs=[dictionary_class, class_info, property_defintions, property_info]
         )
         property_defintions.select(
             fn=select_property_info,
-            inputs=[dictionary, property_defintions],
-            outputs=[eclass_property_info]
+            inputs=[dictionary, dictionary_class, property_defintions],
+            outputs=[property_info]
         )
 
         gr.on(
@@ -523,13 +552,13 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
         extraction_started = extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, eclass_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars, max_values_length],
+            inputs=[pdf_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars, max_values_length],
             outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extraction_started.then(
             fn=create_extracted_properties_excel,
-            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, eclass_class],
+            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class],
             outputs=[results]
         )
 
@@ -578,7 +607,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass --> LLM --> xlsx')
+    parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass / etim --> LLM --> xlsx')
     parser.add_argument('--settings', type=str, help="Load settings from file. Defaults to settings.json", default='settings.json')
     parser.add_argument('--port', type=str, help="Change server port (default 7860 if free)", default=None)
     parser.add_argument('--share', action="store_true", help="Allow to use webserver outside localhost, aka. public.")
