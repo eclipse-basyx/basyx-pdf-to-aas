@@ -5,6 +5,8 @@ from .core import Dictionary, ClassDefinition, PropertyDefinition
 logger = logging.getLogger(__name__)
 
 class ETIM(Dictionary):
+    releases: dict[dict[str, ClassDefinition]] = {}
+    properties: dict[str, PropertyDefinition] = {}
     supported_releases = [
         "9.0",
         "8.0",
