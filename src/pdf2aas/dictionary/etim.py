@@ -48,7 +48,16 @@ class ETIM(Dictionary):
         self.__expire_time = None
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        raise NotImplementedError()
+        class_id = self.parse_class_id(class_id)
+        if class_id is None:
+            return []
+        class_ = self.classes.get(class_id)
+        if class_ is None:
+            etim_class = self._download_etim_class(class_id)
+            if etim_class is None:
+                return []
+            class_ = self._parse_etim_class(etim_class)
+        return class_.properties
     
     def get_property(self, property_id: str) -> PropertyDefinition:
         raise NotImplementedError()
