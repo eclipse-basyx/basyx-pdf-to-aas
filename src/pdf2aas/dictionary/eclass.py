@@ -59,7 +59,6 @@ def parse_html_eclass_valuelist(property, span):
         except json.decoder.JSONDecodeError:
             logger.warning("Couldn't parse eclass property value:" + valuelist_span["data-props"])
 
-
 def parse_html_eclass_property(span, data, id):
     property = PropertyDefinition(
         id,
@@ -83,27 +82,6 @@ def parse_html_eclass_property(span, data, id):
         parse_html_eclass_valuelist(property, value_list_span)
     return property
 
-
-def parse_html_eclass_properties(soup: BeautifulSoup):
-    properties = []
-    li_elements = soup.find_all("li")
-    for li in li_elements:
-        span = li.find("span", attrs={"data-props": True})
-        if span:
-            data_props = span["data-props"].replace("&quot;", '"')
-            data = json.loads(data_props)
-            id = data["IRDI_PR"]
-            property = ECLASS.properties.get(id)
-            if property is None:
-                logger.debug(f"Add new property {id}: {data['preferred_name']}")
-                property = parse_html_eclass_property(span, data, id)
-                ECLASS.properties[id] = property
-            else:
-                logger.debug(f"Add existing property {id}: {property.name}")
-            properties.append(property)
-    return properties
-
-
 def split_keywords(li_keywords):
     if li_keywords is None:
         return []
@@ -118,7 +96,6 @@ def split_keywords(li_keywords):
             )
     return keyphrases
 
-
 def download_html(url):
     try:
         response = requests.get(url)
@@ -127,7 +104,6 @@ def download_html(url):
     except requests.RequestException as e:
         logger.error(f"HTML download failed: {e}")
         return None
-
 
 class ECLASS(Dictionary):
     """
@@ -174,8 +150,8 @@ class ECLASS(Dictionary):
                             releases from file, the first time the release is used.
         """
         super().__init__(release, temp_dir)
-        if release not in ECLASS.properties_download_failed:
-            ECLASS.properties_download_failed[release] = set()
+        if release not in self.properties_download_failed:
+            self.properties_download_failed[release] = set()
 
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """
@@ -194,7 +170,7 @@ class ECLASS(Dictionary):
             list[PropertyDefinition]: A list of PropertyDefinition instances
                                       associated with the specified class ID.
         """
-        class_id = ECLASS.parse_class_id(class_id)
+        class_id = self.parse_class_id(class_id)
         if class_id is None:
             return []
         eclass_class = self.classes.get(class_id)
@@ -231,26 +207,26 @@ class ECLASS(Dictionary):
         Returns:
             PropertyDefinition: The requested PropertyDefinition instance.
         """
-        if ECLASS.check_property_irdi(property_id) is False:
+        if self.check_property_irdi(property_id) is False:
             logger.warning(f"Property id has wrong format, should be IRDI: 0173-1#02-([A-Z]{{3}}[0-9]{{3}})#([0-9]{{3}}), got instead: {property_id}")
             return None
         property = self.properties.get(property_id)
         if property is None:
-            if property_id in ECLASS.properties_download_failed.get(self.release):
+            if property_id in self.properties_download_failed.get(self.release):
                 logger.debug(f"Property {property_id} definition download failed already. Skipping download.")
                 return None
 
             logger.info(f"Property {property_id} definition not found in dictionary, try download.")
             html_content = download_html(self.get_property_url(property_id))
             if html_content is None:
-                ECLASS.properties_download_failed[self.release].add(property_id)
+                self.properties_download_failed[self.release].add(property_id)
                 return None
-            property = ECLASS.__parse_html_eclass_property(html_content, property_id)
+            property = self.__parse_html_eclass_property(html_content, property_id)
             if property is None:
-                ECLASS.properties_download_failed[self.release].add(property_id)
+                self.properties_download_failed[self.release].add(property_id)
                 return None
             logger.debug(f"Add new property {property_id} without class to dictionary: {property.name}")
-            ECLASS.properties[property_id] = property
+            self.properties[property_id] = property
         return property
 
     def __parse_html_eclass_class(self, html_content):
@@ -277,8 +253,27 @@ class ECLASS(Dictionary):
                 self.classes[identifier] = eclass_class
             else:
                 logger.debug(f"Found class {identifier}: {eclass_class.name}")
-        eclass_class.properties = parse_html_eclass_properties(soup)
+        eclass_class.properties = self.__parse_html_eclass_properties(soup)
         return eclass_class
+    
+    def __parse_html_eclass_properties(self, soup: BeautifulSoup):
+        properties = []
+        li_elements = soup.find_all("li")
+        for li in li_elements:
+            span = li.find("span", attrs={"data-props": True})
+            if span:
+                data_props = span["data-props"].replace("&quot;", '"')
+                data = json.loads(data_props)
+                id = data["IRDI_PR"]
+                property = self.properties.get(id)
+                if property is None:
+                    logger.debug(f"Add new property {id}: {data['preferred_name']}")
+                    property = parse_html_eclass_property(span, data, id)
+                    self.properties[id] = property
+                else:
+                    logger.debug(f"Add existing property {id}: {property.name}")
+                properties.append(property)
+        return properties
 
     def __parse_html_eclass_property(html_content, property_id):
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -310,6 +305,7 @@ class ECLASS(Dictionary):
                     language="1",  # 0=de, 1=en, 2=fr, 3=cn
                 )
 
+    @staticmethod
     def check_property_irdi(property_id):
         """
         Checks the format of the property IRDI.
@@ -325,6 +321,7 @@ class ECLASS(Dictionary):
             return False
         return True
 
+    @staticmethod
     def parse_class_id(class_id):
         """
         Checks the format of the eclass class id and returns it in 8 digit format.
