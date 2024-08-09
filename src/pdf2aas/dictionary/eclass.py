@@ -177,17 +177,11 @@ class ECLASS(Dictionary):
             return []
         eclass_class = self.classes.get(class_id)
         if eclass_class is None:
-            logger.info(
-                f"Download class and property definitions for {class_id} in release {self.release}"
-            )
+            logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
             html_content = download_html(self.get_class_url(class_id))
             if html_content is None:
                 return []
             eclass_class = self.__parse_html_eclass_class(html_content)
-        else:
-            logger.debug(
-                f"Found class and property definitions for {class_id} in release {self.release}."
-            )
         return eclass_class.properties
     
     def get_property(self, property_id: str) -> PropertyDefinition:
