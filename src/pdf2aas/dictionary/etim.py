@@ -1,4 +1,5 @@
 import logging
+import re
 
 from .core import Dictionary, ClassDefinition, PropertyDefinition
 
@@ -46,3 +47,13 @@ class ETIM(Dictionary):
 
     def get_property_url(self, property_id: str) -> str:
         return f"https://prod.etim-international.com/Feature/Details/{property_id}"
+    
+    @staticmethod
+    def parse_class_id(class_id:str) -> str | None:
+        if class_id is None:
+            return None
+        class_id = re.sub(r'[-_]|\s', '', class_id)
+        class_id = re.search("EC[0-9]{6}", class_id, re.IGNORECASE)
+        if class_id is None:
+            return None
+        return class_id.group(0)
