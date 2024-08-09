@@ -120,7 +120,7 @@ class ETIM(Dictionary):
         for feature in etim_class['features']:
             property_ = PropertyDefinition(
                 id=feature['code'],
-                name=feature['description'],
+                name={'en': feature['description']},
                 type=etim_datatype_to_type.get(feature['type'], 'string'),
             )
             if 'unit' in feature:
