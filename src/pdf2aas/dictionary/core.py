@@ -17,14 +17,14 @@ class PropertyDefinition():
     Attributes:
         id (str): The unique identifier for the property, typically an IRDI
         name (dict[str, str]): A dictionary containing language-specific names or labels for the property.
-        type (str): The data type of the property. Defaults to 'string'. Well known types are: bool, numeric, string
+        type (str): The data type of the property. Defaults to 'string'. Well known types are: bool, numeric, string, range
         definition (dict[str, str]): A dictionary containing language-specific definitions for the property.
         unit (str): The measurement unit associated with the property. Defaults to an empty string.
         values (dict): A dictionary that stores possible values for the property. Defaults to an empty list.
     """
     id: str
     name: dict[str, str] = field(default_factory= lambda: {})
-    type: Literal['bool', 'numeric', 'string'] = 'string'
+    type: Literal['bool', 'numeric', 'string', 'range'] = 'string'
     definition: dict[str, str] = field(default_factory= lambda: {})
     unit: str = ''
     values: dict = field(default_factory= lambda: [])

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 etim_datatype_to_type = {
     "Logical": "bool",
     "Numeric": "numeric",
-    "Range": "string",
+    "Range": "range",
     "Alphanumeric": "string",
 }
 
