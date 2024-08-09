@@ -3,6 +3,7 @@ import logging
 import requests
 import time
 import re
+import copy
 
 from .core import Dictionary, ClassDefinition, PropertyDefinition
 
@@ -60,7 +61,15 @@ class ETIM(Dictionary):
         return class_.properties
     
     def get_property(self, property_id: str) -> PropertyDefinition:
-        raise NotImplementedError()
+        result = None
+        for id, property_ in self.properties.items():
+            if not id.startswith(property_id):
+                continue                
+            if result is None:
+                result = copy.deepcopy(property_)
+                continue
+            result.values.update(property_.values)
+        return result
     
     def get_class_url(self, class_id: str) -> str :
         # Alternative: f"https://viewer.etim-international.com/class/{class_id}"
