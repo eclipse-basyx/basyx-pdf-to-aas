@@ -111,6 +111,11 @@ class Dictionary(ABC):
         """
         return self.releases.get(self.release)
 
+    def get_class_url(self, class_id: str) -> str | None:
+        return None
+    def get_property_url(self, property_id: str) -> str | None:
+        return None
+
     def save_to_file(self, filepath: str | None = None):
         if filepath is None:
             filepath = os.path.join(self.temp_dir, f'{self.__class__.__name__}-{self.release}.json')

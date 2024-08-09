@@ -3,7 +3,6 @@ import logging
 from logging.handlers import RotatingFileHandler
 import json
 import tempfile
-from urllib.parse import quote
 from datetime import datetime
 
 import gradio as gr
@@ -58,7 +57,7 @@ def get_class_property_definitions(
     class_info = dictionary.classes.get(eclass_id)
     if class_info:
         class_info = f"""# {class_info.name}
-* ID: [{class_info.id}]({ECLASS.eclass_class_search_pattern.format(class_id=class_info.id, language="1", release=dictionary.release)})
+* ID: [{class_info.id}]({dictionary.get_class_url(class_info.id)})
 * Definition: {class_info.description}
 * Keywords: {', '.join(class_info.keywords)}
 * Properties: {len(class_info.properties)}
@@ -88,7 +87,7 @@ def select_property_info(dictionary: ECLASS | None, definitions: pd.DataFrame | 
     if definition is None:
         return "Select Property for Details"
     return f"""## {definition.name.get('en')}
-* ID: [{definition.id}]({ECLASS.eclass_property_search_pattern.format(property_id=quote(definition.id), language="1", release=dictionary.release)})
+* ID: [{definition.id}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
 * Definition: {definition.definition.get('en')}
 * Values:{"".join(["\n  * " + v.get("value") for v in definition.values])}

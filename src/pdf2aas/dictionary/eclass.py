@@ -141,8 +141,8 @@ class ECLASS(Dictionary):
         properties_download_failed (dict[str, set[str]]): Maps release versions to a set of property ids, that could not be downloaded.
     """
 
-    eclass_class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
-    eclass_property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
+    class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
+    property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     properties_download_failed: dict[str, set[str]] = {}
     supported_releases = [
         "14.0",
@@ -202,13 +202,7 @@ class ECLASS(Dictionary):
             logger.info(
                 f"Download class and property definitions for {class_id} in release {self.release}"
             )
-            html_content = download_html(
-                ECLASS.eclass_class_search_pattern.format(
-                    class_id=class_id,
-                    language="1",  # 0=de, 1=en, 2=fr, 3=cn
-                    release=self.release,
-                )
-            )
+            html_content = download_html(self.get_class_url(class_id))
             if html_content is None:
                 return []
             eclass_class = self.__parse_html_eclass_class(html_content)
@@ -247,8 +241,7 @@ class ECLASS(Dictionary):
                 return None
 
             logger.info(f"Property {property_id} definition not found in dictionary, try download.")
-            html_content = download_html(ECLASS.eclass_property_search_pattern.format(
-                property_id=quote(property_id), release=self.release, language="1"))
+            html_content = download_html(self.get_property_url(property_id))
             if html_content is None:
                 ECLASS.properties_download_failed[self.release].add(property_id)
                 return None
@@ -303,6 +296,19 @@ class ECLASS(Dictionary):
             values=extract_values_from_eclass_property_soup(soup)
         )
         return property
+
+    def get_class_url(self, class_id: str) -> str | None:
+        return self.class_search_pattern.format(
+                    class_id=class_id,
+                    release=self.release,
+                    language="1",  # 0=de, 1=en, 2=fr, 3=cn
+                )
+    def get_property_url(self,property_id: str) -> str | None:
+        return self.property_search_pattern.format(
+                    property_id=quote(property_id),
+                    release=self.release,
+                    language="1",  # 0=de, 1=en, 2=fr, 3=cn
+                )
 
     def check_property_irdi(property_id):
         """
