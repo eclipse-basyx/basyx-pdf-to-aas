@@ -204,9 +204,7 @@ def extract(
     preprocessor = PDFium()
     preprocessed_datasheet = preprocessor.convert(pdf_upload)
     if preprocessed_datasheet is None:
-        gr.Warning("Error while preprocessing datasheet.")
-        logger.error(f"Preprocessed datasheet is none.")
-        return
+        raise gr.Error("Error while preprocessing datasheet.")
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     yield None, datasheet_txt, None, None, gr.update()
 
@@ -310,11 +308,10 @@ def save_settings(settings):
 def load_settings(settings_file_path):
     try:
         settings = json.load(open(settings_file_path))
-    except (json.JSONDecodeError, OSError) as error:
-        gr.Error(f"Couldn't load settings from {settings_file_path}: {error.msg}")
-        return {}
+    except (json.JSONDecodeError, OSError, FileNotFoundError) as error:
+        raise gr.Error(f"Couldn't load settings: {error}")
     if settings.get('version', 0) < __current_settings_version:
-        gr.Error(f"Wrong settings version {settings.get('version')}. Please migrate settings file manually to {__current_settings_version}")
+        raise gr.Error(f"Wrong settings version {settings.get('version')}. Please migrate settings file manually to version {__current_settings_version}.")
     logger.info(f"Loading settings from {settings_file_path}")
     return tuple(settings.get('settings').values())
 
@@ -565,53 +562,40 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[results]
         )
 
+        settings_list = [
+            dictionary_type,
+            dictionary_release,
+            prompt_hint,
+            endpoint_type, model,
+            endpoint, api_key,
+            azure_deployment, azure_api_version,
+            custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
+            temperature, max_tokens,
+            batch_size, use_in_prompt, max_definition_chars, max_values_length
+        ]
+
         gr.on(
             triggers=[prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change, max_values_length.change],
             fn=save_settings,
-            inputs={tempdir,
-                    dictionary_type,
-                    dictionary_release,
-                    prompt_hint,
-                    endpoint_type, model,
-                    endpoint, api_key,
-                    azure_deployment, azure_api_version,
-                    custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
-                    temperature, max_tokens,
-                    batch_size, use_in_prompt, max_definition_chars, max_values_length},
+            inputs= {tempdir} | set(settings_list),
             outputs=settings_save
         )
         settings_save.postprocess=lambda path : gr.FileData(path=path, orig_name="settings.json")
         settings_load.upload(
             fn=load_settings,
             inputs=settings_load,
-            outputs=[
-                    dictionary_type,
-                    dictionary_release,
-                    prompt_hint,
-                    endpoint_type, model,
-                    endpoint, api_key,
-                    azure_deployment, azure_api_version,
-                    custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
-                    temperature, max_tokens,
-                    batch_size, use_in_prompt, max_definition_chars, max_values_length],
+            outputs=settings_list,
         )
         try:
             demo.load(
                 fn=load_settings,
                 inputs=gr.File(init_settings_path, visible=False),
-                outputs=[
-                        dictionary_type,
-                        dictionary_release,
-                        prompt_hint,
-                        endpoint_type, model,
-                        endpoint, api_key,
-                        azure_deployment, azure_api_version,
-                        custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
-                        temperature, max_tokens,
-                        batch_size, use_in_prompt, max_definition_chars, max_values_length],
+                outputs=settings_list,
             )
         except FileNotFoundError:
             logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
+        except gr.exceptions.Error as error:
+            logger.warning(f"Initial settings file not loaded: {error}")
     
     demo.queue(max_size=10)
     demo.launch(quiet=not debug, share=share, server_port=server_port)
