@@ -575,7 +575,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         ]
 
         gr.on(
-            triggers=[prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change, max_values_length.change],
+            triggers=[demo.load, prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change, max_values_length.change],
             fn=save_settings,
             inputs= {tempdir} | set(settings_list),
             outputs=settings_save
