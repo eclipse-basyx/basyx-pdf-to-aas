@@ -233,6 +233,22 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 
     def create_property_list_prompt(self, property_list: list[PropertyDefinition], language: str = "en") -> str:
         prompt = "Extract the following properties from the provided datasheet:\n"
+        prompt+= "| Property |"
+        separator = "| - |"
+        if self.use_property_datatype:
+            prompt += " Datatype |"
+            separator += " - |"
+        if self.use_property_unit:
+            prompt += " Unit |"
+            separator += " - |"
+        if self.use_property_definition:
+            prompt += " Definition |"
+            separator += " - |"
+        if self.use_property_values:
+            prompt += " Values |"
+            separator += " - |"
+        prompt+= "\n" + separator + "\n"
+
         for property in property_list:
             if property.name is None:
                 logger.warning(f"Property {property.id} has no name.")
@@ -243,27 +259,32 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 logger.warning(
                     f"Property {property.id} name not defined for language {language}. Using {property_name}."
                 )
-                continue
-            prompt +=f'* Property: "{property_name}"\n'
-            property_definition = property.definition.get(language)
-            if self.use_property_definition and property_definition:
-                if self.max_definition_chars > 0 and len(property_definition) > self.max_definition_chars:
+            
+            property_row = f"| {property_name} |"
+            if self.use_property_datatype:
+                property_row += f" {property.type} |"
+            if self.use_property_unit:
+                property_row += f" {property.unit} |"
+            if self.use_property_definition:
+                property_definition = property.definition.get(language, '')
+                if property_definition and self.max_definition_chars > 0 and len(property_definition) > self.max_definition_chars:
                     property_definition = property_definition[:self.max_definition_chars] + " ..."
-                prompt += f'  * Definition: "{property_definition}"\n'
-            if self.use_property_datatype and property.type:
-                prompt += f'  * Datatype: "{property.type}"\n'
-            if self.use_property_unit and property.unit:
-                prompt += f'  * Unit: "{property.unit}"\n'
-            if self.use_property_values and property.values:
-                if isinstance(next(iter(property.values)), dict):
-                    property_values = [v["value"] for v in property.values]
+                property_row += f" {property_definition} |"
+            if self.use_property_values:
+                if len(property.values) > 0:
+                    if isinstance(next(iter(property.values)), dict):
+                        property_values = [v["value"] for v in property.values]
+                    else:
+                        property_values = property.values
+                    if self.max_values_length > 0 and len(property_values) > self.max_values_length:
+                        property_values = property_values[:self.max_values_length] + ["..."]
                 else:
-                    property_values = property.values
-                if self.max_values_length > 0 and len(property_values) > self.max_values_length:
-                    property_values = property_values[:self.max_values_length] + ["..."]
-                prompt += f'  * Possible values: "{property_values}"\n'
-        return prompt
+                    property_values = []
+                property_row += f" {', '.join(property_values)} |"
+            prompt += property_row.replace('\n', ' ') + "\n"
+            #TODO escape | sign in name, type, unit, definition, values, etc.
 
+        return prompt
 
     def create_prompt(
         self, datasheet: str, property: PropertyDefinition | list[PropertyDefinition], language: str = "en", hint: str | None = None
