@@ -60,23 +60,12 @@ class ETIM(Dictionary):
             class_ = self._parse_etim_class(etim_class)
         return class_.properties
     
-    def get_property(self, property_id: str) -> PropertyDefinition:
-        result = None
-        for id, property_ in self.properties.items():
-            if not id.startswith(property_id):
-                continue                
-            if result is None:
-                result = copy.deepcopy(property_)
-                continue
-            result.values.update(property_.values)
-        return result
-    
     def get_class_url(self, class_id: str) -> str :
         # Alternative: f"https://viewer.etim-international.com/class/{class_id}"
         return f"https://prod.etim-international.com/Class/Details/?classid={class_id}"
 
     def get_property_url(self, property_id: str) -> str:
-        return f"https://prod.etim-international.com/Feature/Details/{property_id}"
+        return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[0]}"
     
     def _download_etim_class(self, etim_class_code, language = "EN") -> dict:
         logger.debug(f"Download etim class details for {etim_class_code} in {language} and release {self.release}")
@@ -118,10 +107,12 @@ class ETIM(Dictionary):
             keywords=etim_class['synonyms'],
         )
         for feature in etim_class['features']:
+            feature_id = f'{feature['code']}/{etim_class['code']}/{self.release}'
             property_ = PropertyDefinition(
-                id=feature['code'],
+                id=feature_id,
                 name={'en': feature['description']},
                 type=etim_datatype_to_type.get(feature['type'], 'string'),
+                # definition is currently not available via ETIM API
             )
             if 'unit' in feature:
                 property_.unit = feature['unit']['abbreviation']
@@ -132,7 +123,7 @@ class ETIM(Dictionary):
                         'id': value['code']
                     }
                     for value in feature['values']]
-            self.properties[f'{feature['code']}/{etim_class['code']}'] = property_
+            self.properties[feature_id] = property_
             class_.properties.append(property_)
         self.classes[etim_class['code']] = class_
         return class_

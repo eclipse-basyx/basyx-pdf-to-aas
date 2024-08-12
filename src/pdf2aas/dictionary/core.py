@@ -92,7 +92,6 @@ class Dictionary(ABC):
             return []
         return class_.properties
 
-    @abstractmethod
     def get_property(self, property_id: str) -> PropertyDefinition:
         """
         Retrieve a single property definition for the given property ID from the dictionary.
@@ -165,16 +164,10 @@ class Dictionary(ABC):
                         f"Load class {class_['id']}: {class_['name']}"
                     )
                     new_class = ClassDefinition(**class_)
-                    if dict.get('type','') == "ETIM":
-                        new_class.properties = [
-                            self.properties[f"{property_id}/{id}"]
-                            for property_id in new_class.properties
-                        ]
-                    else:
-                        new_class.properties = [
-                            self.properties[property_id]
-                            for property_id in new_class.properties
-                        ]
+                    new_class.properties = [
+                        self.properties[property_id]
+                        for property_id in new_class.properties
+                    ]
                     classes[id] = new_class
         return True
     
