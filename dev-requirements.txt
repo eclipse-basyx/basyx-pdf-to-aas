@@ -48,7 +48,7 @@ lxml==4.9.4
     # via
     #   basyx-python-sdk
     #   pyecma376-2
-openai==1.40.1
+openai==1.40.3
     # via pdf2aas (pyproject.toml)
 packaging==24.1
     # via
@@ -70,9 +70,9 @@ pydantic-settings==2.4.0
     # via pdf2aas (pyproject.toml)
 pyecma376-2==1.0.0
     # via basyx-python-sdk
-pyinstaller==6.9.0
+pyinstaller==6.10.0
     # via pdf2aas (pyproject.toml)
-pyinstaller-hooks-contrib==2024.7
+pyinstaller-hooks-contrib==2024.8
     # via pyinstaller
 pypdfium2==4.30.0
     # via pdf2aas (pyproject.toml)

@@ -354,7 +354,6 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     )
                 class_info = gr.Markdown(
                     value="# Class Info",
-                    show_copy_button=True,
                 )
                 with gr.Row():
                     property_defintions = gr.DataFrame(
@@ -364,9 +363,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         interactive=False,
                         scale=3
                     )
-                    property_info = gr.Markdown(
-                        show_copy_button=True,
-                    )
+                    property_info = gr.Markdown()
 
         with gr.Tab("Extract"):
             with gr.Column():
