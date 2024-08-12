@@ -28,7 +28,7 @@ def check_extract_ready(pdf_upload, definitions):
         )
 
 def get_class_choices(dictionary: Dictionary):
-    if dictionary.__class__.__name__ == "ECLASS":
+    if dictionary.name == "ECLASS":
         return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
     return [(f"{class_.id} {class_.name}", class_.id) for class_ in dictionary.classes.values()]
 
@@ -39,8 +39,8 @@ def change_dictionary_type(dictionary_type):
         dictionary = ETIM()
     return (
         dictionary,
-        gr.Dropdown(label=f"{dictionary.__class__.__name__} Class", choices=get_class_choices(dictionary)),
-        gr.Dropdown(label=f"{dictionary.__class__.__name__} Release", choices=dictionary.supported_releases, value=dictionary.release)
+        gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary)),
+        gr.Dropdown(label=f"{dictionary.name} Release", choices=dictionary.supported_releases, value=dictionary.release)
     )
 
 def change_dictionary_release(dictionary_type, release):
@@ -277,7 +277,7 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
         settings.append(['use_in_prompt', " ".join(use_in_prompt)])
         settings.append(['max_definition_chars', max_definition_chars])
         settings.append(['max_values_length', max_values_length])
-        settings.append(['dictionary_type', dictionary.__class__.__name__])
+        settings.append(['dictionary_type', dictionary.name])
         settings.append(['dictionary_release', dictionary.release])
         settings.append(['dictionary_class', class_id])
     

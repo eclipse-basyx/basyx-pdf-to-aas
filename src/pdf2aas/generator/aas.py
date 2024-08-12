@@ -109,7 +109,7 @@ class AASSubmodelTechnicalData(Generator):
             model.Property(
                 id_short = 'ProductClassificationSystem',
                 value_type = model.datatypes.String,
-                value = dictionary.__class__.__name__,
+                value = dictionary.name,
                 category = "PARAMETER",
                 semantic_id = semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationSystem/1/1")
             )

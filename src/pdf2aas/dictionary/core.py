@@ -73,6 +73,10 @@ class Dictionary(ABC):
             self.releases[release] = {}
             self.load_from_file()
 
+    @property
+    def name(self):
+        return self.__class__.__name__
+    
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """
         Retrieves a list of property definitions associated with a given class.
@@ -118,13 +122,13 @@ class Dictionary(ABC):
 
     def save_to_file(self, filepath: str | None = None):
         if filepath is None:
-            filepath = os.path.join(self.temp_dir, f'{self.__class__.__name__}-{self.release}.json')
+            filepath = os.path.join(self.temp_dir, f'{self.name}-{self.release}.json')
         logger.info(f"Save dictionary to file: {filepath}")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w") as file:
             json.dump(
                 {
-                    "type": self.__class__.__name__,
+                    "type": self.name,
                     "release": self.release,
                     "properties": self.properties,
                     "classes": self.classes,
@@ -135,7 +139,7 @@ class Dictionary(ABC):
 
     def load_from_file(self, filepath: str | None = None) -> bool:
         if filepath is None:
-            filepath = os.path.join(self.temp_dir, f'{self.__class__.__name__}-{self.release}.json')
+            filepath = os.path.join(self.temp_dir, f'{self.name}-{self.release}.json')
         if not os.path.exists(filepath):
             logger.debug(
                 f"Couldn't load dictionary from file. File does not exist: {filepath}"
