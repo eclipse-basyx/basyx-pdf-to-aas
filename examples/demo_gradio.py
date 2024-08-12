@@ -499,8 +499,11 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     value=0,
                 )
             with gr.Row():
-                settings_save = gr.DownloadButton(
-                    "Download Settings"
+                settings_save = gr.Button(
+                    "Create Settings File"
+                )
+                settings_file = gr.File(
+                    label="Download Settings"
                 )
                 settings_load = gr.UploadButton(
                     "Load Settings"
@@ -574,13 +577,6 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             batch_size, use_in_prompt, max_definition_chars, max_values_length
         ]
 
-        gr.on(
-            triggers=[demo.load, prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change, max_values_length.change],
-            fn=save_settings,
-            inputs= {tempdir} | set(settings_list),
-            outputs=settings_save
-        )
-        settings_save.postprocess=lambda path : gr.FileData(path=path, orig_name="settings.json")
         settings_load.upload(
             fn=load_settings,
             inputs=settings_load,
@@ -596,6 +592,12 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
         except gr.exceptions.Error as error:
             logger.warning(f"Initial settings file not loaded: {error}")
+        gr.on(
+            triggers=[demo.load, settings_save.click, settings_load.upload],
+            fn=save_settings,
+            inputs= {tempdir} | set(settings_list),
+            outputs=settings_file
+        )
     
     demo.queue(max_size=10)
     demo.launch(quiet=not debug, share=share, server_port=server_port)
