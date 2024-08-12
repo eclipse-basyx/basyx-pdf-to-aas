@@ -39,7 +39,7 @@ def change_dictionary_type(dictionary_type):
         dictionary = ETIM()
     return (
         dictionary,
-        gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary)),
+        gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary), value=None),
         gr.Dropdown(label=f"{dictionary.name} Release", choices=dictionary.supported_releases, value=dictionary.release)
     )
 
@@ -64,7 +64,7 @@ def get_class_property_definitions(
         dictionary,
     ):
     if class_id is None:
-        return None, None, None, None, None
+        return None, "# Class Info", None, None, None
     download = False
     if class_id not in dictionary.classes.keys():
         download = True
@@ -96,15 +96,14 @@ def get_class_property_definitions(
 
     return class_id, class_info, definitions_df, "## Select Property in Table for Details"
 
-def select_property_info(dictionary: Dictionary | None, class_id: str, definitions: pd.DataFrame | None, evt: gr.SelectData):
+def select_property_info(dictionary: Dictionary | None, definitions: pd.DataFrame | None, evt: gr.SelectData):
     if dictionary is None or definitions is None:
         return None
     definition = dictionary.get_property(definitions.iloc[evt.index[0], 0])
-    # TODO use class_id, get class and then the property instead? may be faster for ETIM
     if definition is None:
-        return "Select Property for Details"
+        return "## Select Property in Table for Details"
     return f"""## {definition.name.get('en')}
-* ID: [{definition.id}]({dictionary.get_property_url(definition.id)})
+* ID: [{definition.id.split('/')[0]}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
 * Definition: {definition.definition.get('en', '')}
 * Values:{"".join(["\n  * " + v.get("value") for v in definition.values])}
@@ -178,7 +177,7 @@ def mark_extracted_references(datasheet, properties):
             continue
         unit = f" [{property.get('unit')}]" if property.get('unit') else ''
         datasheet['entities'].append({
-            'entity': f"{property.get('name','')} ({property_id}): {property.get('value','')}{unit}",
+            'entity': f"{property.get('name','')} ({property_id.split('/')[0]}): {property.get('value','')}{unit}",
             'start': start,
             'end': start + len(reference)
         })
@@ -508,31 +507,36 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                 settings_load = gr.UploadButton(
                     "Load Settings"
                 )
+        
         dictionary_type.change(
             fn=change_dictionary_type,
             inputs=dictionary_type,
-            outputs=[dictionary, dictionary_class, dictionary_release]
+            outputs=[dictionary, dictionary_class, dictionary_release],
+            show_progress="hidden"
         )
-
         dictionary_release.change(
             fn=change_dictionary_release,
             inputs=[dictionary_type, dictionary_release],
-            outputs=[dictionary, dictionary_class]
+            outputs=[dictionary, dictionary_class],
+            show_progress="hidden"
         )
         gr.on(
-            triggers=[dictionary_class.change, dictionary_release.change, dictionary_type.change],
+            triggers=[dictionary_class.change, dictionary_release.change],
             fn=change_dictionary_class,
             inputs=[dictionary, dictionary_class],
-            outputs=dictionary_class
+            outputs=dictionary_class,
+            show_progress="hidden"
         ).success(
             fn=get_class_property_definitions,
             inputs=[dictionary_class, dictionary],
-            outputs=[dictionary_class, class_info, property_defintions, property_info]
+            outputs=[dictionary_class, class_info, property_defintions, property_info],
+            show_progress="minimal"
         )
         property_defintions.select(
             fn=select_property_info,
-            inputs=[dictionary, dictionary_class, property_defintions],
-            outputs=[property_info]
+            inputs=[dictionary, property_defintions],
+            outputs=[property_info],
+            show_progress='hidden'
         )
 
         gr.on(
