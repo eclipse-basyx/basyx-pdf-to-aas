@@ -279,6 +279,9 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
         settings.append(['use_in_prompt', " ".join(use_in_prompt)])
         settings.append(['max_definition_chars', max_definition_chars])
         settings.append(['max_values_length', max_values_length])
+        settings.append(['dictionary_type', dictionary.__class__.__name__])
+        settings.append(['dictionary_release', dictionary.release])
+        settings.append(['dictionary_class', class_id])
     
     submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
     #TODO set identifier and other properties --> load from a template, that can be specified in settings?
@@ -291,7 +294,7 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
 
     return [excel_path, properties_path, submodel_path, aasx_path]
 
-__current_settings_version = 1
+__current_settings_version = 2
 def save_settings(settings):
     tempdir = next(iter(settings)) # Assume tempdir is first element
     settings_path = os.path.join(tempdir.value.name, "settings.json")
@@ -566,6 +569,8 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             triggers=[prompt_hint.change, client.change, temperature.change, max_tokens.change, batch_size.change, use_in_prompt.change, max_definition_chars.change, max_values_length.change],
             fn=save_settings,
             inputs={tempdir,
+                    dictionary_type,
+                    dictionary_release,
                     prompt_hint,
                     endpoint_type, model,
                     endpoint, api_key,
@@ -579,7 +584,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         settings_load.upload(
             fn=load_settings,
             inputs=settings_load,
-            outputs=[prompt_hint,
+            outputs=[
+                    dictionary_type,
+                    dictionary_release,
+                    prompt_hint,
                     endpoint_type, model,
                     endpoint, api_key,
                     azure_deployment, azure_api_version,
@@ -591,7 +599,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             demo.load(
                 fn=load_settings,
                 inputs=gr.File(init_settings_path, visible=False),
-                outputs=[prompt_hint,
+                outputs=[
+                        dictionary_type,
+                        dictionary_release,
+                        prompt_hint,
                         endpoint_type, model,
                         endpoint, api_key,
                         azure_deployment, azure_api_version,
