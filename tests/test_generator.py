@@ -1,5 +1,5 @@
 import json
-import filecmp
+from datetime import datetime
 
 from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData
 from pdf2aas.extractor import DummyPropertyLLM
@@ -31,4 +31,12 @@ def test_submodel_technical_data_generate():
     g = AASSubmodelTechnicalData("id1")
     g.add_properties(test_property_list)
     with(open('tests/assets/dummy-result-technical-data-submodel.json') as file):
-        assert json.load(file) == json.loads(g.dumps())
+        expected = json.load(file)
+        for element in expected['submodelElements']:
+            if element['idShort'] == 'FurtherInformation':
+                for item in element['value']:
+                    if item['idShort'] == 'ValidDate':
+                        item['value'] = datetime.now().strftime('%Y-%m-%d')
+                        break
+                break
+        assert expected == json.loads(g.dumps())
