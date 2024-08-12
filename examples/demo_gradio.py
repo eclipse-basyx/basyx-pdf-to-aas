@@ -369,7 +369,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     )
 
         with gr.Tab("Extract"):
-            with gr.Row():
+            with gr.Column():
                 with gr.Row():
                     pdf_upload = gr.File(
                         label="Upload PDF Datasheet",
@@ -391,7 +391,6 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Download Results",
                         scale=2,
                     )
-            with gr.Group():
                 extracted_values = gr.DataFrame(
                     label="Extracted Values",
                     headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
@@ -399,11 +398,12 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     interactive=False,
                     wrap=True,
                 )
-                datasheet_text_highlighted = gr.HighlightedText(
-                    label="Preprocessed Datasheet with References",
-                    combine_adjacent=True,
-                    
-                )
+                with gr.Accordion("Preprocessed Datasheet with References", open=False):
+                    datasheet_text_highlighted = gr.HighlightedText(
+                        show_label=False,
+                        combine_adjacent=True,
+                        container=False,
+                    )
         with gr.Tab("Raw Results"):
             with gr.Row():
                 raw_prompts = gr.JSON(
