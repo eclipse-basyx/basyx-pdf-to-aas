@@ -6,7 +6,6 @@ authors = [
 dependencies = [
   "pydantic",
   "pydantic-settings",
-  "tiktoken",
   "openai",
   "beautifulsoup4",
   "requests",

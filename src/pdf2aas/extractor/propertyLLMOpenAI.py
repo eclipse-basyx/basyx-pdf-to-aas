@@ -4,7 +4,6 @@ import re
 import unicodedata
 from typing import Literal
 
-import tiktoken
 from openai import OpenAI, AzureOpenAI, OpenAIError
 
 from ..dictionary import PropertyDefinition
@@ -83,10 +82,6 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return properties
 
     def _prompt_llm(self, messages, raw_results):
-        for message in messages:
-            token_count = self.calculate_token_count(message.get('content'))
-            logger.debug(f"Prompt ({message.get('role')}) {'token' if token_count > 0 else 'char'} count: {token_count if token_count > 0 else len(message.get("content"))}")
-        
         if self.client is None:
             print("Systemprompt:\n"+ messages[0]["content"])
             print("Prompt:\n"+ messages[1]["content"])
@@ -300,22 +295,3 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         
         prompt+= f"\nThe following text in triple # is the datasheet of the technical device. It was converted from pdf.\n###\n{datasheet}\n###"
         return prompt
-
-    def calculate_token_count(self, text: str) -> int:
-        """
-        Calculate the number of tokens in a given text based on a specified model's encoding.
-
-        Parameters:
-        - text (str): The input text to encode.
-
-        Returns:
-        - int: The number of tokens in the encoded text. Returns -1 on unknown model or error.
-
-        """
-        if self.model_identifier is None or len(self.model_identifier) == 0:
-            return -1
-        try:
-            encoding = tiktoken.encoding_for_model(self.model_identifier)
-        except KeyError:
-            return -1
-        return len(encoding.encode(text))
