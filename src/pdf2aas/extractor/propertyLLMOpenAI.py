@@ -9,6 +9,7 @@ from openai import OpenAI, AzureOpenAI, OpenAIError
 from ..dictionary import PropertyDefinition
 from . import PropertyLLM
 from . import CustomLLMClient
+from . import Property
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             raw_prompts: list[str] | None = None,
             raw_results: list[str] | None = None,
             prompt_hint: str | None = None,
-    ) -> dict | list[dict] | None:
+    ) -> list[Property]:
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
@@ -78,7 +79,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             raw_prompts.append(messages)
         result = self._prompt_llm(messages, raw_results)
         properties = self._parse_result(result)
-        properties = self._add_name_id_from_definition(properties, property_definition)
+        properties = self._add_definitions(properties, property_definition)
         return properties
 
     def _prompt_llm(self, messages, raw_results):
@@ -147,52 +148,45 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 properties = next(iter(properties.values()))
         return properties
 
-    def _add_name_id_from_definition(self, properties, property_definition):
+    def _add_definitions(
+            self,
+            properties: dict | list | None,
+            property_definition: list[PropertyDefinition] | PropertyDefinition
+    ) -> list[Property]:
         if properties is None:
-            return properties
-        if isinstance(properties, dict): # and len(property_definition) == 1
-            properties = [properties]
-            logger.debug(f"Extracted properties are a dict, try to encapsulate them in a list.")
-        if isinstance(property_definition, list):
+            return []
+        if not isinstance(properties, (list, dict)):
+            logger.warning(f"Extraction result type is {type(properties)} instead of list or dict.")
+            return []
+        
+        if isinstance(property_definition, PropertyDefinition):
+            property_definition = [property_definition]
+
+        if isinstance(properties, dict): 
             if len(property_definition) == 1:
-                if len(properties) > 1:
-                    logger.warning(f"Extracted multiple properties {len(properties)} for one definition. Add same 'id' and 'name'")
-                for property in properties:
-                    property["id"] = property_definition[0].id
-                    property["name"] = property_definition[0].name["en"]
-                return properties
+                properties = [properties]
+            else:
+                properties = list(properties.values())
+                logger.debug(f"Extracted properties are a dict, try to encapsulate them in a list.")
+        
+        if len(property_definition) == 1:
+            if len(properties) > 1:
+                logger.warning(f"Extracted multiple properties {len(properties)} for one definition.")
+            return [Property.from_dict(p, property_definition[0])
+                    for p in properties if isinstance(p, dict)]
 
-            if len(properties) != len(property_definition):
-                if len(properties) <= 1:
-                    logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Can't add 'id' and'name'")
-                    return None
+        if len(properties) == len(property_definition):
+            return [Property.from_dict(p, property_definition[i])
+                    for i, p in enumerate(properties) if isinstance(p, dict)]
 
-                logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}. Try to add 'id' and 'name' by extracted property name.")
-                property_definition_dict = {next(iter(p.name.values()), '').lower(): p.id for p in property_definition}
-                for property in properties:
-                    name = property.get('property')
-                    if name is not None and name.lower() in property_definition_dict:
-                        property['name'] = name
-                        property['id'] = property_definition_dict.get(name)
-                return properties
-            
-            if not isinstance(properties, list):
-                logger.warning(f"Extraction result is {type(properties)} instead of list. Can't add 'id' and 'name'")
-                return None
-            dict_error = False
-            for idx, property_def in enumerate(property_definition):
-                if not isinstance(properties[idx], dict):
-                    dict_error = True
-                    continue
-                properties[idx]["id"] = property_def.id
-                properties[idx]["name"] = property_def.name["en"]
-            if dict_error:
-                logger.warning("Some or all extracted properties are not of type dict. Can't add 'id' and 'name'")
-        else:
-            for property in properties:
-                property["id"] = property_definition.id
-                property["name"] = property_definition.name["en"]
-        return properties
+        logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}.")
+        property_definition_dict = {next(iter(p.name.values()), p.id).lower(): p for p in property_definition}
+        result = []
+        for property_ in properties:
+            name = property_.get('property', property_.get('label', property_.get('id')))
+            if name is not None and name.lower() in property_definition_dict:
+                result.append(Property.from_dict(property_, property_definition_dict.get(name)))
+        return result
 
     def create_property_prompt(self, property: PropertyDefinition, language: str = "en") -> str:
         if property.name is None:
