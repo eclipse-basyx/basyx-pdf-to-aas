@@ -18,8 +18,9 @@ class PropertyLLMOpenAI(PropertyLLM):
     system_prompt_template = """You act as an text API to extract technical properties from a given datasheet.
 Answer only in valid JSON format.
 Answer with a list of objects, containing the keys 'property', 'value', 'unit', 'reference'.
-The property field must contain the property id as provided in the datasheet.
-The value field must only contain the value you extracted.
+Keep the order of the requested properties.
+The property field must contain the property id as provided in the request.
+The value field must only contain the value you extracted and converted to the requested unit.
 The unit field contains the physical unit of measurement, if applicable.
 The reference field contains a small excerpt of maximum 100 characters from the datasheet surrounding the extracted value.
 Answer with null values if you don't find the information or if not applicable.
