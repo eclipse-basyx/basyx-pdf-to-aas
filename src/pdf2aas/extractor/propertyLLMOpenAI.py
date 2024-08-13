@@ -190,7 +190,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return result
 
     def create_property_prompt(self, property: PropertyDefinition, language: str = "en") -> str:
-        if property.name is None:
+        if len(property.name) == 0:
             raise ValueError(f"Property {property.id} has no name.")
         property_name = property.name.get(language)
         if property_name is None:
@@ -240,12 +240,12 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         prompt+= "\n" + separator + "\n"
 
         for property in property_list:
-            if property.name is None:
+            if len(property.name) == 0:
                 logger.warning(f"Property {property.id} has no name.")
                 continue
             property_name = property.name.get(language)
             if property_name is None:
-                property_name = property.name
+                property_name = next(iter(property.name.values()))
                 logger.warning(
                     f"Property {property.id} name not defined for language {language}. Using {property_name}."
                 )
