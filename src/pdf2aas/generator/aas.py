@@ -159,19 +159,22 @@ class AASSubmodelTechnicalData(Generator):
             display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
             if technical_properties.value.contains_id('id_short', id_short):
                 id_short += str(uuid.uuid4())
-            
-            aas_property = model.Property(
-                id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short),
-                display_name = model.MultiLanguageNameType({'en': display_name}),
-                value_type = json_data_type_to_xsd(property.get('value')), #TODO get from definition?
-                value = property.get('value'),
-                semantic_id = semantic_id(property.get('id'))
-            )
+            try:
+                aas_property = model.Property(
+                    id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short),
+                    display_name = model.MultiLanguageNameType({'en': display_name}),
+                    value_type = json_data_type_to_xsd(property.get('value')), #TODO get from definition?
+                    value = property.get('value'),
+                    semantic_id = semantic_id(property.get('id'))
+                )
+            except TypeError as error:
+                logger.warning(f"Couldn't create property for submodel: {error}")
+                continue
 
             try:
                 technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
-                logger.warning("Couldn't add property to submodel: "+ error.message)
+                logger.warning(f"Couldn't add property to submodel: {error}")
     
     def dumps(self):
         return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
