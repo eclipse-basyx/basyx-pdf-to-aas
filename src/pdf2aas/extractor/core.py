@@ -20,6 +20,19 @@ class Property():
     reference: str = ""
     definition: PropertyDefinition | None = None
 
+    def to_legacy_dict(self):
+        name = self.definition.name.get('en') if self.definition else ''
+        if name is None:
+            name = next(iter(self.definition.name.values()), '')
+        return {
+            'property': self.label,
+            'value': self.value,
+            'unit': self.unit,
+            'reference': self.reference,
+            'id': self.definition.id if self.definition else '',
+            'name': name
+        }
+
     @classmethod
     def from_dict(cls, property_dict:dict, defintion:PropertyDefinition):      
         label = property_dict.get('property')

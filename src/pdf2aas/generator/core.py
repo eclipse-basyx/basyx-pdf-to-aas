@@ -1,11 +1,13 @@
+from pdf2aas.extractor import Property
+
 class Generator:
     def __init__(self) -> None:
-        self.properties = []
+        self.properties: list[Property] = []
 
     def reset(self):
-        self.properties = []
+        self.properties: list[Property] = []
     
-    def add_properties(self, properties: list):
+    def add_properties(self, properties: list[Property]):
         self.properties.extend(properties)
     
     def dumps(self) -> str:

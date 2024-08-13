@@ -20,10 +20,6 @@ class CSV(Generator):
             lineterminator='\n'
         )
         writer.writeheader()
-        for row in self.properties:
-            try:
-                writer.writerow(row)
-            except AttributeError:
-                logger.warning(f"Couldn't write csv row for: {row}")
-                continue
+        for property_ in self.properties:
+            writer.writerow(property_.to_legacy_dict())
         return csv_str.getvalue()
