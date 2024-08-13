@@ -20,6 +20,24 @@ class Property():
     reference: str = ""
     definition: PropertyDefinition | None = None
 
+    @classmethod
+    def from_dict(cls, property_dict:dict, defintion:PropertyDefinition):      
+        label = property_dict.get('property')
+        if label is None:
+            label = property_dict.get('label')
+        if label is None:
+            label = defintion.name.get('en')
+        if label is None:
+            label = next(iter(defintion.name.values()), "")
+        
+        return cls(
+            label,
+            property_dict.get('value'),
+            property_dict.get('unit'),
+            property_dict.get('reference'),
+            defintion
+        )
+
 class PropertyLLM:
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> list[Property] | None:
         raise NotImplementedError()
