@@ -150,12 +150,15 @@ class AASSubmodelTechnicalData(Generator):
 
         technical_properties : model.SubmodelElementCollection = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
         for property_ in properties:
+            value_id = None
             if property_.definition is not None:
                 unit = property_.unit
                 if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
-                    logger.warning(f"Unit of {property_.definition.id} '{unit}' differs from definition '{property_.definition}'")
-                if len(property_.definition.values) > 0 and property_.value is not None and str(property_.value) not in property_.definition.values:
-                    logger.warning(f"Value of {property_.definition.id} '{property_.value}' not found in defined values.")
+                    logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
+                if len(property_.definition.values) > 0 and property_.value is not None:
+                    value_id = property_.definition.get_value_id(str(property_.value))
+                    if value_id is None:
+                        logger.warning(f"Value '{property_.value}' of '{property_.label}' not found in defined values.")
             
             if property_.label is not None and len(property_.label) > 0:
                 id_short = property_.label
@@ -192,6 +195,7 @@ class AASSubmodelTechnicalData(Generator):
                         display_name = display_name,
                         value_type = value_type,
                         value = property_.value,
+                        value_id=value_id,
                         semantic_id = semantic_id(property_.definition_id)
                     )
             except TypeError as error:
