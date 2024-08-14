@@ -1,6 +1,10 @@
+import re
 from dataclasses import dataclass
 
 from ..dictionary import PropertyDefinition
+
+_number_regex = r"([-+]?[0-9]*[\.,]?[0-9]+)"
+_range_regex = _number_regex + r".{0,6}?(?:\.{2,4}|…|-).{0,6}?" + _number_regex # 6 is the distance between numbers in range, e.g. for units
 
 @dataclass
 class Property():
@@ -39,6 +43,25 @@ class Property():
         if name is None:
             name = next(iter(self.definition.name.values()), '')
         return name
+
+    def parse_range(self) -> tuple:
+        """Try to parse the value as range"""
+        if isinstance(self.value, (list, tuple)) and len(self.value) > 0:
+            return self.value[0], self.value[-1]
+        if isinstance(self.value, set) and len(self.value) > 0:
+            value = list(self.value)
+            return value[0], value[-1]
+        if isinstance(self.value, dict) and len(self.value) > 0:
+            value = list(self.value.values())
+            return value[0], value[-1]
+        
+        if isinstance(self.value, str):
+            result = re.search(_range_regex, self.value)
+            if result is not None:
+                result.group(0), result.group(1)
+            #TODO search for non numeric ranges?
+
+        return self.value, self.value
 
     def to_legacy_dict(self):
         return {
