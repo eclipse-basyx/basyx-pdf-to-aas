@@ -209,11 +209,8 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             prompt += f'The "{property_name}" has the datatype "{property.type}".\n'
         if self.use_property_unit and property.unit:
             prompt += f'The "{property_name}" has the unit of measure "{property.unit}".\n'
-        if self.use_property_values and property.values:
-            if isinstance(next(iter(property.values)), dict):
-                property_values = [v["value"] for v in property.values]
-            else:
-                property_values = property.values
+        if self.use_property_values and len(property.values) > 0:
+            property_values = property.values_list
             if self.max_values_length > 0 and len(property_values) > self.max_values_length:
                 property_values = property_values[:self.max_values_length] + ["..."]
             prompt += f'The "{property_name}" can be one of these values: "{property_values}".\n'
@@ -261,15 +258,9 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                     property_definition = property_definition[:self.max_definition_chars] + " ..."
                 property_row += f" {property_definition} |"
             if self.use_property_values:
-                if len(property.values) > 0:
-                    if isinstance(next(iter(property.values)), dict):
-                        property_values = [v["value"] for v in property.values]
-                    else:
-                        property_values = property.values
-                    if self.max_values_length > 0 and len(property_values) > self.max_values_length:
-                        property_values = property_values[:self.max_values_length] + ["..."]
-                else:
-                    property_values = []
+                property_values = property.values_list
+                if self.max_values_length > 0 and len(property_values) > self.max_values_length:
+                    property_values = property.values_list[:self.max_values_length] + ["..."]
                 property_row += f" {', '.join(property_values)} |"
             prompt += property_row.replace('\n', ' ') + "\n"
             #TODO escape | sign in name, type, unit, definition, values, etc.
