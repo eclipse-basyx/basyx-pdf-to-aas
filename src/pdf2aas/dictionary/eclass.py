@@ -51,10 +51,11 @@ def parse_html_eclass_valuelist(property, span):
     for valuelist_span in valuelist_soup.find_all("span", attrs={"data-props": True}):
         try:
             valuelist_data = json.loads(valuelist_span["data-props"].replace("'", " "))
-            value = {
-                "value": valuelist_data["preferred_name"],
-                "definition": valuelist_data["definition"],
-            }
+            value = {"value": valuelist_data["preferred_name"]}
+            if len(valuelist_data["definition"].strip()) > 0:
+                value['definition'] = valuelist_data["definition"]
+            # valuelist_data["short_name"]
+            # valuelist_data["data_type"]
             property.values.append(value)
         except json.decoder.JSONDecodeError:
             logger.warning("Couldn't parse eclass property value:" + valuelist_span["data-props"])
