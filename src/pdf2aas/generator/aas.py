@@ -168,18 +168,32 @@ class AASSubmodelTechnicalData(Generator):
                 continue
 
             display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
+            display_name = model.MultiLanguageNameType({property_.language: display_name})
+
+            id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short)
             if technical_properties.value.contains_id('id_short', id_short):
                 id_short += str(uuid.uuid4())
             
             value_type = get_property_xsd_type(property_)
             try:
-                aas_property = model.Property(
-                    id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short),
-                    display_name = model.MultiLanguageNameType({'en': display_name}),
-                    value_type = value_type,
-                    value = property_.value,
-                    semantic_id = semantic_id(property_.definition_id)
-                )
+                if isinstance(value_type, tuple):
+                    value = property_.parse_range()
+                    aas_property = model.Range(
+                        id_short = id_short,
+                        display_name = display_name,
+                        min=value[0],
+                        max=value[1],
+                        value_type = value_type[0],
+                        semantic_id = semantic_id(property_.definition_id)
+                    )
+                else:
+                    aas_property = model.Property(
+                        id_short = id_short,
+                        display_name = display_name,
+                        value_type = value_type,
+                        value = property_.value,
+                        semantic_id = semantic_id(property_.definition_id)
+                    )
             except TypeError as error:
                 logger.warning(f"Couldn't create property for submodel: {error}")
                 continue
