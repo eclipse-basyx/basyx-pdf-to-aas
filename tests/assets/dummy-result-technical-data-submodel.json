@@ -52,11 +52,11 @@
       },
       "value": [
         {
-          "idShort": "name1",
+          "idShort": "property1",
           "displayName": [
             {
               "language": "en",
-              "text": "name1"
+              "text": "property1"
             }
           ],
           "modelType": "Property",
@@ -65,11 +65,12 @@
             "keys": [
               {
                 "type": "GlobalReference",
-                "value": "id1"
+                "value": "p1"
               }
             ]
           },
-          "valueType": "xs:string"
+          "value": "1",
+          "valueType": "xs:integer"
         },
         {
           "idShort": "property2",
@@ -85,12 +86,12 @@
             "keys": [
               {
                 "type": "GlobalReference",
-                "value": "id2"
+                "value": "p2"
               }
             ]
           },
-          "value": "1",
-          "valueType": "xs:integer"
+          "value": "a",
+          "valueType": "xs:string"
         }
       ]
     },
@@ -136,7 +137,7 @@
               }
             ]
           },
-          "value": "2024-08-08",
+          "value": "2024-08-14",
           "valueType": "xs:date"
         }
       ]

@@ -11,10 +11,13 @@ from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
 from ..dictionary import Dictionary
+from ..extractor import Property
 
 logger = logging.getLogger(__name__)
 
 def semantic_id(reference):
+    if reference is None:
+        return None
     return model.ExternalReference((
                 model.Key(
                     type_= model.KeyTypes.GLOBAL_REFERENCE,
@@ -72,14 +75,14 @@ def create_submodel_template(identifier:str=None):
     submodel.submodel_element.add(further_information)
     return submodel
 
-def json_data_type_to_xsd(value):
-    if isinstance(value, str):
+def get_property_xsd_type(property_: Property):
+    if isinstance(property_.value, str):
         return model.datatypes.String
-    if isinstance(value, int):
+    if isinstance(property_.value, int):
         return model.datatypes.Integer
-    if isinstance(value, float):
+    if isinstance(property_.value, float):
         return model.datatypes.Float
-    if isinstance(value, bool):
+    if isinstance(property_.value, bool):
         return model.datatypes.Boolean
     return model.datatypes.String
 
@@ -134,26 +137,26 @@ class AASSubmodelTechnicalData(Generator):
         )
         self.submodel.submodel_element.get('id_short', 'ProductClassifications').value.add(classification)
 
-    def add_properties(self, properties : list):       
+    def add_properties(self, properties : list[Property]):       
         #TODO fill general information if provided in properties
 
         technical_properties : model.SubmodelElementCollection = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
-        for property in properties:
-            definition = self.dictionary.get_property(property.get('id','')) if self.dictionary else None
-            if definition is not None:
-                unit = property.get('unit')
-                if unit is not None and len(unit.strip()) > 0 and len(definition.unit) > 0 and unit != definition.unit:
-                    logger.warning(f"Unit of {property['id']} '{unit}' differs from definition '{definition.unit}'")
-                if len(definition.values) > 0 and property.get('value') is not None and str(property.get('value')) not in definition.values:
-                    logger.warning(f"Value of {property['id']} '{property.get('value')}' not found in defined values.")
+        for property_ in properties:
+            if property_.definition is not None:
+                unit = property_.unit
+                if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
+                    logger.warning(f"Unit of {property_.definition.id} '{unit}' differs from definition '{property_.definition}'")
+                if len(property_.definition.values) > 0 and property_.value is not None and str(property_.value) not in property_.definition.values:
+                    logger.warning(f"Value of {property_.definition.id} '{property_.value}' not found in defined values.")
             
-            if property.get('property') is not None and len(property['property']) > 0:
-                id_short = property['property']
-            elif property.get('name') is not None and len(property['name']) > 0:
-                id_short = property['name']
-            elif property.get('id') is not None:
-                id_short = property['id']
+            if property_.label is not None and len(property_.label) > 0:
+                id_short = property_.label
+            elif property_.definition is not None:
+                id_short = property_.definition_name
+                if id_short is None:
+                    id_short = property_.definition_id
             else:
+                logger.warning(f"No id_short for: {property_}")
                 continue
 
             display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
@@ -163,9 +166,9 @@ class AASSubmodelTechnicalData(Generator):
                 aas_property = model.Property(
                     id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short),
                     display_name = model.MultiLanguageNameType({'en': display_name}),
-                    value_type = json_data_type_to_xsd(property.get('value')), #TODO get from definition?
-                    value = property.get('value'),
-                    semantic_id = semantic_id(property.get('id'))
+                    value_type = get_property_xsd_type(property_), #TODO get from definition?
+                    value = property_.value,
+                    semantic_id = semantic_id(property_.definition_id)
                 )
             except TypeError as error:
                 logger.warning(f"Couldn't create property for submodel: {error}")
