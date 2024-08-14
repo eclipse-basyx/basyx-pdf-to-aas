@@ -19,18 +19,29 @@ class Property():
     unit: str = ""
     reference: str = ""
     definition: PropertyDefinition | None = None
+    language: str = "en"
 
-    def to_legacy_dict(self):
-        name = self.definition.name.get('en') if self.definition else ''
+    @property
+    def definition_id(self):
+        return self.definition.id if self.definition is not None else None
+    
+    @property
+    def definition_name(self):
+        if self.definition is None:
+            return None
+        name = self.definition.name.get(self.language)
         if name is None:
             name = next(iter(self.definition.name.values()), '')
+        return name
+
+    def to_legacy_dict(self):
         return {
             'property': self.label,
             'value': self.value,
             'unit': self.unit,
             'reference': self.reference,
             'id': self.definition.id if self.definition else '',
-            'name': name
+            'name': self.definition_name()
         }
 
     @classmethod
