@@ -186,7 +186,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         for property_ in properties:
             name = property_.get('property', property_.get('label', property_.get('id')))
             if name is not None and name.lower() in property_definition_dict:
-                result.append(Property.from_dict(property_, property_definition_dict.get(name)))
+                result.append(Property.from_dict(property_, property_definition_dict.get(name.lower())))
         return result
 
     def create_property_prompt(self, property: PropertyDefinition, language: str = "en") -> str:
