@@ -2,8 +2,6 @@ import json
 from datetime import datetime
 
 from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData
-from pdf2aas.extractor import Property
-from pdf2aas.dictionary import PropertyDefinition
 
 from test_extractor import example_property_value1, example_property_value2
 
