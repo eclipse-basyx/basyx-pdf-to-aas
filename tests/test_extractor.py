@@ -49,9 +49,13 @@ class TestPropertyLLMOpenAI():
         assert properties == [example_property_value1]
     
     def test_propertyLLM_parse_null_llm_response(self):
+        self.llm.client.response = '{}'
+        properties = self.llm.extract("datasheet", example_property_definition1)
+        assert properties == [Property('property1', definition=example_property_definition1)]
+
         self.llm.client.response = '{"property": null, "value": null, "unit": null, "reference": null}'
         properties = self.llm.extract("datasheet", example_property_definition1)
-        assert properties == [Property('property1', None, None, None, example_property_definition1)]
+        assert properties == [Property('property1', definition=example_property_definition1)]
     
     def test_propertyLLM_parse_accepted_incomplete_llm_response(self):
         self.llm.client.response = example_accepted_llm_response[0]

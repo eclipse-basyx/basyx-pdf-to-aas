@@ -76,22 +76,32 @@ def create_submodel_template(identifier:str=None):
     return submodel
 
 def get_property_xsd_type(property_: Property):
+    if isinstance(property_.value, bool):
+        return model.datatypes.Boolean
+    if isinstance(property_.value, int):
+        return model.datatypes.Integer
+    if isinstance(property_.value, float):
+        if property_.value.is_integer():
+            property_.value = int(property_.value)
+            return model.datatypes.Integer
+        return model.datatypes.Float
+
     if property_.definition is not None:
         match property_.definition.type:
             case 'bool': return model.datatypes.Boolean
-            case 'numeric': return model.datatypes.Float
+            case 'numeric':
+                try:
+                    property_.value = float(property_.value)
+                    if property_.value.is_integer():
+                        property_.value = int(property_.value)
+                        return model.datatypes.Integer
+                except (ValueError, TypeError):
+                    return model.datatypes.String
+                return model.datatypes.Float
             case 'range': return (model.datatypes.Float, )
             case 'bool': return model.datatypes.Boolean
             case 'string': return model.datatypes.String
 
-    if isinstance(property_.value, str):
-        return model.datatypes.String
-    if isinstance(property_.value, int):
-        return model.datatypes.Integer
-    if isinstance(property_.value, float):
-        return model.datatypes.Float
-    if isinstance(property_.value, bool):
-        return model.datatypes.Boolean
     return model.datatypes.String
 
 class AASSubmodelTechnicalData(Generator):
