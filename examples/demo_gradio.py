@@ -216,8 +216,6 @@ def extract(
     extractor.max_tokens = max_tokens if max_tokens > 0 else None
     extractor.max_values_length = max_values_length
     extractor.max_definition_chars = max_definition_chars
-    if isinstance(client, AzureOpenAI):
-        extractor.response_format = None
 
     raw_results=[]
     raw_prompts=[]

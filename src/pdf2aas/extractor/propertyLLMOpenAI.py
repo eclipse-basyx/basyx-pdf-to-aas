@@ -100,7 +100,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         return result
 
     def _prompt_llm_openai(self, messages):
-        if self.response_format is None:
+        if self.response_format is None or isinstance(self.client, AzureOpenAI):
             chat_completion = self.client.chat.completions.create(
                 model=self.model_identifier,
                 temperature=self.temperature,
