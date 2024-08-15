@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..dictionary import PropertyDefinition
 
@@ -14,17 +14,17 @@ class Property():
     Attributes:
         label (str): The label of the property, e.g. "Rated Torque".
         value (any): The extracted value of the property.
-        unit (str): The measurement unit for the given value.
-        reference (str): A reference (~100 chars) where the value was found, e.g. an excerpt, or page reference. 
+        unit (str | None): The measurement unit for the given value.
+        reference (str | None): A reference (~100 chars) where the value was found, e.g. an excerpt, or page reference. 
         defintion (PropertyDefinition | None): Definition of the property if available.
         language(str): Language code (default en) used for the fields (except maybe reference, when it was translated).
     """
     label: str = ""
     value: any = None
-    unit: str = ""
-    reference: str = ""
-    definition: PropertyDefinition | None = None
-    language: str = "en"
+    unit: str | None = None
+    reference: str | None = None
+    definition: PropertyDefinition | None = field(default=None, repr=False)
+    language: str =  field(default='en', repr=False)
 
     @property
     def definition_id(self) -> str | None:
@@ -70,7 +70,7 @@ class Property():
             'unit': self.unit,
             'reference': self.reference,
             'id': self.definition.id if self.definition else '',
-            'name': self.definition_name()
+            'name': self.definition_name
         }
 
     @classmethod
@@ -88,7 +88,8 @@ class Property():
             property_dict.get('value'),
             property_dict.get('unit'),
             property_dict.get('reference'),
-            defintion
+            defintion,
+            property_dict.get('language', 'en')
         )
 
 class PropertyLLM:
