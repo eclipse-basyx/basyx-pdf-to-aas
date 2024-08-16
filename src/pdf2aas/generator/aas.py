@@ -155,63 +155,68 @@ class AASSubmodelTechnicalData(Generator):
         )
         self.submodel.submodel_element.get('id_short', 'ProductClassifications').value.add(classification)
 
+    @staticmethod
+    def create_aas_property(property_):
+        value_id = None
+        if property_.definition is not None:
+            unit = property_.unit
+            if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
+                logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
+            if len(property_.definition.values) > 0 and property_.value is not None:
+                value_id = property_.definition.get_value_id(str(property_.value))
+                if value_id is None:
+                    logger.warning(f"Value '{property_.value}' of '{property_.label}' not found in defined values.")
+        
+        if property_.label is not None and len(property_.label) > 0:
+            id_short = property_.label
+        elif property_.definition is not None:
+            id_short = property_.definition_name
+            if id_short is None:
+                id_short = property_.definition_id
+        else:
+            logger.warning(f"No id_short for: {property_}")
+            return None
+
+        display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
+        display_name = model.MultiLanguageNameType({property_.language: display_name})
+        id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short)
+        
+        value_type = get_property_xsd_type(property_)
+        try:
+            if isinstance(value_type, tuple):
+                value = property_.parse_range()
+                return model.Range(
+                    id_short = id_short,
+                    display_name = display_name,
+                    min=value[0],
+                    max=value[1],
+                    value_type = value_type[0],
+                    semantic_id = semantic_id(property_.definition_id)
+                )
+            else:
+                return model.Property(
+                    id_short = id_short,
+                    display_name = display_name,
+                    value_type = value_type,
+                    value = property_.value,
+                    value_id=value_id,
+                    semantic_id = semantic_id(property_.definition_id)
+                )
+        except TypeError as error:
+            logger.warning(f"Couldn't create AAS property for submodel: {error}")
+            return None
+
     def add_properties(self, properties : list[Property]):       
         #TODO fill general information if provided in properties
 
         technical_properties : model.SubmodelElementCollection = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
         for property_ in properties:
-            value_id = None
-            if property_.definition is not None:
-                unit = property_.unit
-                if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
-                    logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
-                if len(property_.definition.values) > 0 and property_.value is not None:
-                    value_id = property_.definition.get_value_id(str(property_.value))
-                    if value_id is None:
-                        logger.warning(f"Value '{property_.value}' of '{property_.label}' not found in defined values.")
-            
-            if property_.label is not None and len(property_.label) > 0:
-                id_short = property_.label
-            elif property_.definition is not None:
-                id_short = property_.definition_name
-                if id_short is None:
-                    id_short = property_.definition_id
-            else:
-                logger.warning(f"No id_short for: {property_}")
+            aas_property = self.create_aas_property(property_)
+            if aas_property is None:
                 continue
 
-            display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
-            display_name = model.MultiLanguageNameType({property_.language: display_name})
-
-            id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short)
-            if technical_properties.value.contains_id('id_short', id_short):
-                id_short += str(uuid.uuid4())
-            
-            value_type = get_property_xsd_type(property_)
-            try:
-                if isinstance(value_type, tuple):
-                    value = property_.parse_range()
-                    aas_property = model.Range(
-                        id_short = id_short,
-                        display_name = display_name,
-                        min=value[0],
-                        max=value[1],
-                        value_type = value_type[0],
-                        semantic_id = semantic_id(property_.definition_id)
-                    )
-                else:
-                    aas_property = model.Property(
-                        id_short = id_short,
-                        display_name = display_name,
-                        value_type = value_type,
-                        value = property_.value,
-                        value_id=value_id,
-                        semantic_id = semantic_id(property_.definition_id)
-                    )
-            except TypeError as error:
-                logger.warning(f"Couldn't create property for submodel: {error}")
-                continue
-
+            if technical_properties.value.contains_id('id_short', aas_property.id_short):
+                aas_property.id_short = str(uuid.uuid4())
             try:
                 technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
