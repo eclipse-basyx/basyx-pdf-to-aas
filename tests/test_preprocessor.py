@@ -16,12 +16,12 @@ class TestPDF2HTMLEX:
         with open(f"{self.datasheet_prefix}.html") as html_file:
             return html_file.read()
 
-    def test_pdf2htmlEX_convert(self):
+    def test_convert(self):
         html_converted = self.preprocessor.convert(f"{self.datasheet_prefix}.pdf")
         assert html_converted == self.dummy_datasheet_html()
 
     @pytest.mark.parametrize("reduction_level", [l for l in ReductionLevel])
-    def test_pdf2htmlEX_reduce(self, reduction_level):
+    def test_reduce(self, reduction_level):
         html_reduced = self.preprocessor.reduce_datasheet(
             self.dummy_datasheet_html(), reduction_level
         )
@@ -42,6 +42,6 @@ class TestPDFium:
         with open(f"{self.datasheet_prefix}.txt") as txt:
             return txt.read()
     
-    def test_pypdfium2_convert(self):
+    def test_convert(self):
         text_converted = self.preprocessor.convert(f"{self.datasheet_prefix}.pdf")
         assert "\n".join(text_converted) == self.dummy_datasheet_txt()

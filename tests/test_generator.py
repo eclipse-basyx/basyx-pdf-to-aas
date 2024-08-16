@@ -7,29 +7,55 @@ from test_extractor import example_property_value1, example_property_value2
 
 test_property_list = [example_property_value1, example_property_value2]
 
-def test_generator_dumps():
+class TestGenerator:
     g = Generator()
-    assert g.dumps() == "[]"
-    g.add_properties(test_property_list)
-    assert g.dumps() == str(test_property_list)
+    def test_reset(self):
+        self.g.add_properties(test_property_list)
+        self.g.reset()
+        assert self.g.dumps() == "[]"
+    def test_dumps(self):
+        self.g.reset()
+        self.g.add_properties(test_property_list)
+        assert self.g.dumps() == str(test_property_list)
 
-def test_csv_dumps():
+class TestCSV:
     g = CSV()
-    assert g.dumps() == f'"{'";"'.join(CSV.header)}"\n'
-    g.add_properties(test_property_list)
-    with(open('tests/assets/dummy-result.csv') as file):
-        assert g.dumps() == file.read()
+    def test_reset(self):
+        self.g.add_properties(test_property_list)
+        self.g.reset()
+        assert self.g.dumps() == f'"{'";"'.join(CSV.header)}"\n'
+    def test_dumps(self):
+        self.g.reset()
+        self.g.add_properties(test_property_list)
+        with(open('tests/assets/dummy-result.csv') as file):
+            assert self.g.dumps() == file.read()
 
-def test_submodel_technical_data_generate():
+class TestAASSubmodelTechnicalData:
     g = AASSubmodelTechnicalData("id1")
-    g.add_properties(test_property_list)
-    with(open('tests/assets/dummy-result-technical-data-submodel.json') as file):
-        expected = json.load(file)
-        for element in expected['submodelElements']:
+    
+    @staticmethod
+    def load_asset(filename):
+        with(open('tests/assets/'+filename) as file):
+            submodel = json.load(file)
+        for element in submodel['submodelElements']:
             if element['idShort'] == 'FurtherInformation':
                 for item in element['value']:
                     if item['idShort'] == 'ValidDate':
                         item['value'] = datetime.now().strftime('%Y-%m-%d')
                         break
                 break
-        assert expected == json.loads(g.dumps())
+        return submodel
+
+    def test_reset(self):
+        # self.g.dump('tests/assets/dummy-result-technical-data-submodel-empty.json')
+        self.g.add_properties(test_property_list)
+        self.g.reset()
+        expected = self.load_asset('dummy-result-technical-data-submodel-empty.json')
+        assert expected == json.loads(self.g.dumps())
+    
+    def test_dumps(self):
+        self.g.reset()
+        self.g.add_properties(test_property_list)
+        # self.g.dump('tests/assets/dummy-result-technical-data-submodel.json')
+        expected = self.load_asset('dummy-result-technical-data-submodel.json')
+        assert expected == json.loads(self.g.dumps())
