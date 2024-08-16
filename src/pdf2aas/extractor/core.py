@@ -3,8 +3,17 @@ from dataclasses import dataclass, field
 
 from ..dictionary import PropertyDefinition
 
-_number_regex = r"([-+]?[0-9]*[\.,]?[0-9]+)"
-_range_regex = _number_regex + r".{0,6}?(?:\.{2,4}|…|-).{0,6}?" + _number_regex # 6 is the distance between numbers in range, e.g. for units
+_number_regex = r"([-+]?[0-9_]*\.?[0-9_]+)"
+_numeric_range_regex = _number_regex + r".+?" + _number_regex
+
+def try_cast_number(value:any) -> float | int | None:
+    try:
+        value = float(value)
+    except (ValueError, TypeError):
+        return None
+    if value.is_integer():
+        value = int(value)
+    return value
 
 @dataclass
 class Property():
@@ -44,24 +53,22 @@ class Property():
             name = next(iter(self.definition.name.values()), '')
         return name
 
-    def parse_range(self) -> tuple:
-        """Try to parse the value as range"""
-        if isinstance(self.value, (list, tuple)) and len(self.value) > 0:
-            return self.value[0], self.value[-1]
-        if isinstance(self.value, set) and len(self.value) > 0:
-            value = list(self.value)
-            return value[0], value[-1]
-        if isinstance(self.value, dict) and len(self.value) > 0:
-            value = list(self.value.values())
-            return value[0], value[-1]
+    def parse_numeric_range(self) -> tuple[float|int| None, float|int|None]:
+        """Try to parse the value as a numerical range
         
-        if isinstance(self.value, str):
-            result = re.search(_range_regex, self.value)
+           Returns (None,None) if not parseable.
+           Returns first and last argument if value is a collection (list, tuple, set, dict)."""
+        value = (self.value, self.value)
+        if isinstance(self.value, (list, tuple, set, dict)):
+            if len(self.value) == 0:
+                return None, None
+            value = list(self.value)
+            value = (value[0], value[-1])
+        elif isinstance(self.value, str):
+            result = re.search(_numeric_range_regex, self.value)
             if result is not None:
-                result.group(0), result.group(1)
-            #TODO search for non numeric ranges?
-
-        return self.value, self.value
+                value = (result.group(1), result.group(2))
+        return (try_cast_number(value[0]), try_cast_number(value[1]))
 
     def to_legacy_dict(self):
         return {
