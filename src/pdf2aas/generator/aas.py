@@ -75,34 +75,89 @@ def create_submodel_template(identifier:str=None):
     submodel.submodel_element.add(further_information)
     return submodel
 
-def get_property_xsd_type(property_: Property):
-    if isinstance(property_.value, bool):
-        return model.datatypes.Boolean
-    if isinstance(property_.value, int):
-        return model.datatypes.Integer
-    if isinstance(property_.value, float):
-        if property_.value.is_integer():
-            property_.value = int(property_.value)
-            return model.datatypes.Integer
-        return model.datatypes.Float
+def cast_range(property_: Property):
+    min, max = property_.parse_numeric_range()
+    if isinstance(min, float) or isinstance(max, float):
+        return None if min is None else float(min), None if max is None else float(max), model.datatypes.Float
+    if isinstance(min, int) or isinstance(max, int):
+        return None if min is None else int(min), None if max is None else int(max), model.datatypes.Integer
+    else:
+        return None, None, model.datatypes.String # XSD has no equivalent to None
 
-    if property_.definition is not None:
-        match property_.definition.type:
-            case 'bool': return model.datatypes.Boolean
-            case 'numeric':
+def cast_property(value, definition) -> model.ValueDataType:
+    if value is None:
+        return None
+    if definition is not None:
+        match definition.type:
+            case 'bool': return model.datatypes.Boolean(value)
+            case 'numeric' | 'range':
+            # Range is catched earlier and should not be reached
                 try:
-                    property_.value = float(property_.value)
-                    if property_.value.is_integer():
-                        property_.value = int(property_.value)
-                        return model.datatypes.Integer
+                    casted = float(value)
                 except (ValueError, TypeError):
-                    return model.datatypes.String
-                return model.datatypes.Float
-            case 'range': return (model.datatypes.Float, )
-            case 'bool': return model.datatypes.Boolean
-            case 'string': return model.datatypes.String
+                    return model.datatypes.String(value)
+                if casted.is_integer():
+                    casted = int(casted)
+                    return model.datatypes.Integer(casted)
+                return model.datatypes.Float(casted)
+            case 'string': return model.datatypes.String(value)
+    
+    if isinstance(value, bool):
+        return model.datatypes.Boolean(value)
+    if isinstance(value, int):
+        return model.datatypes.Integer(value)
+    if isinstance(value, float):
+        if value.is_integer():
+            return model.datatypes.Integer(value)
+        return model.datatypes.Float(value)
+    return model.datatypes.String(value)
 
-    return model.datatypes.String
+def create_aas_property_recursive(property_: Property, value, id_short, display_name):
+    if isinstance(value, (list, set, tuple, dict)):
+        if len(value) == 0:
+            value = None
+        else:
+            #TODO check wether to use SubmodelElementList for ordered stuff
+            smc = model.SubmodelElementCollection(
+                id_short = id_short,
+                display_name = display_name,
+                semantic_id = semantic_id(property_.definition_id)
+            )
+            if isinstance(value, dict):
+                iterator = value.items()
+            elif isinstance(value, (list, tuple)):
+                iterator = enumerate(value)
+            elif isinstance(value, set):
+                iterator = enumerate(list(value))
+            for key, val in iterator:
+                try:
+                    smc.value.add(
+                        create_aas_property_recursive(
+                            property_,
+                            val,
+                            id_short+'_'+str(key),
+                            None,
+                        )
+                    )
+                except AASConstraintViolation as error:
+                    logger.warning(f"Couldn't add {type(value)} item to property {display_name}: {error}")
+            return smc
+    
+    value_id = None
+    if property_.definition is not None and len(property_.definition.values) > 0 and value is not None:
+        value_id = property_.definition.get_value_id(str(value))
+        if value_id is None:
+            logger.warning(f"Value '{value}' of '{property_.label}' not found in defined values.")
+
+    value = cast_property(value, property_.definition)
+    return model.Property(
+        id_short = id_short,
+        display_name = display_name,
+        value_type = type(value) if value is not None else model.datatypes.String,
+        value = value,
+        value_id=value_id,
+        semantic_id = semantic_id(property_.definition_id)
+    )
 
 class AASSubmodelTechnicalData(Generator):
     def __init__(
@@ -156,22 +211,17 @@ class AASSubmodelTechnicalData(Generator):
         self.submodel.submodel_element.get('id_short', 'ProductClassifications').value.add(classification)
 
     @staticmethod
-    def create_aas_property(property_):
-        value_id = None
+    def create_aas_property(property_: Property) -> model.DataElement | None:
         if property_.definition is not None:
             unit = property_.unit
             if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
                 logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
-            if len(property_.definition.values) > 0 and property_.value is not None:
-                value_id = property_.definition.get_value_id(str(property_.value))
-                if value_id is None:
-                    logger.warning(f"Value '{property_.value}' of '{property_.label}' not found in defined values.")
         
         if property_.label is not None and len(property_.label) > 0:
             id_short = property_.label
         elif property_.definition is not None:
             id_short = property_.definition_name
-            if id_short is None:
+            if id_short is None or len(id_short) == 0:
                 id_short = property_.definition_id
         else:
             logger.warning(f"No id_short for: {property_}")
@@ -180,31 +230,19 @@ class AASSubmodelTechnicalData(Generator):
         display_name = id_short[:64] # MultiLanguageNameType has a maximum length of 64!
         display_name = model.MultiLanguageNameType({property_.language: display_name})
         id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short)
-        
-        value_type = get_property_xsd_type(property_)
-        try:
-            if isinstance(value_type, tuple):
-                value = property_.parse_range()
-                return model.Range(
-                    id_short = id_short,
-                    display_name = display_name,
-                    min=value[0],
-                    max=value[1],
-                    value_type = value_type[0],
-                    semantic_id = semantic_id(property_.definition_id)
-                )
-            else:
-                return model.Property(
-                    id_short = id_short,
-                    display_name = display_name,
-                    value_type = value_type,
-                    value = property_.value,
-                    value_id=value_id,
-                    semantic_id = semantic_id(property_.definition_id)
-                )
-        except TypeError as error:
-            logger.warning(f"Couldn't create AAS property for submodel: {error}")
-            return None
+
+        if property_.definition is not None and property_.definition.type == "range":
+            min, max, type_ = cast_range(property_)
+            return model.Range(
+                id_short = id_short,
+                display_name = display_name,
+                min=min,
+                max=max,
+                value_type = type_,
+                semantic_id = semantic_id(property_.definition_id)
+            )
+
+        return create_aas_property_recursive(property_, property_.value, id_short, display_name)
 
     def add_properties(self, properties : list[Property]):       
         #TODO fill general information if provided in properties
