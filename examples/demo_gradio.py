@@ -12,7 +12,7 @@ import pandas as pd
 
 from pdf2aas.dictionary import Dictionary, ECLASS, ETIM
 from pdf2aas.preprocessor import PDFium
-from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP
+from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP, Property
 from pdf2aas.generator import AASSubmodelTechnicalData
 
 logger = logging.getLogger(__name__)
@@ -161,11 +161,10 @@ def change_client(
         )
     return None
 
-def mark_extracted_references(datasheet, properties):
-    for property in properties:
-        property_id = property.get('id')
-        reference = property.get('reference')
-        if property_id is None or reference is None or len(reference.strip()) == 0:
+def mark_extracted_references(datasheet, properties: list[Property]):
+    for property_ in properties:
+        reference = property_.reference
+        if property_.definition_id is None or reference is None or len(reference.strip()) == 0:
             continue
     
         start = datasheet['text'].find(reference)
@@ -175,9 +174,9 @@ def mark_extracted_references(datasheet, properties):
             logger.info(f"Reference not found: {reference}")
             # TODO mark red in properties dataframe
             continue
-        unit = f" [{property.get('unit')}]" if property.get('unit') else ''
+        unit = f" [{property_.unit}]" if property_.unit else ''
         datasheet['entities'].append({
-            'entity': f"{property.get('name','')} ({property_id.split('/')[0]}): {property.get('value','')}{unit}",
+            'entity': f"{property_.definition_name} ({property_.definition_id.split('/')[0]}): {property_.value}{unit}",
             'start': start,
             'end': start + len(reference)
         })
@@ -198,14 +197,14 @@ def extract(
     ):
 
     if pdf_upload is None:
-        yield None, None, None, None, gr.update(interactive=False)
+        yield None, None, None, None, None, gr.update(interactive=False)
         return
     preprocessor = PDFium()
     preprocessed_datasheet = preprocessor.convert(pdf_upload)
     if preprocessed_datasheet is None:
         raise gr.Error("Error while preprocessing datasheet.")
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
-    yield None, datasheet_txt, None, None, gr.update()
+    yield None, None, datasheet_txt, None, None, gr.update()
 
     extractor = PropertyLLMOpenAI(
         model_identifier=model,
@@ -230,9 +229,11 @@ def extract(
         )
         if properties is not None:
             mark_extracted_references(datasheet_txt, properties)
+        else:
+            properties = []
     else:
         properties = []
-        yield None, datasheet_txt, None, None, gr.update(interactive=True)
+        yield None, None, datasheet_txt, None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
             property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
@@ -244,20 +245,20 @@ def extract(
             if extracted is not None:
                 properties.extend(extracted)
                 mark_extracted_references(datasheet_txt, extracted)
-                yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update()
+                yield properties, pd.DataFrame([p.to_legacy_dict() for p in properties]), datasheet_txt, raw_prompts, raw_results, gr.update()
     gr.Info('Extraction completed.', duration=3)
-    yield pd.DataFrame(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
+    yield properties, pd.DataFrame([p.to_legacy_dict() for p in properties]), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
-def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, class_id):
-    if properties is None or len(properties) < 2:
+def create_download_results(properties: list[Property], property_df: pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, class_id):
+    if properties is None or len(properties) == 0:
         return None
     
     properties_path = os.path.join(tempdir.name, 'properties_extracted.json')
-    properties.to_json(properties_path, indent=2, orient='records')
+    property_df.to_json(properties_path, indent=2, orient='records')
 
     excel_path = os.path.join(tempdir.name, "properties_extracted.xlsx")
     with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-        properties.to_excel(
+        property_df.to_excel(
             writer,
             index=False,
             sheet_name='extracted',
@@ -281,7 +282,7 @@ def create_extracted_properties_excel(properties : pd.DataFrame, tempdir, prompt
     submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
     #TODO set identifier and other properties --> load from a template, that can be specified in settings?
     submodel = AASSubmodelTechnicalData(dictionary=dictionary, class_id=class_id)
-    submodel.add_properties(properties=properties.to_dict(orient='records'))
+    submodel.add_properties(properties)
     submodel.dump(submodel_path)
 
     aasx_path = os.path.join(tempdir.name, 'technical_data.aasx')
@@ -328,6 +329,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         dictionary = gr.State(value=init_dictionary)
         client = gr.State()
         tempdir = gr.State(value=init_tempdir)
+        extracted_properties = gr.State()
         
         with gr.Tab(label="Definitions"):
             with gr.Column():
@@ -389,7 +391,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Download Results",
                         scale=2,
                     )
-                extracted_values = gr.DataFrame(
+                extracted_properties_df = gr.DataFrame(
                     label="Extracted Values",
                     headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
                     col_count=(6, "fixed"),
@@ -558,12 +560,12 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         extraction_started = extract_button.click(
             fn=extract,
             inputs=[pdf_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars, max_values_length],
-            outputs=[extracted_values, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
+            outputs=[extracted_properties, extracted_properties_df, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extraction_started.then(
-            fn=create_extracted_properties_excel,
-            inputs=[extracted_values, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class],
+            fn=create_download_results,
+            inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class],
             outputs=[results]
         )
 
