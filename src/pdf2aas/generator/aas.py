@@ -15,6 +15,12 @@ from ..extractor import Property
 
 logger = logging.getLogger(__name__)
 
+#TODO Use Concept Descriptions for semantic ids instead? 
+class AASXWriteAASLoggerFilter(logging.Filter):
+    def filter(self, record):
+        return not (record.funcName == "write_aas" and record.levelno < logging.WARNING)
+logging.getLogger('basyx.aas.adapter.aasx').addFilter(AASXWriteAASLoggerFilter())
+
 def semantic_id(reference):
     if reference is None:
         return None
@@ -276,6 +282,7 @@ class AASSubmodelTechnicalData(Generator):
         #TODO add pdf file (to handover documentation submodel) if given?
 
         with AASXWriter(filepath) as writer:
+            logging.getLogger('your_submodule')
             writer.write_aas(
                 aas_ids=aas.id,
                 object_store=model.DictObjectStore([aas, self.submodel]),
