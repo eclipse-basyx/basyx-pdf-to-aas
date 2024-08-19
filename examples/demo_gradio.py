@@ -94,14 +94,18 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return class_id, class_info, definitions_df, "## Select Property in Table for Details"
+    return class_id, class_info, definitions_df, "## Select Property ID in Table for Details"
 
-def select_property_info(dictionary: Dictionary | None, definitions: pd.DataFrame | None, evt: gr.SelectData):
-    if dictionary is None or definitions is None:
+def select_property_info(dictionary: Dictionary | None, evt: gr.SelectData):
+    if dictionary is None:
         return None
-    definition = dictionary.get_property(definitions.iloc[evt.index[0], 0])
+    #FIXME Currently this will get the wrong row, when the user has sorted the dataframe: https://github.com/gradio-app/gradio/pull/9128
+    #Therefore, we only accept selection of the first row
+    if evt.index[1] != 0:
+        return "## Select Property ID in Table for Details"
+    definition = dictionary.get_property(evt.value)
     if definition is None:
-        return "## Select Property in Table for Details"
+        return "## Select Property ID in Table for Details"
     return f"""## {definition.name.get('en')}
 * ID: [{definition.id.split('/')[0]}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
@@ -534,7 +538,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
         property_defintions.select(
             fn=select_property_info,
-            inputs=[dictionary, property_defintions],
+            inputs=[dictionary],
             outputs=[property_info],
             show_progress='hidden'
         )
