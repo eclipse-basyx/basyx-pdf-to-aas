@@ -155,7 +155,7 @@ def create_aas_property_recursive(property_: Property, value, id_short, display_
         display_name = display_name,
         value_type = type(value) if value is not None else model.datatypes.String,
         value = value,
-        value_id=value_id,
+        value_id=semantic_id(value_id),
         semantic_id = semantic_id(property_.definition_id)
     )
 
