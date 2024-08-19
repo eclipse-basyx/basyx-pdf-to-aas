@@ -3,10 +3,10 @@
   "modelType": "Submodel",
   "id": "id1",
   "semanticId": {
-    "type": "ExternalReference",
+    "type": "ModelReference",
     "keys": [
       {
-        "type": "GlobalReference",
+        "type": "ConceptDescription",
         "value": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"
       }
     ]
@@ -16,10 +16,10 @@
       "idShort": "GeneralInformation",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ExternalReference",
+        "type": "ModelReference",
         "keys": [
           {
-            "type": "GlobalReference",
+            "type": "ConceptDescription",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1"
           }
         ]
@@ -29,10 +29,10 @@
       "idShort": "ProductClassifications",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ExternalReference",
+        "type": "ModelReference",
         "keys": [
           {
-            "type": "GlobalReference",
+            "type": "ConceptDescription",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1"
           }
         ]
@@ -42,10 +42,10 @@
       "idShort": "TechnicalProperties",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ExternalReference",
+        "type": "ModelReference",
         "keys": [
           {
-            "type": "GlobalReference",
+            "type": "ConceptDescription",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1"
           }
         ]
@@ -55,10 +55,10 @@
       "idShort": "FurtherInformation",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ExternalReference",
+        "type": "ModelReference",
         "keys": [
           {
-            "type": "GlobalReference",
+            "type": "ConceptDescription",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1"
           }
         ]
@@ -69,10 +69,10 @@
           "category": "PARAMETER",
           "modelType": "Property",
           "semanticId": {
-            "type": "ExternalReference",
+            "type": "ModelReference",
             "keys": [
               {
-                "type": "GlobalReference",
+                "type": "ConceptDescription",
                 "value": "https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1"
               }
             ]
@@ -85,15 +85,15 @@
           "category": "PARAMETER",
           "modelType": "Property",
           "semanticId": {
-            "type": "ExternalReference",
+            "type": "ModelReference",
             "keys": [
               {
-                "type": "GlobalReference",
+                "type": "ConceptDescription",
                 "value": "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1"
               }
             ]
           },
-          "value": "2024-08-16",
+          "value": "2024-08-19",
           "valueType": "xs:date"
         }
       ]

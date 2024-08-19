@@ -52,9 +52,9 @@ class TestAASSubmodelTechnicalData:
         return submodel
 
     def test_reset(self):
-        # self.g.dump('tests/assets/dummy-result-technical-data-submodel-empty.json')
         self.g.add_properties(test_property_list)
         self.g.reset()
+        # self.g.dump('tests/assets/dummy-result-technical-data-submodel-empty.json')
         expected = self.load_asset('dummy-result-technical-data-submodel-empty.json')
         assert expected == json.loads(self.g.dumps())
     
