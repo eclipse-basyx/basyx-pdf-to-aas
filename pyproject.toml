@@ -26,6 +26,8 @@ eval = [
   "matplotlib",
   "openpyxl",
   "gradio",
+  "gradio_pdf",
+  "levenshtein",
   "pandas",
 ]
 
