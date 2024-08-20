@@ -91,7 +91,22 @@ To run them make sure PDF2AAS is installed according to [setup section above](#s
 Then execute from this directory for example: `python examples/dummy.py`
 Use `-h` or `--help` argument for more information on command line arguments.
 
+### Webui
+
+A gradio based web UI is available by starting [examples/demo_gradio.py]().
+To use it, additional dependencies need to be installed listed in eval-requirements: `pip install -r eval-requirements.txt`
+The webserver is also build as an windows executable, which can be download from the job artifacts: [![Package gradio example with PyInstaller - Windows](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml/badge.svg?branch=main)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml)
+
+The web UI features the selection of an asset class from ECLASS and ETIM dictionary in different releases.
+![Screenshot of the webui showing the tab where definitions (Dictionary, Release and Class) are selected](doc/example_webui_definitions.png)
+
+A datasheet can be uploaded and the properties of the selected dictionary class may be extracted by an LLM.
+The extracted properties can be downloaded as xlsx, json, technical data submodel (json) and as an AAS (aasx).
+![Screenshot of the webui showing the tab where the PDF is uploaded and extracted values are presented and results can be downloaded.](doc/example_webui_extract.png)
+
 ## Tests
+
+[![Teststatus](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/test.yml/badge.svg)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/test.yml)
 
 * If not already done, install the dev dependencies via `python -m pip install -r dev-requirements.txt`
 * Run tests with `pytest`
