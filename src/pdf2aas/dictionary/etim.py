@@ -3,16 +3,22 @@ import logging
 import requests
 import time
 import re
-import copy
+import csv
+import shutil
+from collections import defaultdict
 
 from .core import Dictionary, ClassDefinition, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
 etim_datatype_to_type = {
+    "L": "bool",
     "Logical": "bool",
+    "N": "numeric",
     "Numeric": "numeric",
+    "R": "range",
     "Range": "range",
+    "A": "string",
     "Alphanumeric": "string",
 }
 
@@ -163,3 +169,102 @@ class ETIM(Dictionary):
         if class_id is None:
             return None
         return class_id.group(0)
+    
+    def _load_from_etim_release_csv_zip(self, filepath: str):
+        logger.info(f"Load ETIM dictionary from CSV release zip: {filepath}")
+        
+        zip_dir = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
+        if not os.path.exists(zip_dir):
+            try:
+                os.makedirs(zip_dir)
+                shutil.unpack_archive(filepath, zip_dir)
+            except (shutil.ReadError, FileNotFoundError, PermissionError) as e:
+                logger.warning(f"Error while unpacking ETIM CSV Release: {e}")
+                if os.path.exists(zip_dir):
+                    shutil.rmtree(zip_dir)
+
+        synonyms = defaultdict(list)
+        with open(os.path.join(zip_dir, 'ETIMARTCLASSSYNONYMMAP.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                synonyms[row['ARTCLASSID']].append(row['CLASSSYNONYM'])
+        
+        feature_descriptions = {}
+        with open(os.path.join(zip_dir, 'ETIMFEATURE.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                feature_descriptions[row['FEATUREID']]= row['FEATUREDESC']
+        
+        unit_abbreviations = {}
+        with open(os.path.join(zip_dir, 'ETIMUNIT.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                unit_abbreviations[row['UNITOFMEASID']]= row['UNITDESC']
+
+        value_descriptions = {}
+        with open(os.path.join(zip_dir, 'ETIMVALUE.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                value_descriptions[row['VALUEID']]= row['VALUEDESC']
+
+        feature_value_map = {}
+        with open(os.path.join(zip_dir, 'ETIMARTCLASSFEATUREVALUEMAP.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                value = {
+                    # 'orderNumber' = index in this list
+                    'code': row['VALUEID'],
+                    'description': value_descriptions[row['VALUEID']]
+                }
+                if row['ARTCLASSFEATURENR'] not in feature_value_map:
+                    feature_value_map[row['ARTCLASSFEATURENR']] = [value]
+                else:
+                    feature_value_map[row['ARTCLASSFEATURENR']].append(value)
+
+        class_feature_map = defaultdict(list)
+        with open(os.path.join(zip_dir, 'ETIMARTCLASSFEATUREMAP.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                feature = {
+                    # orderNumber = index in the list
+                    'code': row['FEATUREID'],
+                    'type': row['FEATURETYPE'],
+                    'description': feature_descriptions[row['FEATUREID']],
+                    # 'portcode' : None,
+                    # 'unitImperial': None,
+                }
+                if len(row['UNITOFMEASID']) > 0:
+                    feature['unit'] =  {
+                        'code': row['UNITOFMEASID'],
+                        #'description': None,
+                        'abbreviation': unit_abbreviations[row['UNITOFMEASID']],
+                    }
+                values = feature_value_map.get(row['ARTCLASSFEATURENR'])
+                if values:
+                    feature['values'] = values
+                class_feature_map[row['ARTCLASSID']].append(feature)
+
+        with open(os.path.join(zip_dir, 'ETIMARTCLASS.csv'), encoding='utf-16') as file:
+            reader = csv.DictReader(file, delimiter=';')
+            for row in reader:
+                class_dict = {
+                    'code': row['ARTCLASSID'],
+                    'description': row['ARTCLASSDESC'],
+                    'synonyms': synonyms[row['ARTCLASSID']],
+                    # "version": row['ARTCLASSVERSION'],
+                    # "status": None,
+                    # "mutationDate": None,
+                    # "revision": None,
+                    # "revisionDate": None,
+                    # "modelling": false,
+                    # "descriptionEn": None,
+                    'features' : class_feature_map[row['ARTCLASSID']]
+                }
+                self._parse_etim_class(class_dict)
+
+    def load_from_file(self, filepath: str | None = None) -> bool:
+        if filepath is None:
+            for filename in os.listdir(self.temp_dir):
+                if re.match(f'{self.name}-{self.release}.*CSV.*\.zip', filename, re.IGNORECASE):
+                    self._load_from_etim_release_csv_zip(os.path.join(self.temp_dir, filename))
+        return super().load_from_file(filepath)
