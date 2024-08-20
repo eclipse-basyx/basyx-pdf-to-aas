@@ -185,6 +185,20 @@ def mark_extracted_references(datasheet, properties: list[Property]):
             'end': start + len(reference)
         })
 
+def properties_to_dataframe(properties: list[Property]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                'ID' : p.definition_id.split('/')[0] if p.definition_id else None,
+                'Name': p.label,
+                'Value': p.value,
+                'Unit': p.unit,
+                'Reference': p.reference,
+            }
+            for p in properties
+        ], columns=['ID', 'Name', 'Value', 'Unit', 'Reference']
+    )
+
 def extract(
         pdf_upload,
         class_id,
@@ -249,9 +263,9 @@ def extract(
             if extracted is not None:
                 properties.extend(extracted)
                 mark_extracted_references(datasheet_txt, extracted)
-                yield properties, pd.DataFrame([p.to_legacy_dict() for p in properties]), datasheet_txt, raw_prompts, raw_results, gr.update()
+                yield properties, properties_to_dataframe(properties), datasheet_txt, raw_prompts, raw_results, gr.update()
     gr.Info('Extraction completed.', duration=3)
-    yield properties, pd.DataFrame([p.to_legacy_dict() for p in properties]), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
+    yield properties, properties_to_dataframe(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
 def create_download_results(properties: list[Property], property_df: pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, class_id):
     if properties is None or len(properties) == 0:
@@ -397,8 +411,8 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     )
                 extracted_properties_df = gr.DataFrame(
                     label="Extracted Values",
-                    headers=['id', 'property', 'value', 'unit', 'reference', 'name'],
-                    col_count=(6, "fixed"),
+                    headers=['ID', 'Name', 'Value', 'Unit', 'Reference'],
+                    value=properties_to_dataframe([]),
                     interactive=False,
                     wrap=True,
                 )
