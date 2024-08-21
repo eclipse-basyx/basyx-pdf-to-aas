@@ -19,13 +19,13 @@ class PropertyLLMOpenAI(PropertyLLM):
 Answer only in valid JSON format.
 Answer with a list of objects, containing the keys 'property', 'value', 'unit', 'reference'.
 Keep the order of the requested properties.
-The property field must contain the property id as provided in the request.
+The property field must contain the property label as provided in the request.
 The value field must only contain the value you extracted and converted to the requested unit.
 The unit field contains the physical unit of measurement, if applicable.
 The reference field contains a small excerpt of maximum 100 characters from the datasheet surrounding the extracted value.
 Answer with null values if you don't find the information or if not applicable.
 Example result, when asked for "rated load torque" and "supply voltage" of the device:
-[{"property": "permissible torque", "value": 1000, "unit": "Nm", "reference": "the permissible torque is 1kNm"},
+[{"property": "rated load torque", "value": 1000, "unit": "Nm", "reference": "the permissible torque is 1kNm"},
 {"property": "supply voltage", "value": null, "unit": null, "reference": null}]
 """
 
