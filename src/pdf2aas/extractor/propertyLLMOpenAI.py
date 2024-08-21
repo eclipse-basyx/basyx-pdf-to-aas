@@ -92,8 +92,12 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
         elif isinstance(self.client, CustomLLMClient):
             result, raw_result = self.client.create_completions(messages, self.model_identifier, self.temperature, self.max_tokens, self.response_format)
         else:
-            result, raw_result = self._prompt_llm_openai(messages)
-        
+            try:
+                result, raw_result = self._prompt_llm_openai(messages)
+            except OpenAIError as error:
+                logger.error(f"Error calling openai endpoint: {error}")
+                raw_result = error
+                result = None
         logger.debug(f"Response from LLM: {result}")
         if isinstance(raw_results, list):
             raw_results.append(raw_result)
@@ -116,7 +120,7 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
                 response_format=self.response_format,
             )
         result = chat_completion.choices[0].message.content
-        if chat_completion.choices[0].finish_reason != 'stop':
+        if chat_completion.choices[0].finish_reason not in ['stop', 'None']:
             logger.warning(f"Chat completion finished with reason '{chat_completion.choices[0].finish_reason}'. (max_tokens={self.max_tokens})")
         return result, chat_completion.to_dict(mode="json")
 
