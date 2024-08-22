@@ -265,6 +265,6 @@ class ETIM(Dictionary):
     def load_from_file(self, filepath: str | None = None) -> bool:
         if filepath is None:
             for filename in os.listdir(self.temp_dir):
-                if re.match(f'{self.name}-{self.release}.*CSV.*\.zip', filename, re.IGNORECASE):
+                if re.match(f'{self.name}-{self.release}.*CSV.*\\.zip', filename, re.IGNORECASE):
                     self._load_from_etim_release_csv_zip(os.path.join(self.temp_dir, filename))
         return super().load_from_file(filepath)
