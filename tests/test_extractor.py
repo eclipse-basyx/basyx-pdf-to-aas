@@ -57,8 +57,9 @@ class TestPropertyLLMOpenAI():
         properties = self.llm.extract("datasheet", example_property_definition1)
         assert properties == [Property('property1', definition=example_property_definition1)]
     
-    def test_parse_accepted_incomplete_llm_response(self):
-        self.llm.client.response = example_accepted_llm_response[0]
+    @pytest.mark.parametrize("response", example_accepted_llm_response)
+    def test_parse_accepted_incomplete_llm_response(self, response):
+        self.llm.client.response = response
         properties = self.llm.extract("datasheet", [example_property_definition1, example_property_definition1])
         assert properties == [example_property_value1]
     
