@@ -169,6 +169,10 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
 
         if isinstance(properties, dict): 
             if len(property_definition) == 1:
+                # we asked for one property, we got one
+                properties = [properties]
+            elif all(key in properties for key in ['property', 'value', 'unit', 'reference']):
+                # we asked for multiple properties, but we got only one
                 properties = [properties]
             else:
                 properties = list(properties.values())
@@ -184,10 +188,12 @@ Example result, when asked for "rated load torque" and "supply voltage" of the d
             return [Property.from_dict(p, property_definition[i])
                     for i, p in enumerate(properties) if isinstance(p, dict)]
 
-        logger.warning(f"Extracted property count {len(properties)} doesn't match expected count of {len(property_definition)}.")
+        logger.warning(f"Extracted property count {len(properties)} doesn't match requested count of {len(property_definition)}.")
         property_definition_dict = {next(iter(p.name.values()), p.id).lower(): p for p in property_definition}
         result = []
         for property_ in properties:
+            if not isinstance(property_, dict):
+                continue
             name = property_.get('property', property_.get('label', property_.get('id')))
             if name is not None:
                 result.append(Property.from_dict(property_, property_definition_dict.get(name.strip().lower())))
