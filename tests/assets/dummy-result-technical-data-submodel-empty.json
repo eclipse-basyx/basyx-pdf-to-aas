@@ -138,9 +138,12 @@
               }
             ]
           },
-          "value": {
-            "en": "Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information."
-          }
+          "value": [
+            {
+              "language": "en",
+              "text": "Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information."
+            }
+          ]
         },
         {
           "idShort": "ValidDate",

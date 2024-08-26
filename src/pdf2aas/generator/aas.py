@@ -130,7 +130,7 @@ class AASSubmodelTechnicalData(Generator):
         self.further_information.value.add(
             model.MultiLanguageProperty(
                 id_short = 'TextStatement01',
-                value = {'en': 'Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information.'},
+                value = model.MultiLanguageTextType({'en': 'Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information.'}),
                 category = "PARAMETER",
                 semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1")
             )
@@ -337,7 +337,7 @@ class AASSubmodelTechnicalData(Generator):
         
         general_info = self.general_information.value.get('id_short', id_short)
         if isinstance(general_info, model.MultiLanguageProperty):
-            general_info.value = {property_.language: str(property_.value)}
+            general_info.value = model.MultiLanguageTextType({property_.language: str(property_.value)})
         else:
             general_info.value = str(property_.value)
         return True
