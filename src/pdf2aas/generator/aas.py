@@ -7,7 +7,7 @@ import uuid
 from basyx.aas import model
 from basyx.aas.model.base import AASConstraintViolation
 from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
-from basyx.aas.adapter.json import json_serialization
+from basyx.aas.adapter.json import json_serialization, json_deserialization
 
 from .core import Generator
 from ..dictionary import Dictionary, PropertyDefinition, ECLASS
@@ -397,9 +397,14 @@ class AASSubmodelTechnicalData(Generator):
         aas.submodel.add(model.ModelReference.from_referable(self.submodel))
         #TODO add pdf file (to handover documentation submodel) if given?
 
+        if not self.dump_none_values:
+            submodel = json.loads(self.dumps(), cls=json_deserialization.AASFromJsonDecoder)
+        else:
+            submodel = self.submodel
+
         with AASXWriter(filepath) as writer:
             writer.write_aas(
                 aas_ids=aas.id,
-                object_store=model.DictObjectStore([aas, self.submodel] + list(self.concept_descriptions.values())),
+                object_store=model.DictObjectStore([aas, submodel] + list(self.concept_descriptions.values())),
                 file_store=DictSupplementaryFileContainer(),
                 write_json=True)
