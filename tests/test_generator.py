@@ -65,6 +65,27 @@ class TestAASSubmodelTechnicalData:
         expected = self.load_asset('dummy-result-technical-data-submodel.json')
         assert expected == json.loads(self.g.dumps())
     
+    @pytest.mark.parametrize("definition,value", [
+        (None, None),
+        (None, []),
+        (None, {}),
+        (None, ""),
+        (PropertyDefinition("my_definition", type="int"), None),
+        (PropertyDefinition("my_definition", type="range"), None),
+    ])
+    def test_dump_without_none(self, definition, value):
+        self.g.add_properties([Property("my_empty_property", value=value, definition=definition)])
+        json_dump = self.g.dumps()
+        assert "my_empty_property" in json_dump
+        if definition:
+            assert "my_definition" in json_dump
+        
+        self.g.dump_none_values = False
+        json_dump = self.g.dumps()
+        assert "my_empty_property" not in json_dump
+        if definition:
+            assert "my_definition" not in json_dump
+
     @pytest.mark.parametrize("range,min,max", [
             ('5', 5 ,5),
             ('0 ... 5', 0 ,5),
