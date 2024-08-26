@@ -13,30 +13,31 @@ from test_extractor import example_property_value1, example_property_value2
 test_property_list = [example_property_value1, example_property_value2]
 
 class TestGenerator:
-    g = Generator()
+    def setup_method(self) -> None:
+        self.g = Generator()
     def test_reset(self):
         self.g.add_properties(test_property_list)
         self.g.reset()
         assert self.g.dumps() == "[]"
     def test_dumps(self):
-        self.g.reset()
         self.g.add_properties(test_property_list)
         assert self.g.dumps() == str(test_property_list)
 
 class TestCSV:
-    g = CSV()
+    def setup_method(self) -> None:
+        self.g = CSV()
     def test_reset(self):
         self.g.add_properties(test_property_list)
         self.g.reset()
         assert self.g.dumps() == f'"{'";"'.join(CSV.header)}"\n'
     def test_dumps(self):
-        self.g.reset()
         self.g.add_properties(test_property_list)
         with(open('tests/assets/dummy-result.csv') as file):
             assert self.g.dumps() == file.read()
 
 class TestAASSubmodelTechnicalData:
-    g = AASSubmodelTechnicalData("id1")
+    def setup_method(self) -> None:
+        self.g = AASSubmodelTechnicalData("id1")
     
     @staticmethod
     def load_asset(filename):
@@ -59,7 +60,6 @@ class TestAASSubmodelTechnicalData:
         assert expected == json.loads(self.g.dumps())
     
     def test_dumps(self):
-        self.g.reset()
         self.g.add_properties(test_property_list)
         # self.g.dump('tests/assets/dummy-result-technical-data-submodel.json')
         expected = self.load_asset('dummy-result-technical-data-submodel.json')
@@ -100,7 +100,6 @@ class TestAASSubmodelTechnicalData:
             ('5_000.1 .. 10_000.2', 5000.1, 10000.2),
     ])
     def test_add_range_properties(self, range, min, max):
-        self.g.reset()
         aas_property = self.g.create_aas_property(Property(value=range, definition=PropertyDefinition('id1', type="range")))
         assert aas_property is not None
         assert isinstance(aas_property, basyx.aas.model.Range)
@@ -109,7 +108,6 @@ class TestAASSubmodelTechnicalData:
 
     def test_add_list_properties(self):
         value = [0,5,42.42]
-        self.g.reset()
         aas_property = self.g.create_aas_property(Property(value=value, definition=PropertyDefinition('id1', type="numeric")))
         assert aas_property is not None
         assert isinstance(aas_property, basyx.aas.model.SubmodelElementCollection)
@@ -120,7 +118,6 @@ class TestAASSubmodelTechnicalData:
     
     def test_add_dict_properties(self):
         value = {'first': 0, 'second': 5, 'third': 42.42}
-        self.g.reset()
         aas_property = self.g.create_aas_property(Property(value=value, definition=PropertyDefinition('id1', type="numeric")))
         assert aas_property is not None
         assert isinstance(aas_property, basyx.aas.model.SubmodelElementCollection)
@@ -139,7 +136,6 @@ class TestAASSubmodelTechnicalData:
         ("other_id", "other_label")
     ])
     def test_update_general_information_properties(self, id, label):
-        self.g.reset()
         self.g.add_properties([Property(label=label, value="TheManufacturer", definition=PropertyDefinition(id))])
         manufacturer_name = self.g.general_information.value.get('id_short', "ManufacturerName")
         assert manufacturer_name is not None
@@ -154,7 +150,6 @@ class TestAASSubmodelTechnicalData:
         ([ECLASS(release="13.0"), ETIM(release="8.0")]),
     ])
     def test_add_classification(self, dicts):
-        self.g.reset()
         for idx, dict in enumerate(dicts):
             assert len(self.g.product_classifications.value) == idx
             self.g.add_classification(dict, str(idx))
