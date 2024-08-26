@@ -220,6 +220,15 @@ class AASSubmodelTechnicalData(Generator):
                     ), ), type_=model.concept.ConceptDescription
                 )
 
+    @staticmethod
+    def _create_id_short(proposal:str | None = None):
+        id_short = re.sub(r'[^a-zA-Z0-9_]', '', proposal) if proposal is not None else ''
+        if len(id_short) == 0:
+            id_short = "ID_" + str(uuid.uuid4())
+        elif id_short[0].isdigit():
+            id_short = "ID_" + id_short
+        return id_short[:128]
+
     def create_aas_property_recursive(self, property_: Property, value, id_short, display_name):
         if isinstance(value, (list, set, tuple, dict)):
             if len(value) == 0:
@@ -227,7 +236,7 @@ class AASSubmodelTechnicalData(Generator):
             else:
                 #TODO check wether to use SubmodelElementList for ordered stuff
                 smc = model.SubmodelElementCollection(
-                    id_short = id_short,
+                    id_short = self._create_id_short(id_short),
                     display_name = display_name,
                     semantic_id = self._create_semantic_id(property_.definition_id)
                 )
@@ -263,7 +272,7 @@ class AASSubmodelTechnicalData(Generator):
 
         value = cast_property(value, property_.definition)
         return model.Property(
-            id_short = id_short,
+            id_short = self._create_id_short(id_short),
             display_name = display_name,
             value_type = type(value) if value is not None else model.datatypes.String,
             value = value,
@@ -292,12 +301,11 @@ class AASSubmodelTechnicalData(Generator):
         
         if len(display_name) == 0:
             display_name = model.MultiLanguageNameType({property_.language: id_short[:64]})
-        id_short = re.sub(r'[^a-zA-Z0-9]', '_', id_short)
 
         if property_.definition is not None and property_.definition.type == "range":
             min, max, type_ = cast_range(property_)
             return model.Range(
-                id_short = id_short,
+                id_short = self._create_id_short(id_short),
                 display_name = display_name,
                 min=min,
                 max=max,
@@ -315,7 +323,7 @@ class AASSubmodelTechnicalData(Generator):
                 continue
 
             if self.technical_properties.value.contains_id('id_short', aas_property.id_short):
-                aas_property.id_short = str(uuid.uuid4())
+                aas_property.id_short = self._create_id_short()
             try:
                 self.technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
