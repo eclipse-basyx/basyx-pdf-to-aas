@@ -52,14 +52,35 @@ def cast_property(value, definition) -> model.ValueDataType:
         return model.datatypes.Float(value)
     return model.datatypes.String(value)
 
+class AASToJsonEncoderWithoutEmpty(json_serialization.AASToJsonEncoder):
+    def default(self, obj: object) -> object:
+        if isinstance(obj, model.Property):
+            if obj.value is None:
+                return None
+            if hasattr(obj.value, '__len__') and len(obj.value) == 0:
+                return None
+        elif isinstance(obj, model.MultiLanguageProperty):
+            if obj.value is None:
+                return None
+        elif isinstance(obj, model.Range):
+            if obj.min is None and obj.max is None:
+                return None
+        elif isinstance(obj, (model.SubmodelElementCollection, model.SubmodelElementList)):
+            if len(obj.value) == 0:
+                return None
+            
+        return super().default(obj)
+
 class AASSubmodelTechnicalData(Generator):
     def __init__(
         self,
-        identifier: str = None
+        identifier: str = None,
+        dump_none_values = True,
     ) -> None:
         self.identifier = identifier
         self.concept_descriptions: dict[str, model.concept.ConceptDescription] = {}
         self.reset()
+        self.dump_none_values = dump_none_values
         
     def reset(self):
         self.concept_descriptions = {}
@@ -359,7 +380,10 @@ class AASSubmodelTechnicalData(Generator):
                 logger.warning(f"Couldn't add property to submodel: {error}")
     
     def dumps(self):
-        return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
+        return json.dumps(
+            self.submodel,
+            cls=json_serialization.AASToJsonEncoder if self.dump_none_values else AASToJsonEncoderWithoutEmpty,
+            indent=2)
     
     def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
         if aas is None:
