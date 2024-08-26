@@ -76,6 +76,39 @@ class AASSubmodelTechnicalData(Generator):
             id_short ="GeneralInformation",
             semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1")
         )
+        self.general_information.value.add(
+            model.Property(
+                    id_short='ManufacturerName',
+                    value_type = model.datatypes.String,
+                    category = "PARAMETER",
+                    semantic_id = self._create_semantic_id("0173-1#02-AAO677#002")
+            )
+        )
+        # ManufacturerLogo is optional
+        self.general_information.value.add(
+            model.MultiLanguageProperty(
+                    id_short='ManufacturerProductDesignation',
+                    category = "PARAMETER",
+                    semantic_id = self._create_semantic_id("0173-1#02-AAW338#001")
+            )
+        )
+        self.general_information.value.add(
+            model.Property(
+                    id_short='ManufacturerArticleNumber',
+                    value_type = model.datatypes.String,
+                    category = "PARAMETER",
+                    semantic_id = self._create_semantic_id("0173-1#02-AAO676#003")
+            )
+        )
+        self.general_information.value.add(
+            model.Property(
+                    id_short='ManufacturerOrderCode',
+                    value_type = model.datatypes.String,
+                    category = "PARAMETER",
+                    semantic_id = self._create_semantic_id("0173-1#02-AAO227#002")
+            )
+        )
+         # ProductImage is optional
         submodel.submodel_element.add(self.general_information)
 
         self.product_classifications = model.SubmodelElementCollection(
