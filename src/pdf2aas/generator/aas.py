@@ -55,21 +55,15 @@ def cast_property(value, definition) -> model.ValueDataType:
 class AASSubmodelTechnicalData(Generator):
     def __init__(
         self,
-        identifier: str = None,
-        dictionary: Dictionary = None,
-        class_id: str = None
+        identifier: str = None
     ) -> None:
         self.identifier = identifier
-        self.dictionary = dictionary
-        self.class_id = class_id
         self.concept_descriptions: dict[str, model.concept.ConceptDescription] = {}
         self.reset()
         
     def reset(self):
         self.concept_descriptions = {}
         self.submodel = self.create_submodel_template(self.identifier)
-        if self.dictionary is not None and self.class_id is not None:
-            self._add_classification(self.dictionary, self.class_id)
 
     def create_submodel_template(self, identifier:str=None):
         submodel = model.Submodel(
@@ -77,30 +71,30 @@ class AASSubmodelTechnicalData(Generator):
             id_short = "TechnicalData",
             semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2")
         )
-        submodel.submodel_element.add(
-            model.SubmodelElementCollection(
-                id_short ="GeneralInformation",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1")
-            )
+        
+        self.general_information = model.SubmodelElementCollection(
+            id_short ="GeneralInformation",
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1")
         )
-        # TODO add mandatory properties?
-        submodel.submodel_element.add(
-            model.SubmodelElementCollection(
-                id_short = "ProductClassifications",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1")
-            )
+        submodel.submodel_element.add(self.general_information)
+
+        self.product_classifications = model.SubmodelElementCollection(
+            id_short = "ProductClassifications",
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1")
         )
-        submodel.submodel_element.add(
-            model.SubmodelElementCollection(
-                id_short = "TechnicalProperties",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1")
-            )
+        submodel.submodel_element.add(self.product_classifications)
+
+        self.technical_properties = model.SubmodelElementCollection(
+            id_short = "TechnicalProperties",
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1")
         )
-        further_information = model.SubmodelElementCollection(
-                id_short = "FurtherInformation",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1")
+        submodel.submodel_element.add(self.technical_properties)
+
+        self.further_information = model.SubmodelElementCollection(
+            id_short = "FurtherInformation",
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1")
         )
-        further_information.value.add(
+        self.further_information.value.add(
             model.Property(
                 id_short = 'TextStatement',
                 value_type = model.datatypes.String,
@@ -109,7 +103,7 @@ class AASSubmodelTechnicalData(Generator):
                 semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1")
             )
         )
-        further_information.value.add(
+        self.further_information.value.add(
             model.Property(
                     id_short='ValidDate',
                     value_type = model.datatypes.Date,
@@ -118,12 +112,12 @@ class AASSubmodelTechnicalData(Generator):
                     semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1")
             )
         )
-        submodel.submodel_element.add(further_information)
+        submodel.submodel_element.add(self.further_information)
         return submodel
 
-    def _add_classification(self, dictionary:Dictionary, class_id:str):
+    def add_classification(self, dictionary:Dictionary, class_id:str):
         classification = model.SubmodelElementCollection(
-            id_short = "ProductClassificationItem01",
+            id_short = f"ProductClassificationItem{len(self.product_classifications.value)+1:02d}",
             semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationItem/1/1")
         )
         classification.value.add(
@@ -153,7 +147,7 @@ class AASSubmodelTechnicalData(Generator):
                 semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassId/1/1")
             )
         )
-        self.submodel.submodel_element.get('id_short', 'ProductClassifications').value.add(classification)
+        self.product_classifications.value.add(classification)
 
     def _add_concept_description(self, reference, property_defintion: PropertyDefinition | None = None, value: str = None):
         if reference in self.concept_descriptions:
@@ -283,17 +277,15 @@ class AASSubmodelTechnicalData(Generator):
 
     def add_properties(self, properties : list[Property]):       
         #TODO fill general information if provided in properties
-
-        technical_properties : model.SubmodelElementCollection = self.submodel.submodel_element.get('id_short', 'TechnicalProperties')
         for property_ in properties:
             aas_property = self.create_aas_property(property_)
             if aas_property is None:
                 continue
 
-            if technical_properties.value.contains_id('id_short', aas_property.id_short):
+            if self.technical_properties.value.contains_id('id_short', aas_property.id_short):
                 aas_property.id_short = str(uuid.uuid4())
             try:
-                technical_properties.value.add(aas_property)
+                self.technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
                 logger.warning(f"Couldn't add property to submodel: {error}")
     

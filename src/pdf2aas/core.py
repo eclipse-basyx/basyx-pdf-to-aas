@@ -30,9 +30,8 @@ class PDF2AAS:
             properties = [self.extractor.extract(preprocessed_datasheet, property_definitions[i:i + self.batch_size])
                           for i in range(0, len(property_definitions), self.batch_size)]
         
-        if isinstance(self.generator, AASSubmodelTechnicalData):
-            self.generator.dictionary = self.dictionary
-            self.generator.class_id = classification
         self.generator.reset()
+        if isinstance(self.generator, AASSubmodelTechnicalData):
+            self.generator.add_classification(self.dictionary, classification)
         self.generator.add_properties(properties)
         self.generator.dump(filepath=output_filepath)
