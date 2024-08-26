@@ -10,7 +10,7 @@ from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
 from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
-from ..dictionary import Dictionary, PropertyDefinition
+from ..dictionary import Dictionary, PropertyDefinition, ECLASS
 from ..extractor import Property
 
 logger = logging.getLogger(__name__)
@@ -315,9 +315,38 @@ class AASSubmodelTechnicalData(Generator):
 
         return self.create_aas_property_recursive(property_, property_.value, id_short, display_name)
 
+    general_information_semantic_ids_short = {
+        "AAO677" : "ManufacturerName",
+        "AAW338" : "ManufacturerProductDesignation",
+        "AAO676" : "ManufacturerArticleNumber",
+        "AAO227" : "ManufacturerOrderCode",
+    }
+
+    def _update_general_information(self, property_: Property):
+        id_short = None
+        if property_.definition_id is not None and ECLASS.check_property_irdi(property_.definition_id):
+            id_short = self.general_information_semantic_ids_short.get(property_.definition_id[10:16])
+         
+        if property_.label is not None:
+            for label in self.general_information_semantic_ids_short.values():
+                if re.sub(r'[^a-z0-9_]','', property_.label.lower()) == label.lower():
+                    id_short = label
+                    break
+        if id_short is None:
+            return False
+        
+        general_info = self.general_information.value.get('id_short', id_short)
+        if isinstance(general_info, model.MultiLanguageProperty):
+            general_info.value = {property_.language: str(property_.value)}
+        else:
+            general_info.value = str(property_.value)
+        return True
+
     def add_properties(self, properties : list[Property]):       
-        #TODO fill general information if provided in properties
         for property_ in properties:
+            if self._update_general_information(property_):
+                continue
+            
             aas_property = self.create_aas_property(property_)
             if aas_property is None:
                 continue

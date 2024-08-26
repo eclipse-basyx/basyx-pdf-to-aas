@@ -303,7 +303,7 @@ class ECLASS(Dictionary):
                 )
 
     @staticmethod
-    def check_property_irdi(property_id):
+    def check_property_irdi(property_id:str) -> bool:
         """
         Checks the format of the property IRDI.
         
