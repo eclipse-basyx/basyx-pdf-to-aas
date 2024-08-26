@@ -109,3 +109,20 @@ class TestAASSubmodelTechnicalData:
             key = smc_property.id_short[4:] # remove 'id1_'
             assert key in value
             assert smc_property.value == value[key]
+    
+    @pytest.mark.parametrize("id,label", [
+        ("0173-1#02-AAO677#002", None,),
+        ("0173-1#02-AAO677#003", None,),
+        (None, "ManufacturerName",),
+        (None, "Manufacturer name",),
+        ("other_id", "other_label")
+    ])
+    def test_update_general_information_properties(self, id, label):
+        self.g.reset()
+        self.g.add_properties([Property(label=label, value="TheManufacturer", definition=PropertyDefinition(id))])
+        manufacturer_name = self.g.general_information.value.get('id_short', "ManufacturerName")
+        assert manufacturer_name is not None
+        if id == "other_id":
+            assert manufacturer_name.value == None
+        else:
+            assert manufacturer_name.value == "TheManufacturer"
