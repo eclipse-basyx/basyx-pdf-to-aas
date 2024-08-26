@@ -65,9 +65,9 @@
       },
       "value": [
         {
-          "idShort": "TextStatement",
+          "idShort": "TextStatement01",
           "category": "PARAMETER",
-          "modelType": "Property",
+          "modelType": "MultiLanguageProperty",
           "semanticId": {
             "type": "ModelReference",
             "keys": [
@@ -77,8 +77,9 @@
               }
             ]
           },
-          "value": "Created with basyx pdf-to-aas. We assume no liability for the accuracy of the information.",
-          "valueType": "xs:string"
+          "value": {
+            "en": "Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information."
+          }
         },
         {
           "idShort": "ValidDate",
@@ -93,7 +94,7 @@
               }
             ]
           },
-          "value": "2024-08-19",
+          "value": "2024-08-26",
           "valueType": "xs:date"
         }
       ]

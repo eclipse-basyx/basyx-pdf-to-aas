@@ -95,10 +95,9 @@ class AASSubmodelTechnicalData(Generator):
             semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1")
         )
         self.further_information.value.add(
-            model.Property(
-                id_short = 'TextStatement',
-                value_type = model.datatypes.String,
-                value = 'Created with basyx pdf-to-aas. We assume no liability for the accuracy of the information.',
+            model.MultiLanguageProperty(
+                id_short = 'TextStatement01',
+                value = {'en': 'Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information.'},
                 category = "PARAMETER",
                 semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1")
             )
