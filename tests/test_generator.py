@@ -6,7 +6,7 @@ import basyx.aas.model
 
 from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData
 from pdf2aas.extractor import Property
-from pdf2aas.dictionary import PropertyDefinition
+from pdf2aas.dictionary import PropertyDefinition, ECLASS, ETIM
 
 from test_extractor import example_property_value1, example_property_value2
 
@@ -126,3 +126,26 @@ class TestAASSubmodelTechnicalData:
             assert manufacturer_name.value == None
         else:
             assert manufacturer_name.value == "TheManufacturer"
+
+    @pytest.mark.parametrize("dicts", [
+        ([ECLASS(release="14.0")]),
+        ([ETIM(release="9.0")]),
+        ([ECLASS(release="13.0"), ETIM(release="8.0")]),
+    ])
+    def test_add_classification(self, dicts):
+        self.g.reset()
+        for idx, dict in enumerate(dicts):
+            assert len(self.g.product_classifications.value) == idx
+            self.g.add_classification(dict, str(idx))
+            assert len(self.g.product_classifications.value) == idx+1
+            classification = self.g.product_classifications.value.get('id_short', f'ProductClassificationItem{idx+1:02d}')
+            assert classification is not None
+            system = classification.value.get('id_short', 'ProductClassificationSystem')
+            assert system is not None
+            assert system.value == dict.name
+            version = classification.value.get('id_short', 'ClassificationSystemVersion')
+            assert version is not None
+            assert version.value == dict.release
+            class_id = classification.value.get('id_short', 'ProductClassId')
+            assert class_id is not None
+            assert class_id.value == str(idx)
