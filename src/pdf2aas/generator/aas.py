@@ -52,25 +52,6 @@ def cast_property(value, definition) -> model.ValueDataType:
         return model.datatypes.Float(value)
     return model.datatypes.String(value)
 
-class AASToJsonEncoderWithoutEmpty(json_serialization.AASToJsonEncoder):
-    def default(self, obj: object) -> object:
-        if isinstance(obj, model.Property):
-            if obj.value is None:
-                return None
-            if hasattr(obj.value, '__len__') and len(obj.value) == 0:
-                return None
-        elif isinstance(obj, model.MultiLanguageProperty):
-            if obj.value is None:
-                return None
-        elif isinstance(obj, model.Range):
-            if obj.min is None and obj.max is None:
-                return None
-        elif isinstance(obj, (model.SubmodelElementCollection, model.SubmodelElementList)):
-            if len(obj.value) == 0:
-                return None
-            
-        return super().default(obj)
-
 class AASSubmodelTechnicalData(Generator):
     def __init__(
         self,
@@ -379,11 +360,33 @@ class AASSubmodelTechnicalData(Generator):
             except AASConstraintViolation as error:
                 logger.warning(f"Couldn't add property to submodel: {error}")
     
+    @staticmethod
+    def _remove_empty_submodel_element(element):
+        if isinstance(element, (model.SubmodelElementCollection, model.SubmodelElementList)):
+            element.value = [subelement for subelement in element.value if not AASSubmodelTechnicalData._remove_empty_submodel_element(subelement)]
+            if len(element.value) == 0:
+                return True
+        elif isinstance(element, model.Property):
+            if element.value is None:
+                return True
+            if hasattr(element.value, '__len__') and len(element.value) == 0:
+                return True
+        elif isinstance(element, model.MultiLanguageProperty):
+            if element.value is None:
+                return True
+        elif isinstance(element, model.Range):
+            if element.min is None and element.max is None:
+                return True
+        return False
+
     def dumps(self):
-        return json.dumps(
-            self.submodel,
-            cls=json_serialization.AASToJsonEncoder if self.dump_none_values else AASToJsonEncoderWithoutEmpty,
-            indent=2)
+        if not self.dump_none_values:
+            # Workaround, because deepcopy raises a TypeError:
+            submodel = json.loads(json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)
+            submodel.submodel_element = [element for element in submodel.submodel_element if not self._remove_empty_submodel_element(element)]
+        else:
+            submodel = self.submodel
+        return json.dumps(submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
     
     def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
         if aas is None:
@@ -394,13 +397,15 @@ class AASSubmodelTechnicalData(Generator):
                     global_asset_id=f"https://eclipse.dev/basyx/pdf-to-aas/asset/{uuid.uuid4()}"
                     )
             )
-        aas.submodel.add(model.ModelReference.from_referable(self.submodel))
-        #TODO add pdf file (to handover documentation submodel) if given?
 
         if not self.dump_none_values:
-            submodel = json.loads(self.dumps(), cls=json_deserialization.AASFromJsonDecoder)
+            submodel = json.loads(json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)
+            submodel.submodel_element = [element for element in submodel.submodel_element if not self._remove_empty_submodel_element(element)]
         else:
             submodel = self.submodel
+
+        aas.submodel.add(model.ModelReference.from_referable(submodel))
+        #TODO add pdf file (to handover documentation submodel) if given?
 
         with AASXWriter(filepath) as writer:
             writer.write_aas(

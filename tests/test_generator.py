@@ -68,7 +68,8 @@ class TestAASSubmodelTechnicalData:
     @pytest.mark.parametrize("definition,value", [
         (None, None),
         (None, []),
-        (None, {}),
+        (None, [None, None]),
+        (None, {'a': None, 'b': None}),
         (None, ""),
         (PropertyDefinition("my_definition", type="int"), None),
         (PropertyDefinition("my_definition", type="range"), None),
