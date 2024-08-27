@@ -6,6 +6,7 @@ import tempfile
 from datetime import datetime
 
 import gradio as gr
+from gradio_pdf import PDF
 from dotenv import load_dotenv
 from openai import OpenAI, AzureOpenAI
 import pandas as pd
@@ -422,11 +423,16 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     wrap=True,
                 )
                 with gr.Accordion("Preprocessed Datasheet with References", open=False):
-                    datasheet_text_highlighted = gr.HighlightedText(
-                        show_label=False,
-                        combine_adjacent=True,
-                        container=False,
-                    )
+                    with gr.Row():
+                        datasheet_text_highlighted = gr.HighlightedText(
+                            show_label=False,
+                            combine_adjacent=True,
+                        )
+                        datasheet_preview = PDF(
+                            label="Datasheet Preview",
+                            interactive=False,
+                        )
+
         with gr.Tab("Raw Results"):
             with gr.Row():
                 raw_prompts = gr.JSON(
@@ -509,7 +515,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     label="Use in prompt",
                     choices=['definition','unit','datatype', 'values'],
                     multiselect=True,
-                    value='unit',
+                    value=['unit', 'datatype'],
                     scale=2,
                 )
                 max_definition_chars = gr.Number(
@@ -572,6 +578,12 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             fn=check_additional_client_settings,
             inputs=[endpoint_type],
             outputs=[azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers]
+        )
+
+        pdf_upload.change(
+            fn=lambda pdf: pdf,
+            inputs=pdf_upload,
+            outputs=datasheet_preview
         )
 
         gr.on(
