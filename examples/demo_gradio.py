@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from openai import OpenAI, AzureOpenAI
 import pandas as pd
 
-from pdf2aas.dictionary import Dictionary, ECLASS, ETIM
+from pdf2aas.dictionary import Dictionary, ECLASS, ETIM, PropertyDefinition
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP, Property
 from pdf2aas.generator import AASSubmodelTechnicalData
@@ -211,6 +211,7 @@ def extract(
         temperature,
         max_tokens,
         use_in_prompt,
+        extract_general_information,
         max_definition_chars,
         max_values_length,
     ):
@@ -238,6 +239,20 @@ def extract(
     raw_results=[]
     raw_prompts=[]
     definitions = dictionary.get_class_properties(class_id)
+    if extract_general_information:
+        for property_ in AASSubmodelTechnicalData().general_information.value:
+            if isinstance(dictionary, ECLASS) \
+                    and any(d.id[10:16] == property_.semantic_id.key[0].value[10:16] for d in definitions):
+                continue
+            definitions.append(
+                PropertyDefinition(
+                    property_.semantic_id.key[0].value,
+                    {'en': property_.id_short},
+                    "string",
+                    #TODO add description to submodel and get here (or from concept description)
+                )
+            )
+
     if batch_size <= 0:
         properties = extractor.extract(
             preprocessed_datasheet,
@@ -314,7 +329,7 @@ def create_download_results(properties: list[Property], property_df: pd.DataFram
 
     return [excel_path, properties_path, submodel_path, aasx_path, aasx_path_noneEmpty]
 
-__current_settings_version = 2
+__current_settings_version = 3
 def save_settings(settings):
     tempdir = next(iter(settings)) # Assume tempdir is first element
     settings_path = os.path.join(tempdir.value.name, "settings.json")
@@ -518,6 +533,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     value=['unit', 'datatype'],
                     scale=2,
                 )
+                extract_general_information = gr.Checkbox(
+                    label="Extract General Information",
+                    value=False,
+                )
                 max_definition_chars = gr.Number(
                     label="Max. Definition Chars",
                     value=0,
@@ -594,7 +613,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
         extraction_started = extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, max_definition_chars, max_values_length],
+            inputs=[pdf_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
             outputs=[extracted_properties, extracted_properties_df, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
@@ -613,7 +632,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             azure_deployment, azure_api_version,
             custom_llm_request_template, custom_llm_result_path, custom_llm_headers,
             temperature, max_tokens,
-            batch_size, use_in_prompt, max_definition_chars, max_values_length
+            batch_size, use_in_prompt, extract_general_information, max_definition_chars, max_values_length
         ]
 
         settings_load.upload(
