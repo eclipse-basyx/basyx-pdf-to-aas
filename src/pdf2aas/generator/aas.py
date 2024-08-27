@@ -224,7 +224,7 @@ class AASSubmodelTechnicalData(Generator):
 
     @staticmethod
     def _create_id_short(proposal:str | None = None):
-        id_short = re.sub(r'[^a-zA-Z0-9_]', '', proposal) if proposal is not None else ''
+        id_short = re.sub(r'[^a-zA-Z0-9_]', '_', proposal) if proposal is not None else ''
         if len(id_short) == 0:
             id_short = "ID_" + str(uuid.uuid4())
         elif id_short[0].isdigit():
