@@ -458,57 +458,83 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                 )
 
         with gr.Tab(label="Settings"):
-            prompt_hint = gr.Text(
-                label="Optional Prompt Hint",
-            )
-            with gr.Row():
-                endpoint_type = gr.Dropdown(
-                    label="Endpoint Type",
-                    choices=["openai", "azure", "custom"],
-                    value="openai",
-                    allow_custom_value=True
+            with gr.Group("Extraction Setting"):
+                prompt_hint = gr.Text(
+                    label="Optional Prompt Hint",
                 )
-                model = gr.Dropdown(
-                    label="Model",
-                    choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
-                    value="gpt-4o-mini",
-                    allow_custom_value=True
+                batch_size = gr.Slider(
+                    label="Batch Size",
+                    minimum=0,
+                    maximum=100,
+                    step=1
                 )
-            with gr.Row():
-                endpoint = gr.Text(
-                    label="Endpoint",
-                    lines=1,
+                extract_general_information = gr.Checkbox(
+                    label="Extract General Information",
+                    value=False,
                 )
-                api_key = gr.Text(
-                    label="API Key",
-                    lines=1,
-                    type='password'
+                use_in_prompt = gr.Dropdown(
+                    label="Use in prompt",
+                    choices=['definition','unit','datatype', 'values'],
+                    multiselect=True,
+                    value=['unit', 'datatype'],
+                    scale=2,
                 )
-            with gr.Row():
-                azure_deployment = gr.Text(
-                    label="Azure Deplyoment",
-                    visible=False,
-                    lines=1,
+                max_definition_chars = gr.Number(
+                    label="Max. Definition Chars",
+                    value=0,
                 )
-                azure_api_version = gr.Text(
-                    label="Azure API version",
-                    visible=False,
-                    lines=1,
+                max_values_length = gr.Number(
+                    label="Max. Values Length",
+                    value=0,
                 )
-            with gr.Row():
-                custom_llm_request_template = gr.Text(
-                    label="Custom LLM Request Template",
-                    visible=False,
-                )
-                custom_llm_result_path = gr.Text(
-                    label="Custom LLM Result Path",
-                    visible=False,
-                )
-                custom_llm_headers = gr.Text(
-                    label="Custom LLM Headers",
-                    visible=False,
-                )
-            with gr.Row():
+            with gr.Group("LLM Client"):
+                with gr.Group():
+                    endpoint_type = gr.Dropdown(
+                        label="Endpoint Type",
+                        choices=["openai", "azure", "custom"],
+                        value="openai",
+                        allow_custom_value=True
+                    )
+                    model = gr.Dropdown(
+                        label="Model",
+                        choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
+                        value="gpt-4o-mini",
+                        allow_custom_value=True
+                    )
+                    endpoint = gr.Text(
+                        label="Endpoint",
+                        lines=1,
+                    )
+                    api_key = gr.Text(
+                        label="API Key",
+                        lines=1,
+                        type='password'
+                    )
+                with gr.Group():
+                    azure_deployment = gr.Text(
+                        label="Azure Deplyoment",
+                        visible=False,
+                        lines=1,
+                    )
+                    azure_api_version = gr.Text(
+                        label="Azure API version",
+                        visible=False,
+                        lines=1,
+                    )
+                with gr.Group():
+                    custom_llm_request_template = gr.Text(
+                        label="Custom LLM Request Template",
+                        visible=False,
+                    )
+                    custom_llm_result_path = gr.Text(
+                        label="Custom LLM Result Path",
+                        visible=False,
+                    )
+                    custom_llm_headers = gr.Text(
+                        label="Custom LLM Headers",
+                        visible=False,
+                    )
+            with gr.Group("LLM Settings"):
                 temperature = gr.Slider(
                     label="Temperature",
                     minimum=0,
@@ -519,42 +545,18 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     label="Max. Tokens",
                     value=0,
                 )
-            with gr.Row():
-                batch_size = gr.Slider(
-                    label="Batch Size",
-                    minimum=0,
-                    maximum=100,
-                    step=1
-                )
-                use_in_prompt = gr.Dropdown(
-                    label="Use in prompt",
-                    choices=['definition','unit','datatype', 'values'],
-                    multiselect=True,
-                    value=['unit', 'datatype'],
-                    scale=2,
-                )
-                extract_general_information = gr.Checkbox(
-                    label="Extract General Information",
-                    value=False,
-                )
-                max_definition_chars = gr.Number(
-                    label="Max. Definition Chars",
-                    value=0,
-                )
-                max_values_length = gr.Number(
-                    label="Max. Values Length",
-                    value=0,
-                )
-            with gr.Row():
-                settings_save = gr.Button(
-                    "Create Settings File"
-                )
+            with gr.Group():
+                with gr.Row():
+                    settings_save = gr.Button(
+                        "Create Settings File"
+                    )
+                    settings_load = gr.UploadButton(
+                        "Load Settings File"
+                    )
                 settings_file = gr.File(
                     label="Download Settings"
                 )
-                settings_load = gr.UploadButton(
-                    "Load Settings"
-                )
+
         
         dictionary_type.change(
             fn=change_dictionary_type,
