@@ -377,8 +377,30 @@ class AASSubmodelTechnicalData(Generator):
                 return True
         return False
 
-    def remove_empty_submodel_elements(self):
-        self.submodel.submodel_element = [element for element in self.submodel.submodel_element if not self._remove_empty_submodel_element(element)]
+    def remove_empty_submodel_elements(self, remove_mandatory=False):
+        if remove_mandatory:
+            self.submodel.submodel_element = [
+                element
+                for element in self.submodel.submodel_element
+                if not self._remove_empty_submodel_element(element)
+            ]
+        else:
+            self.general_information.value = [
+                element
+                for element in self.general_information.value
+                if element.id_short not in self.general_information_semantic_ids_short.values()
+                and not self._remove_empty_submodel_element(element)
+            ]
+            self.technical_properties.value = [
+                element
+                for element in self.technical_properties.value
+                if not self._remove_empty_submodel_element(element)
+            ]
+            self.further_information.value = [
+                element
+                for element in self.further_information.value
+                if not self._remove_empty_submodel_element(element)
+            ]
 
     def dumps(self):
         return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
