@@ -81,7 +81,7 @@ class TestAASSubmodelTechnicalData:
         if definition:
             assert "my_definition" in json_dump
         
-        self.g.dump_none_values = False
+        self.g.remove_empty_submodel_elements()
         json_dump = self.g.dumps()
         assert "my_empty_property" not in json_dump
         if definition:
@@ -166,3 +166,10 @@ class TestAASSubmodelTechnicalData:
             class_id = classification.value.get('id_short', 'ProductClassId')
             assert class_id is not None
             assert class_id.value == str(idx)
+
+    @pytest.mark.xfail
+    def test_basyx_aas_json_serialization_deserialization(self):
+        self.g.add_properties(test_property_list)
+        from basyx.aas.adapter.json import json_serialization, json_deserialization
+        submodel : basyx.aas.model.Submodel = json.loads(json.dumps(self.g.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)        
+        assert submodel == self.g.submodel

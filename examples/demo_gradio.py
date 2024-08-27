@@ -299,7 +299,7 @@ def create_download_results(properties: list[Property], property_df: pd.DataFram
     
     submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
     #TODO set identifier and other properties --> load from a template, that can be specified in settings?
-    submodel = AASSubmodelTechnicalData(dump_none_values=True)
+    submodel = AASSubmodelTechnicalData()
     submodel.add_classification(dictionary, class_id)
     submodel.add_properties(properties)
     submodel.dump(submodel_path)
@@ -307,7 +307,7 @@ def create_download_results(properties: list[Property], property_df: pd.DataFram
     aasx_path = os.path.join(tempdir.name, 'technical_data.aasx')
     submodel.save_as_aasx(aasx_path)
 
-    submodel.dump_none_values = False
+    submodel.remove_empty_submodel_elements()
     aasx_path_noneEmpty = os.path.join(tempdir.name, 'technical_data_withoutEmpty.aasx')
     submodel.save_as_aasx(aasx_path_noneEmpty)
 

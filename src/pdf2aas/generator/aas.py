@@ -7,7 +7,7 @@ import uuid
 from basyx.aas import model
 from basyx.aas.model.base import AASConstraintViolation
 from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
-from basyx.aas.adapter.json import json_serialization, json_deserialization
+from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
 from ..dictionary import Dictionary, PropertyDefinition, ECLASS
@@ -56,12 +56,10 @@ class AASSubmodelTechnicalData(Generator):
     def __init__(
         self,
         identifier: str = None,
-        dump_none_values = True,
     ) -> None:
         self.identifier = identifier
         self.concept_descriptions: dict[str, model.concept.ConceptDescription] = {}
         self.reset()
-        self.dump_none_values = dump_none_values
         
     def reset(self):
         self.concept_descriptions = {}
@@ -379,14 +377,11 @@ class AASSubmodelTechnicalData(Generator):
                 return True
         return False
 
+    def remove_empty_submodel_elements(self):
+        self.submodel.submodel_element = [element for element in self.submodel.submodel_element if not self._remove_empty_submodel_element(element)]
+
     def dumps(self):
-        if not self.dump_none_values:
-            # Workaround, because deepcopy raises a TypeError:
-            submodel = json.loads(json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)
-            submodel.submodel_element = [element for element in submodel.submodel_element if not self._remove_empty_submodel_element(element)]
-        else:
-            submodel = self.submodel
-        return json.dumps(submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
+        return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
     
     def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
         if aas is None:
@@ -398,18 +393,12 @@ class AASSubmodelTechnicalData(Generator):
                     )
             )
 
-        if not self.dump_none_values:
-            submodel = json.loads(json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)
-            submodel.submodel_element = [element for element in submodel.submodel_element if not self._remove_empty_submodel_element(element)]
-        else:
-            submodel = self.submodel
-
-        aas.submodel.add(model.ModelReference.from_referable(submodel))
+        aas.submodel.add(model.ModelReference.from_referable(self.submodel))
         #TODO add pdf file (to handover documentation submodel) if given?
 
         with AASXWriter(filepath) as writer:
             writer.write_aas(
                 aas_ids=aas.id,
-                object_store=model.DictObjectStore([aas, submodel] + list(self.concept_descriptions.values())),
+                object_store=model.DictObjectStore([aas, self.submodel] + list(self.concept_descriptions.values())),
                 file_store=DictSupplementaryFileContainer(),
                 write_json=True)
