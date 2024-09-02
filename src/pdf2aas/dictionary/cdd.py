@@ -144,7 +144,7 @@ class CDD(Dictionary):
                 name={'en': row[4]},
                 type=data_type,
                 definition={'en': row[7]},
-                unit=row[12] if len(row[12]) > 0 else None
+                unit=row[12] if len(row[12]) > 0 else ''
             )
         if type_.startswith('ENUM'):
             value_list_id = type_.split('(')[1][:-1]
