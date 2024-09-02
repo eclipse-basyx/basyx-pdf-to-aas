@@ -178,3 +178,13 @@ class CDD(Dictionary):
                         break
         self.properties[property_id] = property_
         return property_
+    
+    @staticmethod
+    def parse_class_id(class_id:str) -> str | None:
+        if class_id is None:
+            return None
+        class_id = re.sub(r'[-]|\s', '', class_id)
+        class_id = re.search(r"0112/2///[A-Z0-9_]+#[A-Z]{3}[0-9]{3}#[0-9]{3}", class_id, re.IGNORECASE)
+        if class_id is None:
+            return None
+        return class_id.group(0)
