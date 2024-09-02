@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from openai import OpenAI, AzureOpenAI
 import pandas as pd
 
-from pdf2aas.dictionary import Dictionary, ECLASS, ETIM, PropertyDefinition
+from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM, PropertyDefinition
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP, Property
 from pdf2aas.generator import AASSubmodelTechnicalData
@@ -29,8 +29,10 @@ def check_extract_ready(pdf_upload, definitions):
         )
 
 def get_class_choices(dictionary: Dictionary):
-    if dictionary.name == "ECLASS":
+    if isinstance(dictionary, ECLASS):
         return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
+    elif isinstance(dictionary, ETIM):
+        return [(f"{etim.id.split('/')[0]} {etim.name}", etim.id) for etim in dictionary.classes.values()]
     return [(f"{class_.id} {class_.name}", class_.id) for class_ in dictionary.classes.values()]
 
 def change_dictionary_type(dictionary_type):
@@ -38,6 +40,8 @@ def change_dictionary_type(dictionary_type):
         dictionary = ECLASS()
     elif dictionary_type == "ETIM":
         dictionary = ETIM()
+    elif dictionary_type == "CDD":
+        dictionary = CDD()
     return (
         dictionary,
         gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary), value=None),
@@ -49,6 +53,8 @@ def change_dictionary_release(dictionary_type, release):
         dictionary = ECLASS(release)
     elif dictionary_type == "ETIM":
         dictionary = ETIM(release)
+    elif dictionary_type == "CDD":
+        dictionary = CDD(release)
     dictionary.load_from_file()
     return dictionary, gr.Dropdown(choices=get_class_choices(dictionary))
 
@@ -108,9 +114,10 @@ def select_property_info(dictionary: Dictionary | None, evt: gr.SelectData):
     if definition is None:
         return "## Select Property ID in Table for Details"
     return f"""## {definition.name.get('en')}
-* ID: [{definition.id.split('/')[0]}]({dictionary.get_property_url(definition.id)})
+* ID: [{definition.id.split('/')[0] if isinstance(dictionary, ETIM) else definition.id}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
 * Definition: {definition.definition.get('en', '')}
+* Unit: {definition.unit}
 * Values:{"".join(["\n  * " + v.get("value") for v in definition.values])}
 """
 
@@ -181,7 +188,7 @@ def mark_extracted_references(datasheet, properties: list[Property]):
             continue
         unit = f" [{property_.unit}]" if property_.unit else ''
         datasheet['entities'].append({
-            'entity': f"{property_.definition_name} ({property_.definition_id.split('/')[0]}): {property_.value}{unit}",
+            'entity': f"{property_.definition_name} ({property_.definition_id}): {property_.value}{unit}",
             'start': start,
             'end': start + len(reference)
         })
@@ -190,7 +197,7 @@ def properties_to_dataframe(properties: list[Property]) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                'ID' : p.definition_id.split('/')[0] if p.definition_id else None,
+                'ID' : p.definition_id,
                 'Name': p.label,
                 'Value': p.value,
                 'Unit': p.unit,
@@ -377,7 +384,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Dictionary",
                         allow_custom_value=False,
                         scale=1,
-                        choices=['ECLASS', 'ETIM'],
+                        choices=['ECLASS', 'ETIM', 'CDD'],
                         value='ECLASS'
                     )
                     dictionary_class = gr.Dropdown(
@@ -664,7 +671,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass / etim --> LLM --> xlsx')
+    parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass / etim / cdd --> LLM --> xlsx / json / aasx')
     parser.add_argument('--settings', type=str, help="Load settings from file. Defaults to settings.json", default='settings.json')
     parser.add_argument('--port', type=str, help="Change server port (default 7860 if free)", default=None)
     parser.add_argument('--share', action="store_true", help="Allow to use webserver outside localhost, aka. public.")
