@@ -12,6 +12,7 @@ dependencies = [
   "python-dotenv",
   "pypdfium2",
   "basyx-python-sdk",
+  "xlrd",
 ]
 name = "pdf2aas"
 requires-python = ">=3.10"

@@ -2,12 +2,24 @@ import logging
 import re
 import requests
 
+import xlrd
 from bs4 import BeautifulSoup
 
 from .core import Dictionary, ClassDefinition, PropertyDefinition
 from .eclass import download_html
 
 logger = logging.getLogger(__name__)
+
+def cdd_datatype_to_type(data_type:str):
+    if data_type.startswith("CLASS_REFERENCE_TYPE"):
+        return "class"
+    if data_type.startswith("ENUM_BOOLEAN_TYPE"):
+        return "bool"
+    if data_type.startswith("LEVEL(MIN,MAX)"):
+        return "range"
+    if data_type.startswith("INT") or data_type.startswith("REAL"):
+        return "numeric"
+    return "string"
 
 class CDD(Dictionary):
     """ Common Data Dictionary
@@ -78,5 +90,61 @@ class CDD(Dictionary):
         if keywords and len(keywords.strip()) > 0:
             class_.keywords = keywords.split(', ')
 
+        class_.properties = self._download_property_definitions(class_id, soup)
         self.classes[class_id] = class_
         return class_
+    
+    def _download_export_xls(self, export_html_content, selection):
+        export_url = re.search(f'href="(.*{selection}.*)"', export_html_content)
+        if export_url is None:
+            return []
+        export_url = f"https://cdd.iec.ch{export_url.group(1)}"
+
+        try:
+            response = requests.get(export_url)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logger.error(f"XLS download failed: {e}")
+            return []
+        workbook = xlrd.open_workbook(file_contents=response.content)
+        return workbook.sheet_by_index(0)
+
+    def _download_property_definitions(self, class_id, class_html_soup):
+        export_id = class_html_soup.find('input', {'id': 'export6'}).get('onclick').split("'")[1]
+        export_url = f"{self.get_class_url(class_id)}?OpenDocument&Click={export_id}"
+        export_html_content = download_html(export_url)
+        if export_html_content is None:
+            return []
+
+        property_sheet = self._download_export_xls(export_html_content, 'PROPERTY')
+        value_list_sheet = self._download_export_xls(export_html_content, 'VALUELIST')
+        value_terms_sheet = self._download_export_xls(export_html_content, 'VALUETERMS')
+
+        properties = []
+        for row in range(property_sheet.nrows):
+            property_ = self._parse_property_xls_row(property_sheet.row_values(row), value_list_sheet, value_terms_sheet)
+            if property_ is not None:
+                properties.append(property_)
+        return properties
+
+    def _parse_property_xls_row(self, row, value_list, value_terms):
+        if row[0].startswith('#'):
+            return None
+        type_ = row[14]
+        data_type = cdd_datatype_to_type(type_)
+        if data_type == "class":
+            return None
+        
+        property_id = f"{row[1]}#{int(row[2]):03d}"
+        if property_id in self.properties:
+            return self.properties[property_id]
+        
+        property_ = PropertyDefinition(
+                id=property_id,
+                name={'en': row[4]},
+                type=data_type,
+                definition={'en': row[7]},
+                unit=row[12] if len(row[12]) > 0 else None
+            )
+        self.properties[property_id] = property_
+        return property_
