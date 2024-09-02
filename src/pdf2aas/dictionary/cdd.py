@@ -17,7 +17,7 @@ def cdd_datatype_to_type(data_type:str):
         return "bool"
     if data_type.startswith("LEVEL(MIN,MAX)"):
         return "range"
-    if data_type.startswith("INT") or data_type.startswith("REAL"):
+    if "INT" in data_type or "REAL" in data_type:
         return "numeric"
     return "string"
 
