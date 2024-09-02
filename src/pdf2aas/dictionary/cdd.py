@@ -146,5 +146,35 @@ class CDD(Dictionary):
                 definition={'en': row[7]},
                 unit=row[12] if len(row[12]) > 0 else None
             )
+        if type_.startswith('ENUM'):
+            value_list_id = type_.split('(')[1][:-1]
+            value_ids = []
+            for row in value_list:
+                if row[1].value == value_list_id:
+                    value_ids = row[2].value[1:-1].split(',')
+                    break
+            for value_id in value_ids:
+                for row in value_terms:
+                    if row[1].value == value_id:
+                        value = {
+                            'value': row[4].value,
+                            'id': f"{row[1].value}#{int(row[2].value):03d}",
+                        }
+                        if len(row[5].value) > 0:
+                            value['synonyms'] = row[5].value.split(',')
+                        if len(row[6].value) > 0:
+                            value['short_name'] = row[6].value
+                        if len(row[7].value) > 0:
+                            value['definition'] = row[7].value
+                        if len(row[9].value) > 0:
+                            value['definition_source'] = row[9].value
+                        if len(row[10].value) > 0:
+                            value['note'] = row[10].value
+                        if len(row[11].value) > 0:
+                            value['remark'] = row[11].value
+                        if len(row[12].value) > 0:
+                            value['symbol'] = row[12].value
+                        property_.values.append(value)
+                        break
         self.properties[property_id] = property_
         return property_
