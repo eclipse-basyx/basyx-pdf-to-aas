@@ -57,13 +57,13 @@ class CDD(Dictionary):
         # example class_id: 0112/2///62683#ACC501 --> https://cdd.iec.ch/cdd/iec62683/cdddev.nsf/classes/0112-2---62683%23ACC501
         standard_id_version = class_id.split('/')[-1].split('#')
         #TODO find specified version
-        return f"https://cdd.iec.ch/cdd/iec{standard_id_version[0]}/cdddev.nsf/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}"
+        return f"https://cdd.iec.ch/cdd/iec{standard_id_version[0][:5]}/cdddev.nsf/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}"
 
     def get_property_url(self, property_id: str) -> str:
         # example property_id: 0112/2///62683#ACC501#002 --> https://cdd.iec.ch/CDD/IEC62683/cdddev.nsf/PropertiesAllVersions/0112-2---62683%23ACE251
         standard_id_version = property_id.split('/')[-1].split('#')
         #TODO find specified version
-        return f"https://cdd.iec.ch/CDD/IEC{standard_id_version[0]}/cdddev.nsf/PropertiesAllVersions/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}"
+        return f"https://cdd.iec.ch/CDD/IEC{standard_id_version[0][:5]}/cdddev.nsf/PropertiesAllVersions/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}"
 
     @staticmethod
     def _get_table_data(labels, label) -> str:
