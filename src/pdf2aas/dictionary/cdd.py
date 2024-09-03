@@ -44,6 +44,27 @@ class CDD(Dictionary):
         #TODO implement release based lookup?
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
+        """ Get class properties from class in the dictionary or try to download otherwise.
+
+        We are only using "FREE ATTRIBUTES" according to the IEC license agreement, c.f. section 5:
+        ```
+        5. FREE ATTRIBUTES
+        FREE ATTRIBUTES are intended for the reference and mapping to dictionary entries/elements in the IEC CDD database and to enable electronic data exchange.
+        YOU are allowed to print, copy, reproduce, distribute or otherwise exploit, whether commercially or not, in any way freely, internally in your organization or to a third party, the following attributes of the data elements in the database with or without contained values, also referred to as FREE ATTRIBUTES:
+
+        • Identity number (Code and IRDI);
+        • Version/Revision;
+        • Name (Preferred name, Synonymous name, Short name, Coded name);
+        • Value formats (Data type and Data format);
+        • Property data element type
+        • Superclass
+        • Applicable properties
+        • DET class
+        • Symbol
+        • Enumerated list of terms
+        • Unit of measurement (IRDI, Preferred name, Short name, Codes of units, Code for unit, Code for alternate units, Code for unit list);
+        ```
+        """
         class_ = self.classes.get(class_id)
         if class_ is None:
             logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
@@ -83,7 +104,8 @@ class CDD(Dictionary):
         class_ = ClassDefinition(
             id=class_id,
             name=self._get_table_data(tds, 'Preferred name'),
-            description=self._get_table_data(tds, 'Definition')
+            # Probably non "FREE ATTRIBUTES", c.f. CDD license section 5
+            # description=self._get_table_data(tds, 'Definition')
         )
 
         keywords = self._get_table_data(tds, 'Synonymous name')
@@ -164,14 +186,15 @@ class CDD(Dictionary):
                             value['synonyms'] = row[5].value.split(',')
                         if len(row[6].value) > 0:
                             value['short_name'] = row[6].value
-                        if len(row[7].value) > 0:
-                            value['definition'] = row[7].value
-                        if len(row[9].value) > 0:
-                            value['definition_source'] = row[9].value
-                        if len(row[10].value) > 0:
-                            value['note'] = row[10].value
-                        if len(row[11].value) > 0:
-                            value['remark'] = row[11].value
+                        # Probably non "FREE ATTRIBUTES", c.f. CDD license section 5
+                        # if len(row[7].value) > 0:
+                        #     value['definition'] = row[7].value
+                        # if len(row[9].value) > 0:
+                        #     value['definition_source'] = row[9].value
+                        # if len(row[10].value) > 0:
+                        #     value['note'] = row[10].value
+                        # if len(row[11].value) > 0:
+                        #     value['remark'] = row[11].value
                         if len(row[12].value) > 0:
                             value['symbol'] = row[12].value
                         property_.values.append(value)
