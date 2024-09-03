@@ -69,17 +69,16 @@ class CDD(Dictionary):
         class_ = self.classes.get(class_id)
         if class_ is None:
             logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
-            html_content = download_html(self.get_class_url(class_id))
-            if html_content is None:
+            class_ = self._download_cdd_class(self.get_class_url(class_id))
+            if class_ is None:
                 return []
-            class_ = self._parse_cdd_class(html_content)
         return class_.properties
     
     def get_class_url(self, class_id: str) -> str :
         # example class_id: 0112/2///62683#ACC501 --> https://cdd.iec.ch/cdd/iec62683/cdddev.nsf/classes/0112-2---62683%23ACC501
         standard_id_version = class_id.split('/')[-1].split('#')
         #TODO find specified version
-        return f"https://cdd.iec.ch/cdd/iec{standard_id_version[0][:5]}/cdddev.nsf/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}"
+        return f"https://cdd.iec.ch/cdd/iec{standard_id_version[0][:5]}/cdddev.nsf/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}?OpenDocument"
 
     def get_property_url(self, property_id: str) -> str:
         # example property_id: 0112/2///62683#ACC501#002 --> https://cdd.iec.ch/CDD/IEC62683/cdddev.nsf/PropertiesAllVersions/0112-2---62683%23ACE251
@@ -94,7 +93,10 @@ class CDD(Dictionary):
                 return td.find_next_sibling('td').text.lstrip('\n')
         return None
 
-    def _parse_cdd_class(self, html_content: dict) -> ClassDefinition:
+    def _download_cdd_class(self, url) -> ClassDefinition | None:
+        html_content = download_html(url)
+        if html_content is None:
+            return None
         soup = BeautifulSoup(html_content, "html.parser")
         #TODO resolve language to table (English --> L1, France = L2, ...) from div id="onglet"
         #TODO translate the labels, e.g. Preferred name --> Nom préféré
@@ -113,14 +115,14 @@ class CDD(Dictionary):
         if keywords and len(keywords.strip()) > 0:
             class_.keywords = keywords.split(', ')
 
-        class_.properties = self._download_property_definitions(class_id, soup)
+        class_.properties = self._download_property_definitions(url, soup)
         self.classes[class_id] = class_
         return class_
     
     def _download_export_xls(self, export_html_content, selection):
         export_url = re.search(f'href="(.*{selection}.*)"', export_html_content)
         if export_url is None:
-            return []
+            return None
         export_url = f"https://cdd.iec.ch{export_url.group(1)}"
 
         try:
@@ -128,13 +130,13 @@ class CDD(Dictionary):
             response.raise_for_status()
         except requests.RequestException as e:
             logger.error(f"XLS download failed: {e}")
-            return []
+            return None
         workbook = xlrd.open_workbook(file_contents=response.content)
         return workbook.sheet_by_index(0)
 
-    def _download_property_definitions(self, class_id, class_html_soup):
+    def _download_property_definitions(self, class_url, class_html_soup):
         export_id = class_html_soup.find('input', {'id': 'export6'}).get('onclick').split("'")[1]
-        export_url = f"{self.get_class_url(class_id)}?OpenDocument&Click={export_id}"
+        export_url = f"{class_url}&Click={export_id}"
         export_html_content = download_html(export_url)
         if export_html_content is None:
             return []
@@ -142,6 +144,9 @@ class CDD(Dictionary):
         property_sheet = self._download_export_xls(export_html_content, 'PROPERTY')
         value_list_sheet = self._download_export_xls(export_html_content, 'VALUELIST')
         value_terms_sheet = self._download_export_xls(export_html_content, 'VALUETERMS')
+
+        if property_sheet is None:
+            return []
 
         properties = []
         for row in range(property_sheet.nrows):
@@ -169,37 +174,42 @@ class CDD(Dictionary):
                 definition={'en': row[7]},
                 unit=row[12] if len(row[12]) > 0 else ''
             )
-        if type_.startswith('ENUM'):
+        if value_list is not None and type_.startswith('ENUM'):
             value_list_id = type_.split('(')[1][:-1]
             value_ids = []
             for row in value_list:
                 if row[1].value == value_list_id:
                     value_ids = row[2].value[1:-1].split(',')
                     break
-            for value_id in value_ids:
-                for row in value_terms:
-                    if row[1].value == value_id:
-                        value = {
-                            'value': row[4].value,
-                            'id': f"{row[1].value}#{int(row[2].value):03d}",
-                        }
-                        if len(row[5].value) > 0:
-                            value['synonyms'] = row[5].value.split(',')
-                        if len(row[6].value) > 0:
-                            value['short_name'] = row[6].value
-                        # Probably non "FREE ATTRIBUTES", c.f. CDD license section 5
-                        # if len(row[7].value) > 0:
-                        #     value['definition'] = row[7].value
-                        # if len(row[9].value) > 0:
-                        #     value['definition_source'] = row[9].value
-                        # if len(row[10].value) > 0:
-                        #     value['note'] = row[10].value
-                        # if len(row[11].value) > 0:
-                        #     value['remark'] = row[11].value
-                        if len(row[12].value) > 0:
-                            value['symbol'] = row[12].value
-                        property_.values.append(value)
-                        break
+
+            if value_terms is None:
+                property_.values = value_ids 
+                
+            else:
+                for value_id in value_ids:
+                    for row in value_terms:
+                        if row[1].value == value_id:
+                            value = {
+                                'value': row[4].value,
+                                'id': f"{row[1].value}#{int(row[2].value):03d}",
+                            }
+                            if len(row[5].value) > 0:
+                                value['synonyms'] = row[5].value.split(',')
+                            if len(row[6].value) > 0:
+                                value['short_name'] = row[6].value
+                            # Probably non "FREE ATTRIBUTES", c.f. CDD license section 5
+                            # if len(row[7].value) > 0:
+                            #     value['definition'] = row[7].value
+                            # if len(row[9].value) > 0:
+                            #     value['definition_source'] = row[9].value
+                            # if len(row[10].value) > 0:
+                            #     value['note'] = row[10].value
+                            # if len(row[11].value) > 0:
+                            #     value['remark'] = row[11].value
+                            if len(row[12].value) > 0:
+                                value['symbol'] = row[12].value
+                            property_.values.append(value)
+                            break
         self.properties[property_id] = property_
         return property_
     
@@ -212,3 +222,21 @@ class CDD(Dictionary):
         if class_id is None:
             return None
         return class_id.group(0)
+
+    def download_full_release(self):
+        logger.warning("Make sure to comply with CDD license agreement, especially section 7 and 8.")
+        for standard_url_part in ['common/iec61360-7', 'iec61360/iec61360', 'iec61987/iec61987', 'iec62683/iec62683', 'iectc85/iec63213']:
+            logger.info(f"Downloading CDD dictionary for standard: {standard_url_part}")
+            class_list_html = download_html(f"https://cdd.iec.ch/CDD/{standard_url_part}.nsf/classes")
+            class_list_soup = BeautifulSoup(class_list_html, "html.parser")
+            class_urls = {a.text.replace('-', '/'): a.get('href') for a in class_list_soup.find_all('a')}
+            class_list_rows = class_list_soup.find('table').find_all('tr')
+            super_classes = set([row.find_all('td')[3].get_text(strip=True) for row in class_list_rows if len(row.find_all('td')) > 3])
+            
+            for class_id, class_url in class_urls.items():
+                if class_id in super_classes:
+                    # skip download of superclasses
+                    continue
+                class_ = self._download_cdd_class("https://cdd.iec.ch" + class_url)
+                if class_ is not None:
+                    logger.info(f"Successfully parsed {class_.id} with {len(class_.properties)} properties.")
