@@ -48,7 +48,11 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
     The converted html is preprocessed further to reduce token usage for the llms.
 * **dictionary**: defines classes and properties semantically.
   * **ECLASS**: downloads property definitions from [ECLASS website](https://eclass.eu/en/eclass-standard/search-content) for a given ECLASS class.
-  * **ETIM**: downloads property definitions from [ETIM model releases](https://www.etim-international.com/downloads/?_sft_downloadcategory=model-releases&_sft_language=etim-english&_sft_format=csv&_sft_unit=metric) (CSV version needs to be placed as zip file in `temp/dict`) or via the [ETIM API](https://etimapi.etim-international.com/)
+    * Make sure to comply with [ECLASS license](https://eclass.eu/en/eclass-standard/licenses).
+  * **ETIM**: downloads property definitions from [ETIM model releases](https://www.etim-international.com/downloads/?_sft_downloadcategory=model-releases&_sft_language=etim-english&_sft_format=csv&_sft_unit=metric) (CSV version needs to be placed as zip file in `temp/dict`) or via the [ETIM API](https://etimapi.etim-international.com/) (ETIM API client id and secret needs to be provided)
+    * Make sure to comply with [ETIM license](https://www.etim-international.com/classification/license-info/), which refers to the [Open Data Commons Attribution License](https://opendatacommons.org/licenses/by/1.0/).
+  * **CDD**: downloads property definitions from [IEC CDD website](https://cdd.iec.ch/) for a given CDD class.
+    * Make sure to comply with [CDD license](https://cdd.iec.ch/cdd/iec62683/iec62683.nsf/License?openPage). We are only using "FREE ATTRIBUTES" according to the current license.
 * **extractor**: extracts technical properties from the preprocessed data sheet.
   * **PropertyLLM**: Uses an LLM to search and extract a single property value with its unit from the given text.
 * **generator**: transforms an extracted property-value list into different formats.

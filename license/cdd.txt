@@ -1,0 +1,64 @@
+End User License Agreement for IEC Common Data Dictionary (CDD)
+
+This License Agreement (hereafter referred to as “LICENSE”) is between the International Electrotechnical Commission (the first party, hereafter referred to as “IEC”) and you, the user of the database (the second party, hereafter referred to as "YOU”). Please read the LICENSE carefully before you access the database or use any of its contents.
+
+If you have any difficulties concerning the terms of this LICENSE or if you have any question regarding IEC copyright, please contact:
+
+Customer Service Centre
+IEC Central Office
+3, rue de Varembé,
+P.O. Box 131,
+1211 Geneva 20, Switzerland
+Tel: +41 22 919 02 11
+Fax: +41 22 919 03 00
+Email: csc@iec.ch
+
+Any information accessed, used, downloaded, reproduced or distributed from the IEC Common Data Dictionary (CDD) database is subject to the following provisions:
+
+
+1. All information in the database is copyrighted by: IEC, 3, rue de Varembé, P.O. Box 131, 1211 Geneva 20, Switzerland. All rights reserved. In all countries, there are civil and/or criminal laws against copyright infringements. By downloading, copying, installing, accessing or otherwise using IEC data YOU agree to be bound by the terms of this LICENSE.
+
+2. YOU are responsible for ensuring that the terms and conditions of this LICENSE are fully adhered to.
+
+3. All access to IEC standards in database format is recorded by the system and log files are created containing username and domain information. All usernames and passwords shall remain confidential.
+
+4. This LICENSE does not grant YOU any rights in any trademarks or service marks of IEC.
+
+5. FREE ATTRIBUTES
+FREE ATTRIBUTES are intended for the reference and mapping to dictionary entries/elements in the IEC CDD database and to enable electronic data exchange.
+YOU are allowed to print, copy, reproduce, distribute or otherwise exploit, whether commercially or not, in any way freely, internally in your organization or to a third party, the following attributes of the data elements in the database with or without contained values, also referred to as FREE ATTRIBUTES:
+
+• Identity number (Code and IRDI);
+• Version/Revision;
+• Name (Preferred name, Synonymous name, Short name, Coded name);
+• Value formats (Data type and Data format);
+• Property data element type
+• Superclass
+• Applicable properties
+• DET class
+• Symbol
+• Enumerated list of terms
+• Unit of measurement (IRDI, Preferred name, Short name, Codes of units, Code for unit, Code for alternate units, Code for unit list);
+
+No Joint Work will be created between IEC and YOU or the user of such FREE ATTRIBUTES. The work that contains or references FREE ATTRIBUTES is irrevocably free from IEC copyright claims.
+
+When using or making available any portion of the IEC 61360 database or information extracted from it, YOU shall ensure that IEC is referenced as the source.
+
+6. Units of measurement
+YOU are allowed to print, copy, reproduce, distribute or otherwise exploit, whether commercially or not, in any way freely, internally in your organization or to a third party, the data dictionary “Units of measurement (IEC 62720)” including all data elements and attributes in the database with or without contained values.
+
+No Joint Work will be created between IEC and YOU or the user of the data dictionary “Units of measurement (IEC 62720)”. The work that contains or references the data dictionary “Units of measurement (IEC 62720)” is irrevocably free from IEC copyright claims.
+
+When using or making available any portion of the data dictionary “Units of measurement (IEC 62720)” or information extracted from it, YOU shall ensure that IEC is referenced as the source.
+
+7. YOU may not sell, lend, lease or distribute to a third party, reproduce or otherwise exploit, whether commercially or not, the total database or a significant portion of it, to which this LICENSE relates.
+
+8. YOU may copy the database only for a restricted and confidential internal use and this LICENSE exception is also restricted to other employees for their internal or external use within YOUR organization. Copies for an external use of the database except FREE ATTRIBUTES may only be made with prior explicit, written permission of the IEC.
+
+9. Translations of the database require written permission of the IEC.
+
+10. This LICENSE terminates immediately if YOU fail to comply with the terms and conditions of this LICENSE.
+
+11. This Agreement is governed by the Laws of Switzerland and the courts of Geneva, Switzerland shall be the forum for the settlement of disputes. IEC expressly reserves the right to take legal action against YOU or otherwise to enforce its rights according to Swiss or local laws in your country of domicile or in any jurisdiction where a breach of this Agreement or an infringement of residence rights may occur or may have had effect.
+
+12. For further rights than those stated in this LICENSE please contact the IEC Customer Service Centre.

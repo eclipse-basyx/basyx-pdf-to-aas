@@ -34,6 +34,7 @@ class CDD(Dictionary):
     supported_releases = [
         "V2.0018.0002",
     ]
+    license = "https://cdd.iec.ch/cdd/iec62683/iec62683.nsf/License?openPage"
     
     def __init__(
         self,

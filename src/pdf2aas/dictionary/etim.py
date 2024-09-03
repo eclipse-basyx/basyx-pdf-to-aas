@@ -34,6 +34,7 @@ class ETIM(Dictionary):
         "4.0",
         "DYNAMIC",
     ]
+    license = "https://opendatacommons.org/licenses/by/1-0/"
     
     def __init__(
         self,

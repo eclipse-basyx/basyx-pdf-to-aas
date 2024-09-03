@@ -141,6 +141,7 @@ class ECLASS(Dictionary):
         "6.1",
         "5.14",
     ]
+    license = "https://eclass.eu/en/eclass-standard/licenses"
 
     def __init__(self, release="14.0", temp_dir=None) -> None:
         """

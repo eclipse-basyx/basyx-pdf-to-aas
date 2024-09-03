@@ -81,12 +81,14 @@ class Dictionary(ABC):
         properties (dict[str, PropertyDefinition]): Maps property IDs to PropertyDefinition instances.
         releases (dict[str, dict[str, object]]): Maps release versions to class objects.
         supported_releases (list[str]): A list of supported release versions.
+        license: A link or note to the license or copyright of the dictionary.
     """
 
     temp_dir = 'temp/dict'
     properties: dict[str, PropertyDefinition] = {}
     releases: dict[dict[str, ClassDefinition]] = {}
     supported_releases: list[str] = []
+    license: str | None = None
 
     def __init__(self, release: str, temp_dir: str = None) -> None:
         if temp_dir:
@@ -156,6 +158,7 @@ class Dictionary(ABC):
                     "release": self.release,
                     "properties": self.properties,
                     "classes": self.classes,
+                    "license": self.license,
                 },
                 file,
                 default=dictionary_serializer,
