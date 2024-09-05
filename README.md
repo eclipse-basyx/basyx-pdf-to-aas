@@ -92,7 +92,7 @@ pdf2aas.convert('path/to/datasheet.pdf', 'eclass id e.g. 27274001', 'path/to/sub
 
 You can find some example toolchains with intermediate steps in the [examples](examples/) folder.
 To run them make sure PDF2AAS is installed according to [setup section above](#setup).
-Then execute from this directory for example: `python examples/dummy.py`
+Then execute for example: `python default_toolchain.py`
 Use `-h` or `--help` argument for more information on command line arguments.
 
 ### Webui
