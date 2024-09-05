@@ -1,13 +1,7 @@
 import pytest
 
 from pdf2aas.dictionary import PropertyDefinition
-from pdf2aas.extractor import DummyPropertyLLM, CustomLLMClient, PropertyLLMOpenAI, Property
-
-def test_dummy_property_llm_extract():
-    e = DummyPropertyLLM()
-    p = PropertyDefinition("EC002714")
-    r = DummyPropertyLLM.empty_property_result(p)
-    assert(e.extract("datasheet", p) == r)
+from pdf2aas.extractor import CustomLLMClient, PropertyLLMOpenAI, Property
 
 example_property_definition1 = PropertyDefinition("p1", {'en': 'property1'}, 'numeric', {'en': 'definition of p1'}, 'T')
 example_property_definition2 = PropertyDefinition("p2", {'en': 'property2'}, 'string', {'en': 'definition of p2'}, values=['a', 'b'])

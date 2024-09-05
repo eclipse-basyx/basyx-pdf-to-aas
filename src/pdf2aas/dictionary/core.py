@@ -207,16 +207,3 @@ class Dictionary(ABC):
             self.release = release
             self.save_to_file()
         self.release = original_release
-    
-class DummyDictionary(Dictionary):
-    supported_releases = ['1.0']
-
-    def __init__(self) -> None:
-        super().__init__('1.0')
-
-    def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        return [self.get_property('EF003647')]
-    
-    def get_property(self, property_id: str) -> PropertyDefinition:
-        # e.g.: https://prod.etim-international.com/Feature/Details/EF003647?local=False
-        return PropertyDefinition('EF003647', {'en': 'Switching distance'}, 'numeric')

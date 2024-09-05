@@ -103,8 +103,3 @@ class PropertyLLM:
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> list[Property]:
         raise NotImplementedError()
 
-class DummyPropertyLLM(PropertyLLM):
-    def empty_property_result(property_definition: PropertyDefinition):
-        return [Property("empty", definition=property_definition)]
-    def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> list[Property]:
-        return DummyPropertyLLM.empty_property_result(property_definition)

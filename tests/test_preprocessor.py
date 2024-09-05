@@ -1,11 +1,6 @@
 import sys
 import pytest
-from pdf2aas.preprocessor import PDF2HTMLEX, DummyPDF2HTML, ReductionLevel, PDFium
-
-
-def test_dummy_pdf_2_html_convert():
-    p = DummyPDF2HTML()
-    assert p.convert([]) == "html"
+from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel, PDFium
 
 @pytest.mark.skipif(sys.platform == "win32", reason="pdf2htmlEx not easily supported for windows")
 class TestPDF2HTMLEX:
