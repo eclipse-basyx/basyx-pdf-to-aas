@@ -25,6 +25,8 @@ IDX_CODE = 1
 IDX_VERSION = 2
 IDX_PREFERRED_NAME = 4
 IDX_DEFINTION = 7
+# CLASS xls files
+IDX_INSTANCE_SHAREABLE = 16
 # PROPERTY xls files
 IDX_PRIMARY_UNIT = 12
 IDX_DATA_TYPE = 14
@@ -283,18 +285,30 @@ class CDD(Dictionary):
 
     def download_full_release(self):
         logger.warning("Make sure to comply with CDD license agreement, especially section 7 and 8.")
-        for standard_url_part in ['common/iec61360-7', 'iec61360/iec61360', 'iec61987/iec61987', 'iec62683/iec62683', 'iectc85/iec63213']:
-            logger.info(f"Downloading CDD dictionary for standard: {standard_url_part}")
-            class_list_html = download_html(f"https://cdd.iec.ch/CDD/{standard_url_part}.nsf/classes")
-            class_list_soup = BeautifulSoup(class_list_html, "html.parser")
-            class_urls = {a.text.replace('-', '/'): a.get('href') for a in class_list_soup.find_all('a')}
-            class_list_rows = class_list_soup.find('table').find_all('tr')
-            super_classes = set([row.find_all('td')[3].get_text(strip=True) for row in class_list_rows if len(row.find_all('td')) > 3])
-            
-            for class_id, class_url in class_urls.items():
-                if class_id in super_classes:
-                    # skip download of superclasses
-                    continue
-                class_ = self._download_cdd_class("https://cdd.iec.ch" + class_url)
-                if class_ is not None:
-                    logger.info(f"Successfully parsed {class_.id} with {len(class_.properties)} properties.")
+        for domain in self.domains.values():
+            logger.info(f"Downloading classes of domain: {domain['name']} ({domain['standard']})")
+            self.download_sub_classes(domain['class'])
+    
+    def download_sub_classes(self, class_id):
+        class_url = self.get_class_url(class_id)
+        html_content = download_html(class_url)
+        if html_content is None:
+            return
+        class_soup = BeautifulSoup(html_content, "html.parser")
+
+        export_id = class_soup.find('input', {'id': 'export2'}).get('onclick').split("'")[1]
+        export_url = f"{class_url}&Click={export_id}"
+        export_html_content = download_html(export_url)
+        if export_html_content is None:
+            return
+        
+        class_list = self._download_export_xls(export_html_content, 'CLASS')
+        for row in class_list:
+            if row[0].value.startswith('#'):
+                continue
+            if row[IDX_INSTANCE_SHAREABLE].value != "true":
+                logger.debug(f"Skipped {row[1].value} because InstanceSharable value '{row[IDX_INSTANCE_SHAREABLE].value}' != true.")
+                continue
+            class_ = self._download_cdd_class(self.get_class_url(f"{row[IDX_CODE].value}#{int(row[IDX_VERSION].value):03d}"))
+            if class_ is not None:
+                logger.info(f"Parsed {class_.id} with {len(class_.properties)} properties.")
