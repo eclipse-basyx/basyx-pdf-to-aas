@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass, field
+from abc import ABC, abstractmethod
 
 from ..dictionary import PropertyDefinition
 
@@ -99,7 +100,8 @@ class Property():
             property_dict.get('language', 'en')
         )
 
-class PropertyLLM:
+class PropertyLLM(ABC):
+    @abstractmethod
     def extract(self, datasheet: str, property_definition: PropertyDefinition | list[PropertyDefinition]) -> list[Property]:
-        raise NotImplementedError()
+        ...
 
