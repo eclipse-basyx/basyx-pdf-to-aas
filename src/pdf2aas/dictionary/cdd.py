@@ -35,6 +35,46 @@ class CDD(Dictionary):
         "V2.0018.0002",
     ]
     license = "https://cdd.iec.ch/cdd/iec62683/iec62683.nsf/License?openPage"
+
+    # keys are the part of the IRDIs
+    domains = {
+        '61360_7': {
+            'standard': 'IEC 61360-7',
+            'name': 'General items',
+            'url': 'https://cdd.iec.ch/cdd/common/iec61360-7.nsf',
+            'class': '0112/2///61360_7#CAA000#001'
+        },
+        '61360_4': {
+            'standard': 'IEC 61360-4',
+            'name': 'Electric/electronic components',
+            'url': 'https://cdd.iec.ch/cdd/iec61360/iec61360.nsf',
+            'class': '0112/2///61360_4#AAA000#001'
+        },
+        '61987': {
+            'standard': 'IEC 61987 series',
+            'name': 'Process automation',
+            'url': 'https://cdd.iec.ch/cdd/iec61987/iec61987.nsf',
+            'class': '0112/2///61987#ABA000#002'
+        },
+        '62720': {
+            'standard': 'IEC 62720',
+            'name': 'Units of measurement',
+            'url': 'https://cdd.iec.ch/cdd/iec62720/iec62720.nsf',
+            'class': '0112/2///62720#UBA000#001'
+        },
+        '62683': {
+            'standard': 'IEC 62683 series',
+            'name': 'Low voltage switchgear',
+            'url': 'https://cdd.iec.ch/cdd/iec62683/iec62683.nsf',
+            'class': '0112/2///62683#ACC001#001'
+        },
+        '63213': {
+            'standard':' IEC 63213',
+            'name': 'Measuring equipment for electrical quantities',
+            'url': 'https://cdd.iec.ch/cdd/iectc85/iec63213.nsf',
+            'class': '0112/2///63213#KEA001#001'
+        }
+    }
     
     def __init__(
         self,
@@ -78,13 +118,17 @@ class CDD(Dictionary):
         # example class_id: 0112/2///62683#ACC501 --> https://cdd.iec.ch/cdd/iec62683/cdddev.nsf/classes/0112-2---62683%23ACC501
         standard_id_version = class_id.split('/')[-1].split('#')
         #TODO find specified version
-        return f"https://cdd.iec.ch/cdd/iec{standard_id_version[0][:5]}/cdddev.nsf/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}?OpenDocument"
+        if standard_id_version[0] not in self.domains:
+            return None
+        return f"{self.domains[standard_id_version[0]]['url']}/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}?OpenDocument"
 
     def get_property_url(self, property_id: str) -> str:
         # example property_id: 0112/2///62683#ACC501#002 --> https://cdd.iec.ch/CDD/IEC62683/cdddev.nsf/PropertiesAllVersions/0112-2---62683%23ACE251
         standard_id_version = property_id.split('/')[-1].split('#')
         #TODO find specified version
-        return f"https://cdd.iec.ch/CDD/IEC{standard_id_version[0][:5]}/cdddev.nsf/PropertiesAllVersions/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}"
+        if standard_id_version[0] not in self.domains:
+            return None
+        return f"{self.domains[standard_id_version[0]]['url']}/PropertiesAllVersions/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}?OpenDocument"
 
     @staticmethod
     def _get_table_data(labels, label) -> str:
