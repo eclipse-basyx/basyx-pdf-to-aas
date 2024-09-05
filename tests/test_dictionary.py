@@ -12,10 +12,9 @@ class TestCDD:
         class_ = d.classes[class_id]
         assert class_.id == class_id
         assert class_.name == "Inductive proximity switch"
-        assert (
-            class_.description
-            == "proximity switch producing an electromagnetic field within a sensing zone for detecting objects and having a semiconductor switching element"
-        )
+        # "definition" is no FREE ATTRIBUTE --> no description
+        # class_.description == "proximity switch producing an electromagnetic field within a sensing zone for detecting objects and having a semiconductor switching element"
+        assert class_.description == ""
         assert class_.keywords == []
 
         switching_distance = PropertyDefinition(
@@ -35,12 +34,14 @@ class TestCDD:
             {
                 'value': 'flush mounting',
                 'id': '0112/2///62683#ACH210#001',
-                'definition': 'embeddable mounting when any damping material can be placed around the sensing face plane without influencing its characteristics',
+                # "definition" is no FREE ATTRIBUTE
+                # 'definition': 'embeddable mounting when any damping material can be placed around the sensing face plane without influencing its characteristics',
                 'symbol': 'FLUSHMOUNT'
             }, {
                 'value': 'not flush mounting',
                 'id': '0112/2///62683#ACH211#001',
-                'definition': 'non-embeddable mounting when a specified free zone around its sensing face is necessary in order to maintain its characteristics.',
+                # "definition" is no FREE ATTRIBUTE
+                # 'definition': 'non-embeddable mounting when a specified free zone around its sensing face is necessary in order to maintain its characteristics.',
                 'symbol': 'NOTFLUSH'
             }
         ]
