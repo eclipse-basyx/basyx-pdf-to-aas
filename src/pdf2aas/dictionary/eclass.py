@@ -322,7 +322,7 @@ class ECLASS(Dictionary):
     @staticmethod
     def parse_class_id(class_id):
         """
-        Checks the format of the eclass class id and returns it in 8 digit format.
+        Search for a valid eclass 8 digit class id and returns it.
         
         Must be an 8 digit number (underscores, dash and whitespace alike chars are ignored).
         Only concrete (level 4) classes will be returned.

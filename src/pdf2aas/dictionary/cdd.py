@@ -38,12 +38,14 @@ IDX_SHORT_NAME = 6
 IDX_SYMBOL = 12
 
 class CDD(Dictionary):
-    """ Common Data Dictionary
+    """
+    Common Data Dictionary of IEC
 
-        C.f.: https://cdd.iec.ch/
-        Class ids are full IRDIs, e.g.: 0112/2///62683#ACC501#002
-        Property ids are currently IRDIs without version, e.g.: 0112/2///62683#ACE102
-
+    Dictionary for multiple ISO/IEC standards (referred to as `domains`).
+    The implementation uses "Free Attributes" from https://cdd.iec.ch/.
+    C.f. `licence` for details.
+    Class and property ids are IRDIs, e.g.: 0112/2///62683#ACC501#002
+    Only the currently available release from the website is available.
     """
     releases: dict[dict[str, ClassDefinition]] = {}
     properties: dict[str, PropertyDefinition] = {}
@@ -101,7 +103,8 @@ class CDD(Dictionary):
         #TODO implement release based lookup?
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        """ Get class properties from class in the dictionary or try to download otherwise.
+        """
+        Get class properties from class in the dictionary or try to download otherwise.
 
         We are only using "FREE ATTRIBUTES" according to the IEC license agreement, c.f. section 5:
         ```
@@ -129,9 +132,19 @@ class CDD(Dictionary):
             if class_ is None:
                 return []
         return class_.properties
-    
+
     def get_class_url(self, class_id: str) -> str :
-        # example class_id: 0112/2///62683#ACC501 --> https://cdd.iec.ch/cdd/iec62683/cdddev.nsf/classes/0112-2---62683%23ACC501
+        """
+        Converts the class id into a URL from https://cdd.iec.ch
+
+        The class id needs to be a IRDI starting with 0112/2////.
+        Currently the version of the IRDI is ignored and the link leads to
+        the most current version. Check the "Version history" field at the
+        bottom of the page to find the correct version.
+
+        Example id: 0112/2///62683#ACC501
+        Exmaple url: https://cdd.iec.ch/cdd/iec62683/iec62683.nsf/classes/0112-2---62683%23ACC501?OpenDocument
+        """
         standard_id_version = class_id.split('/')[-1].split('#')
         #TODO find specified version
         if standard_id_version[0] not in self.domains:
@@ -139,7 +152,17 @@ class CDD(Dictionary):
         return f"{self.domains[standard_id_version[0]]['url']}/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}?OpenDocument"
 
     def get_property_url(self, property_id: str) -> str:
-        # example property_id: 0112/2///62683#ACC501#002 --> https://cdd.iec.ch/CDD/IEC62683/cdddev.nsf/PropertiesAllVersions/0112-2---62683%23ACE251
+        """
+        Converts the property id into a URL from https://cdd.iec.ch
+
+        The property id needs to be a IRDI starting with 0112/2////.
+        Currently the version of the IRDI is ignored and the link leads to
+        the most current version. Check the "Version history" field at the
+        bottom of the page to find the correct version.
+
+        Example id: 0112/2///62683#ACE251
+        Exmaple url: https://cdd.iec.ch/cdd/iec62683/iec62683.nsf/PropertiesAllVersions/0112-2---62683%23ACE251?OpenDocument
+        """
         standard_id_version = property_id.split('/')[-1].split('#')
         #TODO find specified version
         if standard_id_version[0] not in self.domains:
@@ -195,6 +218,7 @@ class CDD(Dictionary):
         return workbook.sheet_by_index(0)
 
     def _download_property_definitions(self, class_url, class_html_soup):
+        # export6 corresponds menu Export > All > Class and superclasses
         export_id = class_html_soup.find('input', {'id': 'export6'}).get('onclick').split("'")[1]
         export_url = f"{class_url}&Click={export_id}"
         export_html_content = download_html(export_url)
@@ -275,6 +299,16 @@ class CDD(Dictionary):
     
     @staticmethod
     def parse_class_id(class_id:str) -> str | None:
+        """
+        Search for a valid CDD IRDI in `class_id` and returns it.
+        
+        The IRDI is searched by regex containing:
+        Regex: 0112/2///[A-Z0-9_]+#[A-Z]{3}[0-9]{3}#[0-9]{3}
+        IRDI must begin with 0112/2/// to belong to IEC CDD.
+        IEC standard / domain: [A-Z0-9_]+
+        IRDI must have 3 upper letters and 3 digits as property id: #ABC123
+        IRDI must have 3 digits as version, e.g. #005 
+        """
         if class_id is None:
             return None
         class_id = re.sub(r'[-]|\s', '', class_id)
@@ -283,19 +317,21 @@ class CDD(Dictionary):
             return None
         return class_id.group(0)
 
-    def download_full_release(self):
-        logger.warning("Make sure to comply with CDD license agreement, especially section 7 and 8.")
-        for domain in self.domains.values():
-            logger.info(f"Downloading classes of domain: {domain['name']} ({domain['standard']})")
-            self.download_sub_classes(domain['class'])
-    
-    def download_sub_classes(self, class_id):
+    def download_sub_class_instances(self, class_id:str):
+        """
+        Downloads all instances below the class with the given class id.
+
+        Instances are recognized by downloading the export xls file
+        "Attributes > Class and subclasses" and checking the column
+        "InstanceShareable".
+        """
         class_url = self.get_class_url(class_id)
         html_content = download_html(class_url)
         if html_content is None:
             return
         class_soup = BeautifulSoup(html_content, "html.parser")
 
+        # export2 corresponds menu Export > Attributes > Class and subclasses
         export_id = class_soup.find('input', {'id': 'export2'}).get('onclick').split("'")[1]
         export_url = f"{class_url}&Click={export_id}"
         export_html_content = download_html(export_url)
@@ -312,3 +348,14 @@ class CDD(Dictionary):
             class_ = self._download_cdd_class(self.get_class_url(f"{row[IDX_CODE].value}#{int(row[IDX_VERSION].value):03d}"))
             if class_ is not None:
                 logger.info(f"Parsed {class_.id} with {len(class_.properties)} properties.")
+
+    def download_full_release(self):
+        """
+        Downloads all class instances from the defined`domains`.
+
+        Make sure to comply with CDD license agreement, especially section 7 and 8.
+        """
+        logger.warning("Make sure to comply with CDD license agreement, especially section 7 and 8.")
+        for domain in self.domains.values():
+            logger.info(f"Downloading classes of domain: {domain['name']} ({domain['standard']})")
+            self.download_sub_class_instances(domain['class'])
