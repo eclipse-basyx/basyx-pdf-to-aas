@@ -21,6 +21,20 @@ def cdd_datatype_to_type(data_type:str):
         return "numeric"
     return "string"
 
+IDX_CODE = 1
+IDX_VERSION = 2
+IDX_PREFERRED_NAME = 4
+IDX_DEFINTION = 7
+# PROPERTY xls files
+IDX_PRIMARY_UNIT = 12
+IDX_DATA_TYPE = 14
+# VALUELIST xls files
+IDX_TERMINOLOGIES = 2
+# VALUETERMS xls file
+IDX_SYNONYMS = 5
+IDX_SHORT_NAME = 6
+IDX_SYMBOL = 12
+
 class CDD(Dictionary):
     """ Common Data Dictionary
 
@@ -202,28 +216,28 @@ class CDD(Dictionary):
     def _parse_property_xls_row(self, row, value_list, value_terms):
         if row[0].startswith('#'):
             return None
-        type_ = row[14]
+        type_ = row[IDX_DATA_TYPE]
         data_type = cdd_datatype_to_type(type_)
         if data_type == "class":
             return None
         
-        property_id = f"{row[1]}#{int(row[2]):03d}"
+        property_id = f"{row[IDX_CODE]}#{int(row[IDX_VERSION]):03d}"
         if property_id in self.properties:
             return self.properties[property_id]
         
         property_ = PropertyDefinition(
                 id=property_id,
-                name={'en': row[4]},
+                name={'en': row[IDX_PREFERRED_NAME]},
                 type=data_type,
-                definition={'en': row[7]},
-                unit=row[12] if len(row[12]) > 0 else ''
+                definition={'en': row[IDX_DEFINTION]},
+                unit=row[IDX_PRIMARY_UNIT] if len(row[IDX_PRIMARY_UNIT]) > 0 else ''
             )
-        if value_list is not None and type_.startswith('ENUM'):
+        if value_list is not None and type_.startswith('ENUM') and '(' in type_:
             value_list_id = type_.split('(')[1][:-1]
             value_ids = []
             for row in value_list:
-                if row[1].value == value_list_id:
-                    value_ids = row[2].value[1:-1].split(',')
+                if row[IDX_CODE].value == value_list_id:
+                    value_ids = row[IDX_TERMINOLOGIES].value[1:-1].split(',')
                     break
 
             if value_terms is None:
@@ -232,15 +246,15 @@ class CDD(Dictionary):
             else:
                 for value_id in value_ids:
                     for row in value_terms:
-                        if row[1].value == value_id:
+                        if row[IDX_CODE].value == value_id:
                             value = {
-                                'value': row[4].value,
-                                'id': f"{row[1].value}#{int(row[2].value):03d}",
+                                'value': row[IDX_PREFERRED_NAME].value,
+                                'id': f"{row[IDX_CODE].value}#{int(row[IDX_VERSION].value):03d}",
                             }
-                            if len(row[5].value) > 0:
-                                value['synonyms'] = row[5].value.split(',')
-                            if len(row[6].value) > 0:
-                                value['short_name'] = row[6].value
+                            if len(row[IDX_SYNONYMS].value) > 0:
+                                value['synonyms'] = row[IDX_SYNONYMS].value.split(',')
+                            if len(row[IDX_SHORT_NAME].value) > 0:
+                                value['short_name'] = row[IDX_SHORT_NAME].value
                             # Probably non "FREE ATTRIBUTES", c.f. CDD license section 5
                             # if len(row[7].value) > 0:
                             #     value['definition'] = row[7].value
@@ -250,8 +264,8 @@ class CDD(Dictionary):
                             #     value['note'] = row[10].value
                             # if len(row[11].value) > 0:
                             #     value['remark'] = row[11].value
-                            if len(row[12].value) > 0:
-                                value['symbol'] = row[12].value
+                            if len(row[IDX_SYMBOL].value) > 0:
+                                value['symbol'] = row[IDX_SYMBOL].value
                             property_.values.append(value)
                             break
         self.properties[property_id] = property_
