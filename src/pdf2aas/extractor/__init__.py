@@ -1,11 +1,13 @@
-from .core import Property, PropertyLLM
+from .core import Property, Extractor
 from .customLLMClient import CustomLLMClient, CustomLLMClientHTTP
-from .propertyLLMOpenAI import PropertyLLMOpenAI
+from .propertyLLM import PropertyLLM
+from .propertyLLMSearch import PropertyLLMSearch
 
 __all__ = [
     "Property",
+    "Extractor",
     "PropertyLLM",
-    "PropertyLLMOpenAI",
+    "PropertyLLMSearch",
     "CustomLLMClient",
     "CustomLLMClientHTTP"
 ]

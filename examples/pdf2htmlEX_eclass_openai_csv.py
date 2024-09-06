@@ -4,7 +4,7 @@ import logging
 from dotenv import load_dotenv
 
 from pdf2aas.dictionary import ECLASS, dictionary_serializer
-from pdf2aas.extractor import PropertyLLMOpenAI
+from pdf2aas.extractor import PropertyLLMSearch
 from pdf2aas.generator import CSV
 from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel
 
@@ -32,7 +32,7 @@ def main(datasheet, eclass_class_id, property_range, model, endpoint):
             json.dumps(dictionary.classes, indent=2, default=dictionary_serializer)
         )
 
-    extractor = PropertyLLMOpenAI(model, endpoint)
+    extractor = PropertyLLMSearch(model, endpoint)
     properties = []
     for property_definition in property_definitions[property_range[0]:property_range[1]]:
         properties.extend(

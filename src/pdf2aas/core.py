@@ -1,6 +1,6 @@
 from .preprocessor import Preprocessor, PDFium
 from .dictionary import Dictionary, ECLASS
-from .extractor import PropertyLLM, PropertyLLMOpenAI
+from .extractor import Extractor, PropertyLLMSearch
 from .generator import Generator, AASSubmodelTechnicalData
 
 class PDF2AAS:
@@ -8,7 +8,7 @@ class PDF2AAS:
         self,
         preprocessor: Preprocessor = PDFium(),
         dictionary: Dictionary = ECLASS(),
-        extractor: PropertyLLM = PropertyLLMOpenAI("gpt-4o-mini"),
+        extractor: Extractor = PropertyLLMSearch("gpt-4o-mini"),
         generator: Generator = AASSubmodelTechnicalData(),
         batch_size: int = 0
     ) -> None:

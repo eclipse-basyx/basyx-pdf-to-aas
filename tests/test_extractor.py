@@ -1,7 +1,7 @@
 import pytest
 
 from pdf2aas.dictionary import PropertyDefinition
-from pdf2aas.extractor import CustomLLMClient, PropertyLLMOpenAI, Property
+from pdf2aas.extractor import CustomLLMClient, PropertyLLMSearch, Property
 
 example_property_definition1 = PropertyDefinition("p1", {'en': 'property1'}, 'numeric', {'en': 'definition of p1'}, 'T')
 example_property_definition2 = PropertyDefinition("p2", {'en': 'property2'}, 'string', {'en': 'definition of p2'}, values=['a', 'b'])
@@ -31,8 +31,8 @@ class DummyLLMClient(CustomLLMClient):
     def create_completions(self, messages: list[dict[str, str]], model: str, temperature: float, max_tokens: int, response_format: dict) -> tuple[str, str]:
         return self.response, self.raw_response
 
-class TestPropertyLLMOpenAI():    
-    llm = PropertyLLMOpenAI('test', client=DummyLLMClient())
+class TestPropertyLLMSearch():
+    llm = PropertyLLMSearch('test', client=DummyLLMClient())
 
     @pytest.mark.parametrize("response", example_accepted_llm_response)
     def test_parse_accepted_llm_response(self, response):

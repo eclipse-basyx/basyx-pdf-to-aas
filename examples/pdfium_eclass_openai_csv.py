@@ -4,7 +4,7 @@ import logging
 from dotenv import load_dotenv
 
 from pdf2aas.dictionary import ECLASS, dictionary_serializer
-from pdf2aas.extractor import PropertyLLMOpenAI
+from pdf2aas.extractor import PropertyLLMSearch
 from pdf2aas.generator import CSV
 from pdf2aas.preprocessor import PDFium
 
@@ -32,7 +32,7 @@ def main(datasheet, eclass_class_id, property_range, model, endpoint, batch_mode
             json.dumps(dictionary.classes, indent=2, default=dictionary_serializer)
         )
 
-    extractor = PropertyLLMOpenAI(model, endpoint, property_keys_in_prompt=['unit'])
+    extractor = PropertyLLMSearch(model, endpoint, property_keys_in_prompt=['unit'])
     
     if batch_mode:
         properties = extractor.extract(preprocessed_datasheet, property_definitions[property_range[0]:property_range[1]])

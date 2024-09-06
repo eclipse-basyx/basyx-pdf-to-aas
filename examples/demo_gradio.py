@@ -13,7 +13,7 @@ import pandas as pd
 
 from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM, PropertyDefinition
 from pdf2aas.preprocessor import PDFium
-from pdf2aas.extractor import PropertyLLMOpenAI, CustomLLMClientHTTP, Property
+from pdf2aas.extractor import PropertyLLMSearch, CustomLLMClientHTTP, Property
 from pdf2aas.generator import AASSubmodelTechnicalData
 
 logger = logging.getLogger(__name__)
@@ -233,7 +233,7 @@ def extract(
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     yield None, None, datasheet_txt, None, None, gr.update()
 
-    extractor = PropertyLLMOpenAI(
+    extractor = PropertyLLMSearch(
         model_identifier=model,
         property_keys_in_prompt=use_in_prompt,
         client=client,

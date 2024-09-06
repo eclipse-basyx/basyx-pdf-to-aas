@@ -14,7 +14,10 @@ from . import Property
 logger = logging.getLogger(__name__)
 
 
-class PropertyLLMOpenAI(PropertyLLM):
+class PropertyLLMSearch(PropertyLLM):
+    """
+    PropertyLLM that searches for given property definitions only.
+    """
     system_prompt_template = """You act as an text API to extract technical properties from a given datasheet.
 Answer only in valid JSON format.
 Answer with a list of objects, containing the keys 'property', 'value', 'unit', 'reference'.
