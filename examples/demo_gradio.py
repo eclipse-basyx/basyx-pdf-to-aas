@@ -13,22 +13,28 @@ import pandas as pd
 
 from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM, PropertyDefinition
 from pdf2aas.preprocessor import PDFium
-from pdf2aas.extractor import PropertyLLMSearch, CustomLLMClientHTTP, Property
+from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP, Property
 from pdf2aas.generator import AASSubmodelTechnicalData
 
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-def check_extract_ready(pdf_upload, definitions):
-    return gr.Button(
-        interactive=
-            pdf_upload is not None and
-            definitions is not None and
-            len(definitions) > 1
+def check_extract_ready(pdf_upload, definitions, dictionary):
+    return gr.Button(interactive=
+        pdf_upload is not None
+        and (
+            dictionary is None
+            or (
+                definitions is not None and
+                len(definitions) > 1
+                )
         )
+    )
 
 def get_class_choices(dictionary: Dictionary):
+    if dictionary is None:
+        return []
     if isinstance(dictionary, ECLASS):
         return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
     elif isinstance(dictionary, ETIM):
@@ -42,10 +48,15 @@ def change_dictionary_type(dictionary_type):
         dictionary = ETIM()
     elif dictionary_type == "CDD":
         dictionary = CDD()
+    else:
+        return (None,
+            gr.Dropdown(visible=False),
+            gr.Dropdown(visible=False)
+        )
     return (
         dictionary,
-        gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary), value=None),
-        gr.Dropdown(label=f"{dictionary.name} Release", choices=dictionary.supported_releases, value=dictionary.release)
+        gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary), value=None, visible=True),
+        gr.Dropdown(label=f"{dictionary.name} Release", choices=dictionary.supported_releases, value=dictionary.release, visible=True)
     )
 
 def change_dictionary_release(dictionary_type, release):
@@ -55,11 +66,13 @@ def change_dictionary_release(dictionary_type, release):
         dictionary = ETIM(release)
     elif dictionary_type == "CDD":
         dictionary = CDD(release)
+    else:
+        return None, None
     dictionary.load_from_file()
     return dictionary, gr.Dropdown(choices=get_class_choices(dictionary))
 
 def change_dictionary_class(dictionary, class_id):
-    if class_id is None:
+    if class_id is None or dictionary is None:
         return None
     id_parsed = dictionary.parse_class_id(class_id)
     if id_parsed is None:
@@ -70,7 +83,7 @@ def get_class_property_definitions(
         class_id,
         dictionary,
     ):
-    if class_id is None:
+    if class_id is None or dictionary is None:
         return None, "# Class Info", None, None, None
     download = False
     if class_id not in dictionary.classes.keys():
@@ -233,19 +246,26 @@ def extract(
     datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
     yield None, None, datasheet_txt, None, None, gr.update()
 
-    extractor = PropertyLLMSearch(
-        model_identifier=model,
-        client=client,
-        property_keys_in_prompt=use_in_prompt,
-    )
+    if dictionary is None:
+        extractor = PropertyLLM(
+            model_identifier=model,
+            client=client,
+        )
+    else:
+        extractor = PropertyLLMSearch(
+            model_identifier=model,
+            client=client,
+            property_keys_in_prompt=use_in_prompt,
+        )
     extractor.temperature = temperature
     extractor.max_tokens = max_tokens if max_tokens > 0 else None
     extractor.max_values_length = max_values_length
     extractor.max_definition_chars = max_definition_chars
 
-    raw_results=[]
-    raw_prompts=[]
-    definitions = dictionary.get_class_properties(class_id)
+    definitions = []
+    if dictionary is not None:
+        definitions = dictionary.get_class_properties(class_id)
+
     if extract_general_information:
         for property_ in AASSubmodelTechnicalData().general_information.value:
             if isinstance(dictionary, ECLASS) \
@@ -260,6 +280,8 @@ def extract(
                 )
             )
 
+    raw_results=[]
+    raw_prompts=[]
     if batch_size <= 0:
         properties = extractor.extract(
             preprocessed_datasheet,
@@ -316,14 +338,15 @@ def create_download_results(properties: list[Property], property_df: pd.DataFram
         settings.append(['use_in_prompt', " ".join(use_in_prompt)])
         settings.append(['max_definition_chars', max_definition_chars])
         settings.append(['max_values_length', max_values_length])
-        settings.append(['dictionary_type', dictionary.name])
-        settings.append(['dictionary_release', dictionary.release])
+        settings.append(['dictionary_type', dictionary.name if dictionary is not None else ''])
+        settings.append(['dictionary_release', dictionary.release if dictionary is not None else ''])
         settings.append(['dictionary_class', class_id])
     
     submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
     #TODO set identifier and other properties --> load from a template, that can be specified in settings?
     submodel = AASSubmodelTechnicalData()
-    submodel.add_classification(dictionary, class_id)
+    if dictionary is not None and class_id is not None:
+        submodel.add_classification(dictionary, class_id)
     submodel.add_properties(properties)
     submodel.dump(submodel_path)
 
@@ -364,15 +387,10 @@ def init_tempdir():
     logger.info(f"Created tempdir: {tempdir.name}")
     return tempdir
 
-def init_dictionary():
-    dictionary = ECLASS()
-    dictionary.load_from_file()
-    return dictionary
-
 def main(debug=False, init_settings_path=None, share=False, server_port=None):
 
     with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:
-        dictionary = gr.State(value=init_dictionary)
+        dictionary = gr.State(value=None)
         client = gr.State()
         tempdir = gr.State(value=init_tempdir)
         extracted_properties = gr.State()
@@ -384,19 +402,18 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Dictionary",
                         allow_custom_value=False,
                         scale=1,
-                        choices=['ECLASS', 'ETIM', 'CDD'],
-                        value='ECLASS'
+                        choices=['None','ECLASS', 'ETIM', 'CDD'],
+                        value='None'
                     )
                     dictionary_class = gr.Dropdown(
-                        label="ECLASS Class",
+                        label="Class",
                         allow_custom_value=True,
                         scale=2,
-                        choices=get_class_choices(dictionary.value),
+                        visible=False,
                     )
                     dictionary_release = gr.Dropdown(
-                        label="ECLASS Release",
-                        choices=dictionary.value.supported_releases,
-                        value=dictionary.value.release,
+                        label="Release",
+                        visible=False,
                     )
                 class_info = gr.Markdown(
                     value="# Class Info",
@@ -617,7 +634,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         gr.on(
             triggers=[pdf_upload.change, property_defintions.change],
             fn=check_extract_ready,
-            inputs=[pdf_upload, property_defintions],
+            inputs=[pdf_upload, property_defintions, dictionary],
             outputs=[extract_button]
         )
         extraction_started = extract_button.click(
