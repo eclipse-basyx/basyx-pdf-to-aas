@@ -63,13 +63,21 @@ class Property():
         if isinstance(self.value, (list, tuple, set, dict)):
             if len(self.value) == 0:
                 return None, None
-            value = list(self.value)
+            if isinstance(self.value, dict):
+                value = list(self.value.values())
+            else:
+                value = list(self.value)
             value = (value[0], value[-1])
         elif isinstance(self.value, str):
             result = re.search(_numeric_range_regex, self.value)
             if result is not None:
                 value = (result.group(1), result.group(2))
-        return (try_cast_number(value[0]), try_cast_number(value[1]))
+        min = try_cast_number(value[0])
+        max = try_cast_number(value[1])
+        if min is not None and max is not None:
+            if min > max:
+                return (max, min)
+        return (min, max)
 
     def to_legacy_dict(self):
         return {

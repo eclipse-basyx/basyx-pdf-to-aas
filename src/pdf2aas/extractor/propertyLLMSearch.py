@@ -22,6 +22,7 @@ Keep the order of the requested properties.
 The property field is used to assign your extracted property to the requested property definitions.
 Convert the value to the requested unit if provided.
 When multiple values apply use a json list to represent them.
+Represent ranges as json list of two values.
 """
 
     def __init__(
