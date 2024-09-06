@@ -197,7 +197,7 @@ def change_client(
 def mark_extracted_references(datasheet, properties: list[Property]):
     for property_ in properties:
         reference = property_.reference
-        if property_.definition_id is None or reference is None or len(reference.strip()) == 0:
+        if reference is None or len(reference.strip()) == 0:
             continue
     
         start = datasheet['text'].find(reference)
@@ -208,8 +208,12 @@ def mark_extracted_references(datasheet, properties: list[Property]):
             # TODO mark red in properties dataframe
             continue
         unit = f" [{property_.unit}]" if property_.unit else ''
+        if property_.definition is None:
+            name = property_.label
+        else:
+            name = f"{property_.definition_name} ({property_.definition_id})"
         datasheet['entities'].append({
-            'entity': f"{property_.definition_name} ({property_.definition_id}): {property_.value}{unit}",
+            'entity': f"{name}: {property_.value}{unit}",
             'start': start,
             'end': start + len(reference)
         })
