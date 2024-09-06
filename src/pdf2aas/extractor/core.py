@@ -82,21 +82,19 @@ class Property():
         }
 
     @classmethod
-    def from_dict(cls, property_dict:dict, defintion:PropertyDefinition):      
+    def from_dict(cls, property_dict:dict):
         label = property_dict.get('property')
         if label is None:
             label = property_dict.get('label')
         if label is None:
-            label = defintion.name.get('en')
-        if label is None:
-            label = next(iter(defintion.name.values()), "")
+            label = ""
         
         return cls(
             label,
             property_dict.get('value'),
             property_dict.get('unit'),
             property_dict.get('reference'),
-            defintion,
+            None,
             property_dict.get('language', 'en')
         )
 

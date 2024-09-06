@@ -45,11 +45,11 @@ class TestPropertyLLMSearch():
     def test_parse_null_llm_response(self):
         self.llm.client.response = '{}'
         properties = self.llm.extract("datasheet", example_property_definition1)
-        assert properties == [Property('property1', definition=example_property_definition1)]
+        assert properties == []
 
         self.llm.client.response = '{"property": null, "value": null, "unit": null, "reference": null}'
         properties = self.llm.extract("datasheet", example_property_definition1)
-        assert properties == [Property('property1', definition=example_property_definition1)]
+        assert properties == [Property(definition=example_property_definition1)]
     
     @pytest.mark.parametrize("response", example_accepted_llm_response)
     def test_parse_accepted_incomplete_llm_response(self, response):

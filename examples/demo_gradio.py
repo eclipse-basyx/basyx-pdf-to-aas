@@ -235,8 +235,8 @@ def extract(
 
     extractor = PropertyLLMSearch(
         model_identifier=model,
-        property_keys_in_prompt=use_in_prompt,
         client=client,
+        property_keys_in_prompt=use_in_prompt,
     )
     extractor.temperature = temperature
     extractor.max_tokens = max_tokens if max_tokens > 0 else None
