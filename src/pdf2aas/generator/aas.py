@@ -233,6 +233,8 @@ class AASSubmodelTechnicalData(Generator):
         if isinstance(value, (list, set, tuple, dict)):
             if len(value) == 0:
                 value = None
+            elif len(value) == 1:
+                value = value[0]
             else:
                 #TODO check wether to use SubmodelElementList for ordered stuff
                 smc = model.SubmodelElementCollection(

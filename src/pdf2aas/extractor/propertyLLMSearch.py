@@ -21,6 +21,7 @@ Search exactly for the reuqested properties.
 Keep the order of the requested properties.
 The property field is used to assign your extracted property to the requested property definitions.
 Convert the value to the requested unit if provided.
+When multiple values apply use a json list to represent them.
 """
 
     def __init__(
@@ -132,7 +133,7 @@ Convert the value to the requested unit if provided.
                 property_values = property_.values_list
                 if self.max_values_length > 0 and len(property_values) > self.max_values_length:
                     property_values = property_.values_list[:self.max_values_length] + ["..."]
-                property_row += f" {', '.join(property_values)} |"
+                property_row += f" {property_values} |"
             prompt += property_row.replace('\n', ' ') + "\n"
             #TODO escape | sign in name, type, unit, definition, values, etc.
         return prompt
