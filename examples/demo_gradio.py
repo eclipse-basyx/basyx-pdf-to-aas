@@ -50,8 +50,8 @@ def change_dictionary_type(dictionary_type):
         dictionary = CDD()
     else:
         return (None,
-            gr.Dropdown(visible=False),
-            gr.Dropdown(visible=False)
+            gr.Dropdown(visible=False, value=None),
+            gr.Dropdown(visible=False, value=None)
         )
     return (
         dictionary,
@@ -84,7 +84,7 @@ def get_class_property_definitions(
         dictionary,
     ):
     if class_id is None or dictionary is None:
-        return None, "# Class Info", None, None, None
+        return None, gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
     download = False
     if class_id not in dictionary.classes.keys():
         download = True
@@ -100,7 +100,11 @@ def get_class_property_definitions(
 """
     if definitions is None or len(definitions) == 0:
         gr.Warning(f"No property definitions found for class {class_id} in release {dictionary.release}.")
-        return class_id, class_info, None, None, None
+        return (class_id,
+            gr.update(visible=True, value=class_info),
+            gr.update(visible=False),
+            gr.update(visible=False)
+        )
     if download:
         class_id = gr.update(choices=get_class_choices(dictionary))
         dictionary.save_to_file()
@@ -114,7 +118,11 @@ def get_class_property_definitions(
         for definition in definitions
     ])
 
-    return class_id, class_info, definitions_df, "## Select Property ID in Table for Details"
+    return (class_id,
+            gr.update(visible=True, value=class_info),
+            gr.update(visible=True, value=definitions_df),
+            gr.update(visible=True, value="## Select Property ID in Table for Details")
+    )
 
 def select_property_info(dictionary: Dictionary | None, evt: gr.SelectData):
     if dictionary is None:
@@ -418,6 +426,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                 class_info = gr.Markdown(
                     value="# Class Info",
                     show_copy_button=True,
+                    visible=False,
                 )
                 with gr.Row():
                     property_defintions = gr.DataFrame(
@@ -425,10 +434,12 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         show_label=False,
                         headers=['ID', 'Type', 'Name'],
                         interactive=False,
-                        scale=3
+                        scale=3,
+                        visible=False,
                     )
                     property_info = gr.Markdown(
                         show_copy_button=True,
+                        visible=False,
                     )
 
         with gr.Tab("Extract"):
