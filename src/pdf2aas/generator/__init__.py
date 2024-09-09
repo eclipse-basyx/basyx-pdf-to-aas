@@ -1,6 +1,6 @@
 from .core import Generator
 from .csv import CSV
-from .aas import AASSubmodelTechnicalData
+from .aasTechnicalDataSubmodel import AASSubmodelTechnicalData
 
 __all__ = [
     "Generator",
