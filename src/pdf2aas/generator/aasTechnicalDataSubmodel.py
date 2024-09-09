@@ -63,9 +63,9 @@ class AASSubmodelTechnicalData(Generator):
         
     def reset(self):
         self.concept_descriptions = {}
-        self.submodel = self.create_submodel_template(self.identifier)
+        self.submodel = self._create_submodel_template(self.identifier)
 
-    def create_submodel_template(self, identifier:str=None):
+    def _create_submodel_template(self, identifier:str=None):
         submodel = model.Submodel(
             id_= f"https://eclipse.dev/basyx/pdf-to-aas/submodel/{uuid.uuid4()}" if identifier is None else identifier,
             id_short = "TechnicalData",
@@ -229,7 +229,7 @@ class AASSubmodelTechnicalData(Generator):
             id_short = "ID_" + id_short
         return id_short[:128]
 
-    def create_aas_property_recursive(self, property_: Property, value, id_short, display_name):
+    def _create_aas_property_recursive(self, property_: Property, value, id_short, display_name):
         if isinstance(value, (list, set, tuple, dict)):
             if len(value) == 0:
                 value = None
@@ -251,7 +251,7 @@ class AASSubmodelTechnicalData(Generator):
                 for key, val in iterator:
                     try:
                         smc.value.add(
-                            self.create_aas_property_recursive(
+                            self._create_aas_property_recursive(
                                 property_,
                                 val,
                                 id_short+'_'+str(key),
@@ -282,7 +282,7 @@ class AASSubmodelTechnicalData(Generator):
             semantic_id = self._create_semantic_id(property_.definition_id, property_.definition)
         )
 
-    def create_aas_property(self, property_: Property) -> model.DataElement | None:
+    def _create_aas_property(self, property_: Property) -> model.DataElement | None:
         if property_.label is not None and len(property_.label) > 0:
             id_short = property_.label
         elif property_.definition is not None:
@@ -315,7 +315,7 @@ class AASSubmodelTechnicalData(Generator):
                 semantic_id = self._create_semantic_id(property_.definition_id, property_.definition)
             )
 
-        return self.create_aas_property_recursive(property_, property_.value, id_short, display_name)
+        return self._create_aas_property_recursive(property_, property_.value, id_short, display_name)
 
     general_information_semantic_ids_short = {
         "AAO677" : "ManufacturerName",
@@ -349,7 +349,7 @@ class AASSubmodelTechnicalData(Generator):
             if self._update_general_information(property_):
                 continue
             
-            aas_property = self.create_aas_property(property_)
+            aas_property = self._create_aas_property(property_)
             if aas_property is None:
                 continue
 

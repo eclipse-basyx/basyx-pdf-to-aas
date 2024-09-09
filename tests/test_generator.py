@@ -103,7 +103,7 @@ class TestAASSubmodelTechnicalData:
             ('5_000.1 .. 10_000.2', 5000.1, 10000.2),
     ])
     def test_add_range_properties(self, range, min, max):
-        aas_property = self.g.create_aas_property(Property(value=range, definition=PropertyDefinition('id1', type="range")))
+        aas_property = self.g._create_aas_property(Property(value=range, definition=PropertyDefinition('id1', type="range")))
         assert aas_property is not None
         assert isinstance(aas_property, basyx.aas.model.Range)
         assert aas_property.min == min
@@ -111,7 +111,7 @@ class TestAASSubmodelTechnicalData:
 
     def test_add_list_properties(self):
         value = [0,5,42.42]
-        aas_property = self.g.create_aas_property(Property(value=value, definition=PropertyDefinition('id1', type="numeric")))
+        aas_property = self.g._create_aas_property(Property(value=value, definition=PropertyDefinition('id1', type="numeric")))
         assert aas_property is not None
         assert isinstance(aas_property, basyx.aas.model.SubmodelElementCollection)
         assert len(aas_property.value) == len(value)
@@ -121,7 +121,7 @@ class TestAASSubmodelTechnicalData:
     
     def test_add_dict_properties(self):
         value = {'first': 0, 'second': 5, 'third': 42.42}
-        aas_property = self.g.create_aas_property(Property(value=value, definition=PropertyDefinition('id1', type="numeric")))
+        aas_property = self.g._create_aas_property(Property(value=value, definition=PropertyDefinition('id1', type="numeric")))
         assert aas_property is not None
         assert isinstance(aas_property, basyx.aas.model.SubmodelElementCollection)
         assert len(aas_property.value) == len(value)
