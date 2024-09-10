@@ -20,6 +20,6 @@ class CSV(Generator):
             lineterminator='\n'
         )
         writer.writeheader()
-        for property_ in self.properties:
+        for property_ in self._properties:
             writer.writerow(property_.to_legacy_dict())
         return csv_str.getvalue()

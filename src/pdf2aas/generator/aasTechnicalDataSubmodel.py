@@ -55,19 +55,20 @@ def cast_property(value, definition) -> model.ValueDataType:
 class AASSubmodelTechnicalData(Generator):
     def __init__(
         self,
-        identifier: str = None,
+        identifier: str | None = None,
     ) -> None:
-        self.identifier = identifier
+        self.identifier = f"https://eclipse.dev/basyx/pdf-to-aas/submodel/{uuid.uuid4()}" if identifier is None else identifier
         self.concept_descriptions: dict[str, model.concept.ConceptDescription] = {}
         self.reset()
         
     def reset(self):
+        super().reset()
         self.concept_descriptions = {}
-        self.submodel = self._create_submodel_template(self.identifier)
+        self.submodel = self._create_submodel_template()
 
-    def _create_submodel_template(self, identifier:str=None):
+    def _create_submodel_template(self):
         submodel = model.Submodel(
-            id_= f"https://eclipse.dev/basyx/pdf-to-aas/submodel/{uuid.uuid4()}" if identifier is None else identifier,
+            id_= self.identifier,
             id_short = "TechnicalData",
             semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2")
         )
@@ -344,7 +345,8 @@ class AASSubmodelTechnicalData(Generator):
             general_info.value = str(property_.value)
         return True
 
-    def add_properties(self, properties : list[Property]):       
+    def add_properties(self, properties: list[Property]):
+        super().add_properties(self, properties)
         for property_ in properties:
             if self._update_general_information(property_):
                 continue
