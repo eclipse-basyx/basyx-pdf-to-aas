@@ -1,16 +1,18 @@
 import json
 from datetime import datetime
+from copy import deepcopy
 
 import pytest
 import basyx.aas.model
 
-from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData
+from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData, AASTemplate
 from pdf2aas.extractor import Property
 from pdf2aas.dictionary import PropertyDefinition, ECLASS, ETIM
 
-from test_extractor import example_property_value1, example_property_value2
+from test_extractor import example_property_numeric, example_property_string, example_property_range
 
-test_property_list = [example_property_value1, example_property_value2]
+test_property_list = [example_property_numeric, example_property_string]
+test_property_list2 = [example_property_numeric, example_property_string, example_property_range]
 
 class TestGenerator:
     def setup_method(self) -> None:
@@ -175,3 +177,39 @@ class TestAASSubmodelTechnicalData:
         from basyx.aas.adapter.json import json_serialization, json_deserialization
         submodel : basyx.aas.model.Submodel = json.loads(json.dumps(self.g.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)        
         assert submodel == self.g.submodel
+
+class TestAASTemplate:
+    @staticmethod
+    def create_assets():
+        td_submodel = AASSubmodelTechnicalData('id1')
+        td_submodel.save_as_aasx('tests/assets/dummy-result-aas-template-empty.aasx')
+        td_submodel.add_properties(test_property_list2)
+        td_submodel.save_as_aasx('tests/assets/dummy-result-aas-template.aasx')
+
+    
+    @pytest.mark.parametrize("property_,new_value", [
+        (example_property_numeric, 42),
+        (example_property_string, 'b'),
+        (example_property_range, [42,43]),
+    ])
+    def test_add_properties(self, property_:Property, new_value):
+        g = AASTemplate('tests/assets/dummy-result-aas-template.aasx')
+        aas_property = g._search_property(property_)
+        assert aas_property is not None
+        if property_.definition.type == "range":
+            assert aas_property.min == property_.value[0]
+            assert aas_property.max == property_.value[1]
+        else:
+            assert aas_property.value == property_.value
+
+        property_ = deepcopy(property_)
+        property_.value = new_value
+        g.add_properties([property_])
+        aas_property = g._search_property(property_)
+        assert aas_property is not None
+        if property_.definition.type == "range":
+            assert aas_property.min == new_value[0]
+            assert aas_property.max == new_value[1]
+        else:
+            assert aas_property.value == new_value
+
