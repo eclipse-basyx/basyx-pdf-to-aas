@@ -1,10 +1,13 @@
 import logging
+import re
 
 from basyx.aas import model
 
 from ..extractor import Property
 
 logger = logging.getLogger(__name__)
+
+anti_alphanumeric_regex = re.compile(r'[^a-zA-Z0-9]')
 
 def cast_property(value, definition) -> model.ValueDataType:
     if value is None:

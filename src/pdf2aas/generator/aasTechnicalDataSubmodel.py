@@ -10,7 +10,7 @@ from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
 from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
-from .aas import cast_property, cast_range
+from .aas import cast_property, cast_range, anti_alphanumeric_regex
 from ..dictionary import Dictionary, PropertyDefinition, ECLASS
 from ..extractor import Property
 
@@ -164,12 +164,12 @@ class AASSubmodelTechnicalData(Generator):
             if name is None:
                 name = next(iter(property_defintion.name.values()), None)
             if name is not None:
-                cd.id_short = re.sub(r'[^a-zA-Z0-9]', '_', name)
+                cd.id_short = re.sub(anti_alphanumeric_regex, '_', name)
                 cd.display_name = model.MultiLanguageNameType({l:n[:64] for l,n in property_defintion.name.items()})
             if property_defintion.definition is not None and len(property_defintion.definition) > 0:
                 cd.description = model.MultiLanguageNameType({l:n[:64] for l,n in property_defintion.definition.items()})
         elif value:
-            cd.id_short = re.sub(r'[^a-zA-Z0-9]', '_', value)
+            cd.id_short = re.sub(anti_alphanumeric_regex, '_', value)
             cd.display_name = model.MultiLanguageNameType({'en': value[:64]})
 
         self.concept_descriptions[reference] = cd
@@ -187,7 +187,7 @@ class AASSubmodelTechnicalData(Generator):
 
     @staticmethod
     def _create_id_short(proposal:str | None = None):
-        id_short = re.sub(r'[^a-zA-Z0-9_]', '_', proposal) if proposal is not None else ''
+        id_short = re.sub(anti_alphanumeric_regex, '_', proposal) if proposal is not None else ''
         if len(id_short) == 0:
             id_short = "ID_" + str(uuid.uuid4())
         elif id_short[0].isdigit():
@@ -296,7 +296,7 @@ class AASSubmodelTechnicalData(Generator):
          
         if property_.label is not None:
             for label in self.general_information_semantic_ids_short.values():
-                if re.sub(r'[^a-z0-9_]','', property_.label.lower()) == label.lower():
+                if re.sub(anti_alphanumeric_regex,'', property_.label.lower()) == label.lower():
                     id_short = label
                     break
         if id_short is None:
