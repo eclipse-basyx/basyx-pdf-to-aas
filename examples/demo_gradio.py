@@ -55,8 +55,8 @@ def change_dictionary_type(dictionary_type):
         )
     return (
         dictionary,
-        gr.Dropdown(label=f"{dictionary.name} Class", choices=get_class_choices(dictionary), value=None, visible=True),
-        gr.Dropdown(label=f"{dictionary.name} Release", choices=dictionary.supported_releases, value=dictionary.release, visible=True)
+        gr.Dropdown(choices=get_class_choices(dictionary), value=None, visible=True),
+        gr.Dropdown(choices=dictionary.supported_releases, value=dictionary.release, visible=True)
     )
 
 def change_dictionary_release(dictionary_type, release):
@@ -371,29 +371,6 @@ def create_download_results(properties: list[Property], property_df: pd.DataFram
 
     return [excel_path, properties_path, submodel_path, aasx_path, aasx_path_noneEmpty]
 
-__current_settings_version = 3
-def save_settings(settings):
-    tempdir = next(iter(settings)) # Assume tempdir is first element
-    settings_path = os.path.join(tempdir.value.name, "settings.json")
-    settings.pop(tempdir)
-    with open(settings_path, 'w') as settings_file:
-        json.dump({
-            'version': __current_settings_version,
-            'date': str(datetime.now()),
-            'settings': {c.label: v for c, v in settings.items()},
-        }, settings_file, indent=2)
-    return settings_path
-
-def load_settings(settings_file_path):
-    try:
-        settings = json.load(open(settings_file_path))
-    except (json.JSONDecodeError, OSError, FileNotFoundError) as error:
-        raise gr.Error(f"Couldn't load settings: {error}")
-    if settings.get('version', 0) < __current_settings_version:
-        raise gr.Error(f"Wrong settings version {settings.get('version')}. Please migrate settings file manually to version {__current_settings_version}.")
-    logger.info(f"Loading settings from {settings_file_path}")
-    return tuple(settings.get('settings').values())
-
 def init_tempdir():
     tempdir =  tempfile.TemporaryDirectory(prefix="pdf2aas_")
     logger.info(f"Created tempdir: {tempdir.name}")
@@ -676,6 +653,31 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             batch_size, use_in_prompt, extract_general_information, max_definition_chars, max_values_length
         ]
 
+        def save_settings(settings):
+            settings_path = os.path.join(settings[tempdir].name, "settings.json")
+            with open(settings_path, 'w') as settings_file:
+                json.dump({
+                    'date': str(datetime.now()),
+                    'settings': {c.label: v for c, v in settings.items() if c != tempdir},
+                }, settings_file, indent=2)
+            return settings_path
+
+        def load_settings(settings_file_path):
+            try:
+                settings = json.load(open(settings_file_path))
+            except (json.JSONDecodeError, OSError, FileNotFoundError) as error:
+                raise gr.Error(f"Couldn't load settings: {error}")
+
+            updated_settings = {}
+            for key, value in settings.get('settings').items():
+                component = next((component for component in settings_list if component.label == key), None)
+                if component is None:
+                    gr.Warning(f"Unexpected setting key '{key}'. Value ignored: {value}")
+                else:
+                    updated_settings[component] = value
+            logger.info(f"Loaded settings from {settings_file_path}")
+            return updated_settings
+
         settings_load.upload(
             fn=load_settings,
             inputs=settings_load,
@@ -694,7 +696,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         gr.on(
             triggers=[demo.load, settings_save.click, settings_load.upload],
             fn=save_settings,
-            inputs= {tempdir} | set(settings_list),
+            inputs={tempdir} | set(settings_list),
             outputs=settings_file
         )
     
