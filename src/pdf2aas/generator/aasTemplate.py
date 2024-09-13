@@ -8,7 +8,8 @@ from basyx.aas.adapter.aasx import DictSupplementaryFileContainer, AASXWriter, A
 from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
-from .aas import cast_property, cast_range, anti_alphanumeric_regex
+from .aas import cast_property, cast_range, get_dict_data_type_from_xsd, get_dict_data_type_from_IEC6360, anti_alphanumeric_regex
+from ..dictionary import PropertyDefinition
 from ..extractor import Property
 
 logger = logging.getLogger(__name__)
@@ -89,8 +90,103 @@ class AASTemplate(Generator):
                 aas_property.min = min_
                 aas_property.max = max_
 
+    @staticmethod
+    def _get_multilang_string(string_dict: dict[str,str], language: str) -> tuple[str | None, str]:
+        if string_dict is not None and len(string_dict) > 0:
+            if language in string_dict:
+                return string_dict[language], language
+            else:
+                next(iter(string_dict.items()))
+        return None, language
+
+    @staticmethod
+    #TODO move to PropertyDefinition
+    def _fill_definition_from_data_spec(definition:PropertyDefinition, embedded_data_specifications):
+        data_spec:model.DataSpecificationIEC61360 = next(
+                    (spec.data_specification_content for spec in embedded_data_specifications
+                    if isinstance(spec.data_specification_content, model.DataSpecificationIEC61360)),
+                    None)
+        if data_spec is None:
+            return
+        
+        if (definition.name is None or len(definition.name) == 0):
+            if data_spec.preferred_name is not None and len(data_spec.preferred_name) > 0:
+                definition.name = data_spec.preferred_name._dict
+            elif data_spec.short_name is not None and len(data_spec.short_name) > 0:
+                definition.name = data_spec.short_name._dict
+
+        if definition.type is None and data_spec.data_type is not None:
+            definition.type = get_dict_data_type_from_IEC6360(data_spec.data_type)
+        
+        if len(definition.definition) == 0 and data_spec.definition is not None:
+            definition.definition = data_spec.definition._dict
+
+        if len(definition.unit) == 0 and data_spec.unit is not None:
+            definition.unit = data_spec.unit
+        
+        if definition.values is None or len(definition.values) == 0 and \
+                data_spec.value_list is not None and len(data_spec.value_list) > 0:
+            definition.values = [{"value": value.value, "id": value.value_id.key[0].value} #TODO get key more robust
+                                  for value in data_spec.value_list]
+        #use data_spec.value as default value?
+
+    def _resolve_concept_description(self, semantic_id):
+        try:
+            cd = semantic_id.resolve(self.object_store)
+            if not isinstance(cd, model.concept.ConceptDescription):
+                raise model.UnexpectedTypeError(value=type(cd))
+            return cd
+        except (IndexError, TypeError, KeyError):
+            logger.debug("ConceptDescription for semantidId %s not found in object store.", str(semantic_id))
+        except model.UnexpectedTypeError as e:
+            logger.debug("semantidId %s resolves to %s, which is not a ConceptDescription",
+                        str(semantic_id), e.value)
+        return None
+
     def get_properties(self) -> list[Property]:
-        return []
+        properties = []
+        for aas_property in self._walk_properties():
+            property_ = Property()
+            
+            property_.label, property_.language = self._get_multilang_string(
+                aas_property.display_name, property_.language)
+            if property_.label is None:
+                property_.label = aas_property.id_short
+            
+            property_.reference, _ = self._get_multilang_string(
+                aas_property.description, property_.language)
+            
+            if isinstance(aas_property, model.Range):
+                property_.value = [aas_property.min, aas_property.max]
+                type_ = "range"
+            elif isinstance(aas_property, model.MultiLanguageProperty):
+                property_.value, _ = self._get_multilang_string(
+                    aas_property.value, property_.language)
+                type_ = "string"
+            else:
+                property_.value = aas_property.value
+                type_ = get_dict_data_type_from_xsd(aas_property.value_type)
+
+            definition = PropertyDefinition(
+                id=aas_property.id_short,
+                type=type_
+            )
+            self._fill_definition_from_data_spec(definition, aas_property.embedded_data_specifications)
+            
+            semantic_id = aas_property.semantic_id
+            if semantic_id and isinstance(semantic_id, model.ModelReference):
+                definition.id = semantic_id.key[0].value # TODO handle types and multiple keys etc.
+                cd = self._resolve_concept_description(semantic_id)
+                if cd is not None:
+                    self._fill_definition_from_data_spec(definition, cd.embedded_data_specifications)
+                    if len(definition.name) == 0:
+                        if cd.display_name:
+                            definition.name = cd.display_name._dict
+                        else:
+                            definition.name = {'en': cd.id_short}
+            property_.definition = definition
+            properties.append(property_)
+        return properties
 
     def dumps(self):
         return json.dumps([o for o in self.object_store], cls=json_serialization.AASToJsonEncoder, indent=2)
