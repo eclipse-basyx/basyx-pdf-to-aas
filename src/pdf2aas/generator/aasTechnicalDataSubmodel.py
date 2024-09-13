@@ -194,7 +194,7 @@ class AASSubmodelTechnicalData(Generator):
             id_short = "ID_" + id_short
         return id_short[:128]
 
-    def _create_aas_property_recursive(self, property_: Property, value, id_short, display_name):
+    def _create_aas_property_recursive(self, property_: Property, value, id_short, display_name, description):
         if isinstance(value, (list, set, tuple, dict)):
             if len(value) == 0:
                 value = None
@@ -205,7 +205,8 @@ class AASSubmodelTechnicalData(Generator):
                 smc = model.SubmodelElementCollection(
                     id_short = self._create_id_short(id_short),
                     display_name = display_name,
-                    semantic_id = self._create_semantic_id(property_.definition_id)
+                    semantic_id = self._create_semantic_id(property_.definition_id),
+                    description = description,
                 )
                 if isinstance(value, dict):
                     iterator = value.items()
@@ -220,6 +221,7 @@ class AASSubmodelTechnicalData(Generator):
                                 property_,
                                 val,
                                 id_short+'_'+str(key),
+                                None,
                                 None,
                             )
                         )
@@ -241,6 +243,7 @@ class AASSubmodelTechnicalData(Generator):
         return model.Property(
             id_short = self._create_id_short(id_short),
             display_name = display_name,
+            description = description,
             value_type = type(value) if value is not None else model.datatypes.String,
             value = value,
             value_id = value_id,
@@ -268,19 +271,25 @@ class AASSubmodelTechnicalData(Generator):
         
         if len(display_name) == 0:
             display_name = model.MultiLanguageNameType({property_.language: id_short[:64]})
+        
+        if property_.reference is None:
+            description = None
+        else:
+            description = model.MultiLanguageTextType({property_.language: property_.reference[:1023]})
 
         if property_.definition is not None and property_.definition.type == "range":
             min, max, type_ = cast_range(property_)
             return model.Range(
                 id_short = self._create_id_short(id_short),
                 display_name = display_name,
+                description = description,
                 min=min,
                 max=max,
                 value_type = type_,
                 semantic_id = self._create_semantic_id(property_.definition_id, property_.definition)
             )
 
-        return self._create_aas_property_recursive(property_, property_.value, id_short, display_name)
+        return self._create_aas_property_recursive(property_, property_.value, id_short, display_name, description)
 
     general_information_semantic_ids_short = {
         "AAO677" : "ManufacturerName",
@@ -310,7 +319,7 @@ class AASSubmodelTechnicalData(Generator):
         return True
 
     def add_properties(self, properties: list[Property]):
-        super().add_properties(self, properties)
+        super().add_properties(properties)
         for property_ in properties:
             if self._update_general_information(property_):
                 continue

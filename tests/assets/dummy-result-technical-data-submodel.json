@@ -120,6 +120,12 @@
               "text": "property1"
             }
           ],
+          "description": [
+            {
+              "language": "en",
+              "text": "p1 is 1Nm"
+            }
+          ],
           "modelType": "Property",
           "semanticId": {
             "type": "ModelReference",
@@ -139,6 +145,12 @@
             {
               "language": "en",
               "text": "property2"
+            }
+          ],
+          "description": [
+            {
+              "language": "en",
+              "text": "p2 is a"
             }
           ],
           "modelType": "Property",
@@ -211,7 +223,7 @@
               }
             ]
           },
-          "value": "2024-08-26",
+          "value": "2024-09-13",
           "valueType": "xs:date"
         }
       ]
