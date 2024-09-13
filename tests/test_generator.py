@@ -186,7 +186,6 @@ class TestAASTemplate:
         td_submodel.add_properties(test_property_list2)
         td_submodel.save_as_aasx('tests/assets/dummy-result-aas-template.aasx')
 
-    
     @pytest.mark.parametrize("property_,new_value", [
         (example_property_numeric, 42),
         (example_property_string, 'b'),
@@ -213,3 +212,25 @@ class TestAASTemplate:
         else:
             assert aas_property.value == new_value
 
+    @pytest.mark.parametrize("property_", test_property_list2)
+    def test_get_properties(self, property_:Property):
+        g = AASTemplate('tests/assets/dummy-result-aas-template.aasx')
+        properties = g.get_properties()
+        assert len(properties) == 9
+        
+        property_result = next((p for p in properties if p.label == property_.label), None)
+        assert property_result is not None
+        assert property_result.language == property_.language
+        assert property_result.value == property_.value
+        #Unit is currently not exported and thus not read
+        # assert property_result.unit == property_.unit
+        assert property_result.reference == property_.reference
+
+        assert property_result.definition is not None
+        assert property_result.definition.id == property_.definition.id
+        assert property_result.definition.name == property_.definition.name
+        assert property_result.definition.type == property_.definition.type
+        assert property_result.definition.unit == property_.definition.unit
+        assert property_result.definition.definition == property_.definition.definition
+        #The definition.values might differ
+        assert property_result.definition.values_list == property_.definition.values_list
