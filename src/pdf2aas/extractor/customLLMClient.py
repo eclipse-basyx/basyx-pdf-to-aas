@@ -79,13 +79,14 @@ class CustomLLMClientHTTP(CustomLLMClient):
         self.endpoint = endpoint
         self.api_key = api_key
         if request_template is None:
-            request_template = """{
-    "model": "{model}",
-    "messages": {messages},
-    "max_tokens": {max_tokens},
-    "temperature": {temperature},
-    "response_format": {response_format},
-}"""
+            request_template = \
+"""{{
+"model": "{model}",
+"messages": {messages},
+"max_tokens": {max_tokens},
+"temperature": {temperature},
+"response_format": {response_format}
+}}"""
         self.request_template = request_template
         self.result_path = result_path
         if headers is None:
@@ -117,9 +118,14 @@ class CustomLLMClientHTTP(CustomLLMClient):
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format=response_format
+            response_format=json.dumps(response_format)
         )
-        logger.debug(f"Custom LLM Client Request: {request_payload}")
+        logger.debug(f"Load formated request payload: {request_payload}")
+        try:
+            request_payload = json.loads(request_payload)
+        except json.JSONDecodeError as e:
+            logger.error(f"Request payload is not JSON deserializeable: {e}")
+            return None, None
         
         headers = deepcopy(self.headers)
         if self.api_key:
@@ -127,7 +133,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
         
         for attempt in range(self.retries+1):
             try:
-                response = requests.post(self.endpoint, headers=headers, data=request_payload)
+                response = requests.post(self.endpoint, headers=headers, json=json.dumps(request_payload))
                 response.raise_for_status()
                 result = response.json()
                 break
