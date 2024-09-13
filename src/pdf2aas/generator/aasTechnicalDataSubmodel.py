@@ -146,6 +146,50 @@ class AASSubmodelTechnicalData(Generator):
         )
         self.product_classifications.value.add(classification)
 
+    @staticmethod
+    def _add_embedded_data_spec(cd: model.concept.ConceptDescription, defintion: PropertyDefinition):
+        if len(defintion.name) == 0:
+            return
+        data_spec = model.DataSpecificationIEC61360(
+            model.PreferredNameTypeIEC61360({l:v[:255] for l, v in defintion.name.items()}),
+        )
+        match defintion.type:
+            case "bool": data_spec.data_type = model.DataTypeIEC61360.BOOLEAN
+            case "numeric": data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
+            case "range":
+                data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
+                # data_spec.level_types = model.IEC61360LevelType.MAX
+            case "string": data_spec.data_type = model.DataTypeIEC61360.STRING
+        if len(defintion.definition) > 0:
+            data_spec.definition = model.DefinitionTypeIEC61360({l:v[:1024] for l, v in defintion.definition.items()})
+        if defintion.unit is not None and len(defintion.unit) > 0:
+            data_spec.unit = defintion.unit
+        if defintion.values:
+            data_spec.value_list = set()
+            for idx, value in enumerate(defintion.values):
+                if isinstance(value, str):
+                    value_id = str(idx)
+                elif isinstance(value, dict):
+                    value_id = value.get("id")
+                    value = value.get("value")
+                else:
+                    continue
+                data_spec.value_list.add(
+                    model.ValueReferencePair(value, 
+                        model.ExternalReference(
+                            (model.Key(
+                                type_= model.KeyTypes.GLOBAL_REFERENCE,
+                                value=value_id
+                            ),)
+                        )
+                    )
+                )
+        cd.embedded_data_specifications.append(
+            model.EmbeddedDataSpecification(
+                data_specification=next(iter(cd.is_case_of)),
+                data_specification_content=data_spec
+            ))
+
     def _add_concept_description(self, reference, property_defintion: PropertyDefinition | None = None, value: str = None):
         if reference in self.concept_descriptions:
             return
@@ -167,7 +211,8 @@ class AASSubmodelTechnicalData(Generator):
                 cd.id_short = re.sub(anti_alphanumeric_regex, '_', name)
                 cd.display_name = model.MultiLanguageNameType({l:n[:64] for l,n in property_defintion.name.items()})
             if property_defintion.definition is not None and len(property_defintion.definition) > 0:
-                cd.description = model.MultiLanguageNameType({l:n[:64] for l,n in property_defintion.definition.items()})
+                cd.description = model.MultiLanguageTextType({l:n[:1024] for l,n in property_defintion.definition.items()})
+            self._add_embedded_data_spec(cd, property_defintion)
         elif value:
             cd.id_short = re.sub(anti_alphanumeric_regex, '_', value)
             cd.display_name = model.MultiLanguageNameType({'en': value[:64]})
