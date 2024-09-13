@@ -1,7 +1,10 @@
 import pytest
+from unittest.mock import patch, MagicMock
+import json
+import requests
 
 from pdf2aas.dictionary import PropertyDefinition
-from pdf2aas.extractor import CustomLLMClient, PropertyLLMSearch, Property
+from pdf2aas.extractor import CustomLLMClient, CustomLLMClientHTTP, PropertyLLMSearch, Property
 
 example_property_definition_numeric = PropertyDefinition("p1", {'en': 'property1'}, 'numeric', {'en': 'definition of p1'}, 'T')
 example_property_definition_string = PropertyDefinition("p2", {'en': 'property2'}, 'string', {'en': 'definition of p2'}, values=['a', 'b'])
@@ -69,5 +72,143 @@ class TestPropertyLLMSearch():
         self.llm.client.response = example_accepted_llm_response[0]
         properties = self.llm.extract("datasheet", [example_property_definition_string, example_property_definition_numeric])
         assert properties == [example_property_numeric]
+
+class TestCustomLLMClientHttp():
+    mock_result = {"result": {"value": 42}, "status": 200}
+    endpoint = "http://localhost:12345"
+    messages = [
+        {'role': 'system', 'content': 'system\nmessage'},
+        {'role': 'user', 'content': 'user\nmessage'},
+    ]
+    model_identifier = 'test'
+    temperature = 0.5
+    max_tokens = 1000
+    response_format = {"format": "json"}
     
-        
+    default_headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+    }
+    default_payload = json.dumps({
+        "model": model_identifier,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "response_format": response_format
+    })
+
+    def test_create_completions_post(self):
+        client=CustomLLMClientHTTP(self.endpoint)
+        with patch('requests.post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=200, json=lambda: self.mock_result)
+            result_content, result = client.create_completions(
+                self.messages,
+                self.model_identifier,
+                self.temperature,
+                self.max_tokens,
+                self.response_format
+            )
+
+            mock_post.assert_called_once_with(
+                self.endpoint,
+                headers=self.default_headers,
+                json=self.default_payload)
+            assert result_content == self.mock_result
+            assert result == self.mock_result
+    
+    def test_request_template(self):
+        client=CustomLLMClientHTTP(self.endpoint)
+        client.request_template = \
+"""
+{{"name": "{model}", "texts": [{message_system}, {message_user}], "t": {temperature} }}
+"""
+        expected_payload = json.dumps({
+            "name": self.model_identifier,
+            "texts": [self.messages[0]['content'], self.messages[1]['content']],
+            "t" : self.temperature,
+        })
+        with patch('requests.post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=200, json=lambda: self.mock_result)
+            client.create_completions(
+                self.messages,
+                self.model_identifier,
+                self.temperature,
+                self.max_tokens,
+                self.response_format
+            )
+
+            mock_post.assert_called_once()
+            called_args, called_kwargs = mock_post.call_args
+            assert "json" in called_kwargs
+            assert called_kwargs['json'] == expected_payload
+
+    def test_result_path(self):
+        client=CustomLLMClientHTTP(self.endpoint)
+        client.result_path = "result.value"
+        with patch('requests.post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=200, json=lambda: self.mock_result)
+            result_content, result = client.create_completions(
+                self.messages,
+                self.model_identifier,
+                self.temperature,
+                self.max_tokens,
+                self.response_format
+            )
+
+            mock_post.assert_called_once()
+            assert result_content == self.mock_result['result']['value']
+            assert result == self.mock_result
+    
+    def test_api_key_is_added_as_bearer(self):
+        client=CustomLLMClientHTTP(self.endpoint)
+        client.api_key = "my_api_key"
+        with patch('requests.post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=200, json=lambda: self.mock_result)
+            client.create_completions(
+                self.messages,
+                self.model_identifier,
+                self.temperature,
+                self.max_tokens,
+                self.response_format
+            )
+
+            mock_post.assert_called_once()
+            called_args, called_kwargs = mock_post.call_args
+            assert "headers" in called_kwargs
+            assert "Authorization" in called_kwargs['headers']
+            assert called_kwargs['headers']['Authorization'] == "Bearer my_api_key"
+    
+    def test_api_key_is_inserted(self):
+        client=CustomLLMClientHTTP(self.endpoint)
+        client.api_key = "my_api_key"
+        client.headers = {'Authorization': 'here is {api_key}'}
+        with patch('requests.post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=200, json=lambda: self.mock_result)
+            client.create_completions(
+                self.messages,
+                self.model_identifier,
+                self.temperature,
+                self.max_tokens,
+                self.response_format
+            )
+
+            mock_post.assert_called_once()
+            called_args, called_kwargs = mock_post.call_args
+            assert "headers" in called_kwargs
+            assert "Authorization" in called_kwargs['headers']
+            assert called_kwargs['headers']['Authorization'] == "here is my_api_key"
+
+    def test_retries(self):
+        client=CustomLLMClientHTTP(self.endpoint)
+        client.retries = 2
+        with patch('requests.post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=400, json=lambda: self.mock_result)
+            mock_post.side_effect = requests.exceptions.RequestException("Mocked exception")
+            client.create_completions(
+                self.messages,
+                self.model_identifier,
+                self.temperature,
+                self.max_tokens,
+                self.response_format
+            )
+            assert mock_post.call_count == 3
