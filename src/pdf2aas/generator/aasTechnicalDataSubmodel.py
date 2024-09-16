@@ -410,8 +410,8 @@ class AASSubmodelTechnicalData(Generator):
             self.general_information.value = [
                 element
                 for element in self.general_information.value
-                if element.id_short not in self.general_information_semantic_ids_short.values()
-                and not self._remove_empty_submodel_element(element)
+                if element.id_short in self.general_information_semantic_ids_short.values()
+                or not self._remove_empty_submodel_element(element)
             ]
             self.technical_properties.value = [
                 element
