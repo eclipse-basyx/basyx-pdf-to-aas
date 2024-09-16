@@ -14,7 +14,7 @@ import pandas as pd
 from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM, PropertyDefinition
 from pdf2aas.preprocessor import PDFium
 from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP, Property
-from pdf2aas.generator import AASSubmodelTechnicalData
+from pdf2aas.generator import AASSubmodelTechnicalData, AASTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -50,13 +50,15 @@ def change_dictionary_type(dictionary_type):
         dictionary = CDD()
     else:
         return (None,
-            gr.Dropdown(visible=False, value=None),
-            gr.Dropdown(visible=False, value=None)
+            gr.update(visible=False, value=None),
+            gr.update(visible=False, value=None),
+            gr.update(visible=dictionary_type == "AAS", value=None)
         )
     return (
         dictionary,
-        gr.Dropdown(choices=get_class_choices(dictionary), value=None, visible=True),
-        gr.Dropdown(choices=dictionary.supported_releases, value=dictionary.release, visible=True)
+        gr.update(choices=get_class_choices(dictionary), value=None, visible=True),
+        gr.update(choices=dictionary.supported_releases, value=dictionary.release, visible=True),
+        gr.update(visible=False, value=None),
     )
 
 def change_dictionary_release(dictionary_type, release):
@@ -78,6 +80,8 @@ def change_dictionary_class(dictionary, class_id):
     if id_parsed is None:
         gr.Warning(f"Class id has wrong format. Should be 8 digits for eclass (e.g. 27-27-40-01) or EC plus 6 digits for ETIM (e.g. EC002714).")
     return id_parsed
+
+property_details_default_str = "## Select Property ID in Table for Details"
 
 def get_class_property_definitions(
         class_id,
@@ -121,25 +125,91 @@ def get_class_property_definitions(
     return (class_id,
             gr.update(visible=True, value=class_info),
             gr.update(visible=True, value=definitions_df),
-            gr.update(visible=True, value="## Select Property ID in Table for Details")
+            gr.update(visible=True, value=property_details_default_str)
     )
 
-def select_property_info(dictionary: Dictionary | None, evt: gr.SelectData):
-    if dictionary is None:
+def get_aas_template_properties(aas_template_upload):
+    aas_template = AASTemplate(aas_template_upload)
+    properties = aas_template.get_properties()
+    if len(properties) == 0:
+        gr.Warning("No properties found in aasx template.")
+        return (
+            aas_template,
+            gr.update(visible=False),
+            gr.update(visible=False)
+        )
+
+    properties_df = pd.DataFrame([
+        {
+            'ID': property_.id,
+            'Label': property_.label,
+            'Value': property_.value,
+            'Unit': property_.unit
+                if property_.unit is not None else property_.definition.unit
+                if property_.definition is not None else None,
+            'Description': property_.reference,
+            'Definition': property_.definition_id,
+        }
+        for property_ in properties
+    ])
+
+    return (aas_template,
+        gr.update(visible=True, value=properties_df),
+        gr.update(visible=True, value=property_details_default_str)
+    )
+
+def select_property_info(dictionary_type: str, dictionary: Dictionary | None, aas_template: AASTemplate | None, evt: gr.SelectData):
+    if dictionary is None and aas_template is None:
         return None
+
     #FIXME Currently this will get the wrong row, when the user has sorted the dataframe: https://github.com/gradio-app/gradio/pull/9128
     #Therefore, we only accept selection of the first row
     if evt.index[1] != 0:
-        return "## Select Property ID in Table for Details"
-    definition = dictionary.get_property(evt.value)
-    if definition is None:
-        return "## Select Property ID in Table for Details"
-    return f"""## {definition.name.get('en')}
+        return property_details_default_str
+
+    if dictionary_type == "AAS":
+        property_ = aas_template.get_property(evt.value)
+        if property_ is None:
+            return property_details_default_str
+        property_info = \
+f"""## {property_.label}
+* ID: {property_.id}
+* Label: {property_.label}
+* Value: {property_.value}
+* Unit: {property_.unit}
+* Description (Reference): {property_.reference}
+* Language: {property_.language}
+"""
+        definition = property_.definition
+        if definition is None:
+            return property_info
+        return property_info + \
+f"""
+### Definition
+* ID: {property_.definition_id}
+* Name: {property_.definition_name}
+* Type: {definition.type}
+* Definition: {definition.definition.get(property_.language, next(iter(definition.definition.values()), ''))}
+* Unit: {definition.unit}
+* Values:{"".join(["\n  * " +
+        f"{v.get('value')} ({v.get('id')})"
+        if isinstance(v, dict) else str(v)
+        for v in property_.definition.values])}
+"""
+    else:
+        definition = dictionary.get_property(evt.value)
+        if definition is None:
+            return property_details_default_str
+    return \
+f"""## {definition.name.get('en')}
 * ID: [{definition.id.split('/')[0] if isinstance(dictionary, ETIM) else definition.id}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
-* Definition: {definition.definition.get('en', '')}
+* Definition: {definition.definition.get('en', next(iter(definition.definition.values()), ''))}
 * Unit: {definition.unit}
-* Values:{"".join(["\n  * " + v.get("value") for v in definition.values])}
+* Values:{"".join(["\n  * " +
+        f"{v.get('value')} ({v.get('id')})"
+        if isinstance(v, dict) else str(v)
+        for v in definition.values])}
 """
 
 def check_additional_client_settings(endpoint_type):
@@ -383,6 +453,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         client = gr.State()
         tempdir = gr.State(value=init_tempdir)
         extracted_properties = gr.State()
+        aas_template = gr.State()
         
         with gr.Tab(label="Definitions"):
             with gr.Column():
@@ -391,7 +462,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Dictionary",
                         allow_custom_value=False,
                         scale=1,
-                        choices=['None','ECLASS', 'ETIM', 'CDD'],
+                        choices=['None','ECLASS', 'ETIM', 'CDD', 'AAS'],
                         value='None'
                     )
                     dictionary_class = gr.Dropdown(
@@ -403,6 +474,14 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     dictionary_release = gr.Dropdown(
                         label="Release",
                         visible=False,
+                    )
+                    aas_template_upload = gr.File(
+                        label="Upload AAS Template",
+                        file_count='single',
+                        file_types=['.aasx'],
+                        visible=False,
+                        scale=2,
+                        height=80
                     )
                 class_info = gr.Markdown(
                     value="# Class Info",
@@ -577,7 +656,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         dictionary_type.change(
             fn=change_dictionary_type,
             inputs=dictionary_type,
-            outputs=[dictionary, dictionary_class, dictionary_release],
+            outputs=[dictionary, dictionary_class, dictionary_release, aas_template_upload],
             show_progress="hidden"
         )
         dictionary_release.change(
@@ -600,9 +679,14 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
         property_defintions.select(
             fn=select_property_info,
-            inputs=[dictionary],
+            inputs=[dictionary_type, dictionary, aas_template],
             outputs=[property_info],
             show_progress='hidden'
+        )
+        aas_template_upload.upload(
+            fn=get_aas_template_properties,
+            inputs=[aas_template_upload],
+            outputs=[aas_template, property_defintions, property_info],
         )
 
         gr.on(

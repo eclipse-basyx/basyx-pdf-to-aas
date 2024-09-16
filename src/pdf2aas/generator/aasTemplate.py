@@ -73,6 +73,10 @@ class AASTemplate(Generator):
     def get_properties(self) -> list[Property]:
         return [p for (p, _) in self._properties.values()]
     
+    def get_property(self, _id) -> Property | None:
+        property_, _ =  self._properties.get(_id, (None, None))
+        return property_
+
     def _walk_properties(self):
         for submodel in self.submodels:
             for element in walk_submodel(submodel):
