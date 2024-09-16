@@ -19,7 +19,16 @@ class AASTemplate(Generator):
         self,
         aasx_path: str,
     ) -> None:
-        self.aasx_path = aasx_path
+        self._aasx_path = aasx_path
+        self.reset()
+
+    @property
+    def aasx_path(self):
+        return self._aasx_path
+    
+    @aasx_path.setter
+    def aasx_path(self, value):
+        self._aasx_path = value
         self.reset()
 
     def reset(self):
