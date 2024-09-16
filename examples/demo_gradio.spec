@@ -12,7 +12,7 @@ datas = [(os.path.join(site_packages_dir, 'pypdfium2_raw', 'pdfium.dll'), 'pypdf
          (os.path.join(site_packages_dir, 'pypdfium2', 'version.json'), 'pypdfium2')]
 datas += collect_data_files('gradio_client')
 datas += collect_data_files('gradio')
-
+datas += collect_data_files('gradio_pdf')
 
 a = Analysis(
     ['demo_gradio.py'],
@@ -28,6 +28,7 @@ a = Analysis(
     optimize=0,
     module_collection_mode={
         'gradio': 'py',  # Collect gradio package as source .py files
+        'gradio_pdf': 'py',
     },
 )
 pyz = PYZ(a.pure)
