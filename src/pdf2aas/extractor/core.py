@@ -1,4 +1,5 @@
 import re
+import uuid
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 
@@ -28,6 +29,7 @@ class Property():
         reference (str | None): A reference (~100 chars) where the value was found, e.g. an excerpt, or page reference. 
         defintion (PropertyDefinition | None): Definition of the property if available.
         language(str): Language code (default en) used for the fields (except maybe reference, when it was translated).
+        id (str): Optional ID to identify the property globally.
     """
     label: str = ""
     value: any = None
@@ -35,6 +37,7 @@ class Property():
     reference: str | None = None
     definition: PropertyDefinition | None = field(default=None, repr=False)
     language: str =  field(default='en', repr=False)
+    id: str = field(default_factory=lambda: str(uuid.uuid4()), repr=False, compare=False)
 
     @property
     def definition_id(self) -> str | None:
