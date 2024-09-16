@@ -11,7 +11,7 @@ dependencies = [
   "requests",
   "python-dotenv",
   "pypdfium2",
-  "basyx-python-sdk",
+  "basyx-python-sdk@git+https://github.com/JGrothoff/basyx-python-sdk@pdf-to-aas",
   "xlrd",
 ]
 name = "pdf2aas"

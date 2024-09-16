@@ -19,8 +19,6 @@ jobs:
         cache: 'pip'
     - name: Install dependencies
       run: pip install -r eval-requirements.txt -r dev-requirements.txt
-    - name: Upgrade Gradio
-      run: pip install --upgrade gradio
     - name: Install pdf2aas
       run: pip install -e .
     - name: Build executable
