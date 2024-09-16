@@ -131,7 +131,7 @@ Represent ranges as json list of two values.
                     property_definition = property_definition[:self.max_definition_chars] + " ..."
                 property_row += f" {property_definition} |"
             if self.use_property_values:
-                property_values = property_.values_list
+                property_values = property_.values_list if len(property_.values) > 0 else ''
                 if self.max_values_length > 0 and len(property_values) > self.max_values_length:
                     property_values = property_.values_list[:self.max_values_length] + ["..."]
                 property_row += f" {property_values} |"
