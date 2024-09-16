@@ -182,9 +182,12 @@ class AASTemplate(Generator):
             self._fill_definition_from_data_spec(definition, aas_property.embedded_data_specifications)
             
             semantic_id = aas_property.semantic_id
-            if semantic_id and isinstance(semantic_id, model.ModelReference):
+            if semantic_id:
                 definition.id = semantic_id.key[0].value # TODO handle types and multiple keys etc.
-                cd = self._resolve_concept_description(semantic_id)
+                if isinstance(semantic_id, model.ModelReference):
+                    cd = self._resolve_concept_description(semantic_id)
+                else:
+                    cd = self.object_store.get(semantic_id.key[0].value)
                 if cd is not None:
                     self._fill_definition_from_data_spec(definition, cd.embedded_data_specifications)
                     if len(definition.name) == 0:
