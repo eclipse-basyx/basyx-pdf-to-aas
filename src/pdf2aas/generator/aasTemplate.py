@@ -19,6 +19,7 @@ class AASTemplate(Generator):
         self,
         aasx_path: str,
     ) -> None:
+        self._properties: dict[str, tuple[Property, model.Property | model.Range | model.MultiLanguageProperty]] = {}
         self._aasx_path = aasx_path
         self.reset()
 
@@ -40,53 +41,23 @@ class AASTemplate(Generator):
         except (ValueError, OSError) as e:
             logger.error(f"Couldn't load aasx template from '{self.aasx_path}':{e}")
         self.submodels = [submodel for submodel in self.object_store if isinstance(submodel, model.Submodel)]
-
-    def _walk_properties(self):
-        for submodel in self.submodels:
-            for element in walk_submodel(submodel):
-                if isinstance(element, (model.Property, model.Range, model.MultiLanguageProperty)):
-                    yield element
-
-    def _search_property_by_semantic_id(self, id_):
-        if id_ is None:
-            return None
-        for property_ in self._walk_properties():
-            if property_.semantic_id is None:
-                continue
-            for key in property_.semantic_id.key:
-                if key.value == id_:
-                    return property_
-        return None
-    
-    def _search_property_by_id_short(self, name):
-        if name is None or len(name.strip()) == 0:
-            return None
-        # TODO add option for exact matches only?
-        name = re.sub(anti_alphanumeric_regex,'', name.lower())
-        for property_ in self._walk_properties():
-            if re.sub(anti_alphanumeric_regex,'', property_.id_short.lower()) == name:
-                return property_
-        return None
-
-    def _search_property(self, property_: Property) -> model.Property | model.Range | model.MultiLanguageProperty | None:
-        search_result = self._search_property_by_semantic_id(property_.definition_id)
-        if search_result is None:
-            search_result = self._search_property_by_id_short(property_.definition_name)
-        if search_result is None:
-            search_result = self._search_property_by_id_short(property_.label)
-        return search_result
+        self._properties = self._search_properties()
 
     def add_properties(self, properties: list[Property]):
         """
-        Search the property by semantic id or id_short to update its value.
+        Search the property by its `id` to update the aas property value.
         
         Instead of adding the property, only its value is updated, as the AAS 
         Template defines the properties and their place in the AAS hierarchy.
+        The property id resembles the submodel id plus the id_short hierarchy.
         """
         for property_ in properties:
-            aas_property = self._search_property(property_)
+            if property_.id is None:
+                continue
+            old_property, aas_property = self._properties.get(property_.id, (None, None))
             if aas_property is None:
                 continue
+            old_property.value = property_.value
             if isinstance(aas_property, model.Property):
                 value = cast_property(property_.value, property_.definition)
                 aas_property.value_type = type(value)
@@ -98,6 +69,15 @@ class AASTemplate(Generator):
                 aas_property.value_type = type_
                 aas_property.min = min_
                 aas_property.max = max_
+
+    def get_properties(self) -> list[Property]:
+        return [p for (p, _) in self._properties.values()]
+    
+    def _walk_properties(self):
+        for submodel in self.submodels:
+            for element in walk_submodel(submodel):
+                if isinstance(element, (model.Property, model.Range, model.MultiLanguageProperty)):
+                    yield element
 
     @staticmethod
     def _get_multilang_string(string_dict: dict[str,str], language: str) -> tuple[str | None, str]:
@@ -152,10 +132,29 @@ class AASTemplate(Generator):
                         str(semantic_id), e.value)
         return None
 
-    def get_properties(self) -> list[Property]:
-        properties = []
+    @staticmethod
+    def _create_id_from_path(item: model.Referable):
+        parent_path = []
+        if item.id_short is not None:
+            while item is not None:
+                if isinstance(item, model.Identifiable):
+                    parent_path.append(item.id)
+                    break
+                elif isinstance(item, model.Referable):
+                    if isinstance(item.parent, model.SubmodelElementList):
+                        parent_path.append(f"{item.parent.id_short}[{item.parent.value.index(item)}]")
+                        item = item.parent
+                    else:
+                        parent_path.append(item.id_short)
+                    item = item.parent
+        return "/".join(reversed(parent_path))
+
+    def _search_properties(self):
+        properties = {}
         for aas_property in self._walk_properties():
-            property_ = Property()
+            property_ = Property(
+                id=self._create_id_from_path(aas_property),
+            )
             
             property_.label, property_.language = self._get_multilang_string(
                 aas_property.display_name, property_.language)
@@ -194,7 +193,7 @@ class AASTemplate(Generator):
                         else:
                             definition.name = {'en': cd.id_short}
             property_.definition = definition
-            properties.append(property_)
+            properties[property_.id] = (property_, aas_property)
         return properties
 
     def dumps(self):

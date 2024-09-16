@@ -179,12 +179,24 @@ class TestAASSubmodelTechnicalData:
         assert submodel == self.g.submodel
 
 class TestAASTemplate:
+    def setup_method(self) -> None:
+        self.g = AASTemplate('tests/assets/dummy-result-aas-template.aasx')
+
     @staticmethod
     def create_assets():
         td_submodel = AASSubmodelTechnicalData('id1')
-        td_submodel.save_as_aasx('tests/assets/dummy-result-aas-template-empty.aasx')
         td_submodel.add_properties(test_property_list2)
         td_submodel.save_as_aasx('tests/assets/dummy-result-aas-template.aasx')
+
+    @pytest.mark.parametrize("property_", test_property_list2)
+    def test_load_property_values(self, property_:Property):
+        old_property, aas_property = self.g._properties.get('id1/TechnicalProperties/' + property_.label)
+        if property_.definition.type == "range":
+            assert aas_property.min == property_.value[0]
+            assert aas_property.max == property_.value[1]
+        else:
+            assert aas_property.value == property_.value
+        assert old_property.value == property_.value
 
     @pytest.mark.parametrize("property_,new_value", [
         (example_property_numeric, 42),
@@ -192,30 +204,22 @@ class TestAASTemplate:
         (example_property_range, [42,43]),
     ])
     def test_add_properties(self, property_:Property, new_value):
-        g = AASTemplate('tests/assets/dummy-result-aas-template.aasx')
-        aas_property = g._search_property(property_)
-        assert aas_property is not None
-        if property_.definition.type == "range":
-            assert aas_property.min == property_.value[0]
-            assert aas_property.max == property_.value[1]
+        property_copy = deepcopy(property_)
+        property_copy.value = new_value
+        property_copy.id = 'id1/TechnicalProperties/' + property_.label
+        self.g.add_properties([property_copy])
+        updated_property, updated_aas_property = self.g._properties.get(property_copy.id)
+        if property_copy.definition.type == "range":
+            assert updated_aas_property.min == new_value[0]
+            assert updated_aas_property.max == new_value[1]
         else:
-            assert aas_property.value == property_.value
+            assert updated_aas_property.value == new_value
+        assert updated_property.value == new_value
 
-        property_ = deepcopy(property_)
-        property_.value = new_value
-        g.add_properties([property_])
-        aas_property = g._search_property(property_)
-        assert aas_property is not None
-        if property_.definition.type == "range":
-            assert aas_property.min == new_value[0]
-            assert aas_property.max == new_value[1]
-        else:
-            assert aas_property.value == new_value
 
     @pytest.mark.parametrize("property_", test_property_list2)
     def test_get_properties(self, property_:Property):
-        g = AASTemplate('tests/assets/dummy-result-aas-template.aasx')
-        properties = g.get_properties()
+        properties = self.g.get_properties()
         assert len(properties) == 9
         
         property_result = next((p for p in properties if p.label == property_.label), None)
@@ -233,4 +237,4 @@ class TestAASTemplate:
         assert property_result.definition.unit == property_.definition.unit
         assert property_result.definition.definition == property_.definition.definition
         #The definition.values might differ
-        assert property_result.definition.values_list == property_.definition.values_list
+        assert sorted(property_result.definition.values_list) == sorted(property_.definition.values_list)
