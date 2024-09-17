@@ -120,12 +120,13 @@ class CustomLLMClientHTTP(CustomLLMClient):
             max_tokens=max_tokens,
             response_format=json.dumps(response_format)
         )
-        logger.debug(f"Load formated request payload: {request_payload}")
         try:
-            request_payload = json.loads(request_payload)
+            # Normalize payload: delete, escape \n, ...
+            request_payload = json.dumps(json.loads(request_payload))
         except json.JSONDecodeError as e:
-            logger.error(f"Request payload is not JSON deserializeable: {e}")
+            logger.error(f"Request payload is not JSON deserializeable: {e}.\n{request_payload}")
             return None, None
+        logger.debug(f"Formated and normalized request payload: {request_payload}")
         
         headers = deepcopy(self.headers)
         if self.api_key:
@@ -133,7 +134,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
         
         for attempt in range(self.retries+1):
             try:
-                response = requests.post(self.endpoint, headers=headers, json=json.dumps(request_payload))
+                response = requests.post(self.endpoint, headers=headers, data=request_payload)
                 response.raise_for_status()
                 result = response.json()
                 break
