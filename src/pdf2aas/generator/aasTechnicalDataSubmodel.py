@@ -161,7 +161,7 @@ class AASSubmodelTechnicalData(Generator):
                 # data_spec.level_types = model.IEC61360LevelType.MAX
             case "string": data_spec.data_type = model.DataTypeIEC61360.STRING
         if len(defintion.definition) > 0:
-            data_spec.definition = model.DefinitionTypeIEC61360({l:v[:1024] for l, v in defintion.definition.items()})
+            data_spec.definition = model.DefinitionTypeIEC61360({l:v[:1023] for l, v in defintion.definition.items()})
         if defintion.unit is not None and len(defintion.unit) > 0:
             data_spec.unit = defintion.unit
         if defintion.values:
@@ -214,7 +214,7 @@ class AASSubmodelTechnicalData(Generator):
                 cd.id_short = re.sub(anti_alphanumeric_regex, '_', name)
                 cd.display_name = model.MultiLanguageNameType({l:n[:64] for l,n in property_defintion.name.items()})
             if property_defintion.definition is not None and len(property_defintion.definition) > 0:
-                cd.description = model.MultiLanguageTextType({l:n[:1024] for l,n in property_defintion.definition.items()})
+                cd.description = model.MultiLanguageTextType({l:n[:1023] for l,n in property_defintion.definition.items()})
             self._add_embedded_data_spec(cd, property_defintion)
         elif value:
             cd.id_short = re.sub(anti_alphanumeric_regex, '_', value)
