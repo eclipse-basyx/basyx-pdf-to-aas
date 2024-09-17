@@ -133,6 +133,29 @@ class TestAASSubmodelTechnicalData:
             assert key in value
             assert smc_property.value == value[key]
     
+    def test_add_same_id_short(self):
+        self.g.add_properties([
+            Property('id1'),
+        ])
+        container = self.g.technical_properties.value
+        assert "id2" == self.g._generate_next_free_id_short(container, "id1")
+
+    @pytest.mark.parametrize("existing_id,new_id,expected_id", [
+        ('id', 'id1', 'id1'),
+        ('id', 'id', 'id_1'),
+        ('id_42', 'id_42', 'id_43'),
+        ('a'*128, 'a'*128, 'a'*126+'_1'),
+        ('a'*127, 'a'*127, 'a'*126+'_1'),
+        ('a'*127 +'1', 'a'*127+'1', 'a'*127+'2'),
+        ('a'*127 +'9', 'a'*127+'9', 'a'*126+'10'),
+    ])
+    def test_add_same_id_short(self, existing_id, new_id, expected_id):
+        self.g.add_properties([Property(existing_id)])
+        next_id = self.g._generate_next_free_id_short(
+            self.g.technical_properties.value, new_id)
+        assert next_id == expected_id
+        assert len(new_id) < 129
+    
     @pytest.mark.parametrize("id,label", [
         ("0173-1#02-AAO677#002", None,),
         ("0173-1#02-AAO677#003", None,),

@@ -237,8 +237,8 @@ class AASSubmodelTechnicalData(Generator):
     def _create_id_short(proposal:str | None = None):
         id_short = re.sub(anti_alphanumeric_regex, '_', proposal) if proposal is not None else ''
         if len(id_short) == 0:
-            id_short = "ID_" + str(uuid.uuid4())
-        elif id_short[0].isdigit():
+            id_short = "ID_" + str(uuid.uuid4()).replace('-', '_')
+        elif not id_short[0].isalpha():
             id_short = "ID_" + id_short
         return id_short[:128]
 
@@ -366,6 +366,29 @@ class AASSubmodelTechnicalData(Generator):
             general_info.value = str(property_.value)
         return True
 
+    @staticmethod
+    def _generate_next_free_id_short(container: model.NamespaceSet, id_short):
+        while(container.contains_id('id_short', id_short)):
+            i = len(id_short) - 1
+            while i >= 0 and id_short[i].isdigit():
+                i -= 1
+
+            if i == len(id_short) - 1:
+                next_id_short = id_short + '_1'
+            else:
+                prefix = id_short[:i + 1]
+                num = int(id_short[i + 1:]) + 1
+                next_id_short = prefix + str(num)
+
+            if len(next_id_short) > 128:
+                if i == len(id_short) - 1:
+                    next_id_short = id_short[:126] + '_1'
+                else:
+                    prefix = id_short[:128 - len(str(num))]
+                    next_id_short = prefix + str(num)
+            id_short = next_id_short
+        return id_short
+
     def add_properties(self, properties: list[Property]):
         super().add_properties(properties)
         for property_ in properties:
@@ -375,9 +398,10 @@ class AASSubmodelTechnicalData(Generator):
             aas_property = self._create_aas_property(property_)
             if aas_property is None:
                 continue
-
-            if self.technical_properties.value.contains_id('id_short', aas_property.id_short):
-                aas_property.id_short = self._create_id_short()
+            
+            aas_property.id_short = self._generate_next_free_id_short(
+                self.technical_properties.value, aas_property.id_short)
+            
             try:
                 self.technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
