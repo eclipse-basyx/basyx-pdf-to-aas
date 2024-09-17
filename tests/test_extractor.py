@@ -112,16 +112,15 @@ class TestCustomLLMClientHttp():
             mock_post.assert_called_once_with(
                 self.endpoint,
                 headers=self.default_headers,
-                json=self.default_payload)
+                data=self.default_payload,
+                verify=None,
+            )
             assert result_content == self.mock_result
             assert result == self.mock_result
     
     def test_request_template(self):
         client=CustomLLMClientHTTP(self.endpoint)
-        client.request_template = \
-"""
-{{"name": "{model}", "texts": [{message_system}, {message_user}], "t": {temperature} }}
-"""
+        client.request_template = """{{"name": "{model}", "texts": [{message_system}, {message_user}], "t": {temperature} }}"""
         expected_payload = json.dumps({
             "name": self.model_identifier,
             "texts": [self.messages[0]['content'], self.messages[1]['content']],
@@ -139,8 +138,8 @@ class TestCustomLLMClientHttp():
 
             mock_post.assert_called_once()
             called_args, called_kwargs = mock_post.call_args
-            assert "json" in called_kwargs
-            assert called_kwargs['json'] == expected_payload
+            assert "data" in called_kwargs
+            assert called_kwargs['data'] == expected_payload
 
     def test_result_path(self):
         client=CustomLLMClientHTTP(self.endpoint)

@@ -260,7 +260,8 @@ def change_client(
             endpoint=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL']),
             request_template=request_template,
             result_path=result_path,
-            headers=headers_json
+            headers=headers_json,
+            verify=False if "REQUESTS_VERIFY_FALSE" in os.environ else None,
         )
     return None
 

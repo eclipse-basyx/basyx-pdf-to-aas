@@ -62,6 +62,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
                  result_path: str = None,
                  headers: dict[str, str] = None,
                  retries: int  = 0,
+                 verify: bool | None = None,
     ) -> None:
         """
         A custom LLM client that uses http requests, which can be customized via string templates
@@ -74,6 +75,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
         - result_path (str, optional): A simple path for extracting the result from the response after parsing it with json.loads, e.g. "choices[0].message.content"
         - headers (dict[str, str], optional): Overwrite headers. Default is "Content-Type": "application/json", "Accept": "application/json"
         - retries (int, optional): Number of retries, if request fails
+        - verify (bool, optional): False will skip request SSL verification. C.f. `requests.post` argument.
         """
         super().__init__()
         self.endpoint = endpoint
@@ -96,6 +98,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
             }
         self.headers = headers
         self.retries = retries
+        self.verify = verify
 
     def create_completions(self, messages: list[dict[str, str]], model: str, temperature: float, max_tokens: int, response_format: dict) -> tuple[str, str]:
         """
@@ -134,7 +137,12 @@ class CustomLLMClientHTTP(CustomLLMClient):
         
         for attempt in range(self.retries+1):
             try:
-                response = requests.post(self.endpoint, headers=headers, data=request_payload)
+                response = requests.post(
+                    self.endpoint,
+                    headers=headers,
+                    data=request_payload,
+                    verify=self.verify
+                )
                 response.raise_for_status()
                 result = response.json()
                 break
