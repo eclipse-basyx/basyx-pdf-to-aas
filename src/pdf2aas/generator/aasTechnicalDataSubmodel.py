@@ -166,20 +166,23 @@ class AASSubmodelTechnicalData(Generator):
             data_spec.unit = defintion.unit
         if defintion.values:
             data_spec.value_list = set()
-            for idx, value in enumerate(defintion.values):
-                if isinstance(value, str):
-                    value_id = str(idx)
-                elif isinstance(value, dict):
+            for value in defintion.values:
+                if isinstance(value, dict):
                     value_id = value.get("id")
                     value = value.get("value")
                 else:
+                    value_id = None
+                    value = str(value)
+                if value is None or len(value) == 0:
                     continue
+                if value_id is None:
+                    value_id = f"{defintion.id}/{value}"
                 data_spec.value_list.add(
-                    model.ValueReferencePair(value, 
+                    model.ValueReferencePair(value[:2000], 
                         model.ExternalReference(
                             (model.Key(
                                 type_= model.KeyTypes.GLOBAL_REFERENCE,
-                                value=value_id
+                                value=value_id[:2000]
                             ),)
                         )
                     )
