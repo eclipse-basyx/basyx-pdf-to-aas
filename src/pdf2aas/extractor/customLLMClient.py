@@ -38,17 +38,6 @@ class CustomLLMClient:
         """
         raise NotImplementedError()
 
-def evaluate_path(data, path):
-    try:
-        keys = path.replace('[', '.').replace(']', '').split('.')
-        for key in keys:
-            if isinstance(data, list):
-                key = int(key)
-            data = data[key]
-    except (KeyError, ValueError, TypeError): 
-        return None
-    return data
-
 class CustomLLMClientHTTP(CustomLLMClient):
     """
     Custom LLM client that communicates with an HTTP endpoint.
@@ -151,10 +140,20 @@ class CustomLLMClientHTTP(CustomLLMClient):
                 result = None
         if result is None:
             return None, None
-        
-        if self.result_path:
-            result_content = evaluate_path(result, self.result_path)
-        else:
-            result_content = result
-
-        return result_content, result
+        return self.evaluate_result_path(result), result
+    
+    def evaluate_result_path(self, raw_result: dict | list | None) -> str | None:
+        """
+        Gets the answer as string from the raw_result using the `result_path`
+        """
+        if self.result_path is None or raw_result is None:
+            return raw_result
+        try:
+            keys = self.result_path.replace('[', '.').replace(']', '').split('.')
+            for key in keys:
+                if isinstance(raw_result, list):
+                    key = int(key)
+                raw_result = raw_result[key]
+        except (KeyError, ValueError, TypeError): 
+            return None
+        return str(raw_result)

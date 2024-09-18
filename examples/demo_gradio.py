@@ -395,6 +395,26 @@ def extract(
     gr.Info('Extraction completed.', duration=3)
     yield properties, properties_to_dataframe(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
 
+def create_chat_history(raw_prompts, raw_results, client):
+    if raw_prompts is None or len(raw_prompts) == 0:
+        return []
+    history = []
+    for idx in range(len(raw_prompts)):
+        history.extend(raw_prompts[idx])
+        if idx < len(raw_results):
+            if isinstance(client, CustomLLMClientHTTP):
+                content = client.evaluate_result_path(raw_results[idx])
+                if content is None:
+                    continue
+                answer = {'role': 'assistant', 'content': content}
+            else:
+                try:
+                    answer = raw_results[idx]['choices'][0]['message']
+                except KeyError:
+                    continue
+            history.append(answer)
+    return history
+
 def create_download_results(properties: list[Property], property_df: pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, class_id):
     if properties is None or len(properties) == 0:
         return None
@@ -545,6 +565,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         )
 
         with gr.Tab("Raw Results"):
+            chat_history = gr.Chatbot(
+                label="Chat History",
+                type="messages",
+            )
             with gr.Row():
                 raw_prompts = gr.JSON(
                     label="Prompts",
@@ -724,6 +748,11 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             fn=create_download_results,
             inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class],
             outputs=[results]
+        )
+        raw_prompts.change(
+            fn=create_chat_history,
+            inputs=[raw_prompts, raw_results, client],
+            outputs=chat_history,
         )
 
         settings_list = [
