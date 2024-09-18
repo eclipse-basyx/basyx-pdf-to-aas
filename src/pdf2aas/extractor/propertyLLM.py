@@ -22,7 +22,7 @@ class PropertyLLM(Extractor):
     """
     system_prompt_template = \
 """You act as an text API to extract technical properties from a given datasheet.
-The datasheet will be surrounded by triple hashtags (###).
+The datasheet will be surrounded by triple backticks (```).
 
 Answer only in valid JSON format.
 Answer with a list of objects, containing the keys 'property', 'value', 'unit', 'reference':
@@ -40,9 +40,9 @@ Example result:
     user_prompt_template = \
 """Extract all technical properties from the following datasheet text.
 
-###
+```
 {datasheet}
-###"""
+```"""
 
     def __init__(
         self,
@@ -68,7 +68,7 @@ Example result:
 
     def extract(
         self,
-        datasheet: str,
+        datasheet: list[str] | str,
         property_definition: PropertyDefinition | list[PropertyDefinition],
         raw_prompts: list[str] | None = None,
         raw_results: list[str] | None = None,
@@ -77,6 +77,7 @@ Example result:
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
+            datasheet = "\n".join(datasheet)
         else:
             logger.debug(f"Processing datasheet with {len(datasheet)} chars.")
 

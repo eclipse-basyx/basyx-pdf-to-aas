@@ -59,7 +59,7 @@ Represent ranges as json list of two values.
         if hint:
             prompt+= "\n" + hint
         
-        prompt+= f"\nThe following text in triple # is the datasheet of the technical device. It was converted from pdf.\n###\n{datasheet}\n###"
+        prompt+= f"\nThe following text enclosed in triple backticks (```) is the datasheet of the technical device. It was converted from pdf.\n```\n{datasheet}\n```"
         return prompt
 
     def create_property_prompt(self, property_: PropertyDefinition, language: str = "en") -> str:
