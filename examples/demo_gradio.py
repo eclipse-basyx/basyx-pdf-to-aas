@@ -303,14 +303,28 @@ def properties_to_dataframe(properties: list[Property]) -> pd.DataFrame:
         ], columns=['ID', 'Name', 'Value', 'Unit', 'Reference']
     )
 
-def update_datasheet_preview(datasheet):
-    if datasheet is not None and datasheet.lower().endswith(".pdf"):
-        return gr.update(visible=True, value=datasheet)
+def change_datasheet(datasheet):
+    pdf_preview = gr.update(visible=False, value=None)
+    if datasheet is None:
+        return pdf_preview, None
+    
+    if datasheet.lower().endswith(".pdf"):
+        preprocessor = PDFium()
+        pdf_preview = gr.update(visible=True, value=datasheet)
     else:
-        return gr.update(visible=False, value=None)
+        preprocessor = Text()
+    preprocessed_datasheet = preprocessor.convert(datasheet)
+    if preprocessed_datasheet is None:
+        gr.Warning("Error while preprocessing datasheet.")
+        return pdf_preview, None
+    datasheet_txt = {
+        'text': "\n".join(preprocessed_datasheet) if isinstance(preprocessed_datasheet, list) else preprocessed_datasheet,
+        'entities': []
+    }
+    return pdf_preview, datasheet_txt
 
 def extract(
-        datasheet,
+        datasheet_txt,
         class_id,
         dictionary,
         client,
@@ -325,21 +339,10 @@ def extract(
         max_values_length,
     ):
 
-    if datasheet is None:
-        yield None, None, None, None, None, gr.update(interactive=False)
-        return
-    if datasheet.lower().endswith(".pdf"):
-        preprocessor = PDFium()
-    else:
-        preprocessor = Text()
-    preprocessed_datasheet = preprocessor.convert(datasheet)
-    if preprocessed_datasheet is None:
-        raise gr.Error("Error while preprocessing datasheet.")
-    datasheet_txt = {
-        'text': "\n".join(preprocessed_datasheet) if isinstance(preprocessed_datasheet, list) else preprocessed_datasheet,
-        'entities': []
-    }
-    yield None, None, datasheet_txt, None, None, gr.update()
+    preprocessed_datasheet = datasheet_txt.get('text')
+    if preprocessed_datasheet is None or len (preprocessed_datasheet) == 0:
+        gr.Warning("Preprocessed datasheet is none or empty.")
+        return None, None, datasheet_txt, None, None, gr.update(interactive=False)
 
     if dictionary is None:
         extractor = PropertyLLM(
@@ -739,13 +742,13 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
 
         datasheet_upload.change(
-            fn=update_datasheet_preview,
+            fn=change_datasheet,
             inputs=datasheet_upload,
-            outputs=datasheet_preview
+            outputs=[datasheet_preview, datasheet_text_highlighted]
         )
 
         gr.on(
-            triggers=[datasheet_upload.change, property_defintions.change],
+            triggers=[datasheet_text_highlighted.change, property_defintions.change],
             fn=check_extract_ready,
             inputs=[datasheet_upload, property_defintions, dictionary],
             outputs=[extract_button]
