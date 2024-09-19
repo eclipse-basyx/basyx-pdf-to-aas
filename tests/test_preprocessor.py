@@ -1,6 +1,6 @@
 import sys
 import pytest
-from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel, PDFium
+from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel, PDFium, Text
 
 @pytest.mark.skipif(sys.platform == "win32", reason="pdf2htmlEx not easily supported for windows")
 class TestPDF2HTMLEX:
@@ -40,3 +40,14 @@ class TestPDFium:
     def test_convert(self):
         text_converted = self.preprocessor.convert(f"{self.datasheet_prefix}.pdf")
         assert "\n".join(text_converted) == self.dummy_datasheet_txt()
+
+class TestText:
+    preprocessor = Text()
+
+    def dummy_datasheet_txt(self):
+        with open("tests/assets/dummy-test-datasheet.txt") as txt:
+            return txt.read()
+    
+    def test_convert(self):
+        text_converted = self.preprocessor.convert("tests/assets/dummy-test-datasheet.txt")
+        assert text_converted == self.dummy_datasheet_txt()
