@@ -12,7 +12,7 @@ from openai import OpenAI, AzureOpenAI
 import pandas as pd
 
 from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM, PropertyDefinition
-from pdf2aas.preprocessor import PDFium
+from pdf2aas.preprocessor import PDFium, Text
 from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP, Property
 from pdf2aas.generator import AASSubmodelTechnicalData, AASTemplate
 
@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-def check_extract_ready(pdf_upload, definitions, dictionary):
+def check_extract_ready(datasheet, definitions, dictionary):
     return gr.Button(interactive=
-        pdf_upload is not None
+        datasheet is not None
         and (
             dictionary is None
             or (
@@ -303,8 +303,14 @@ def properties_to_dataframe(properties: list[Property]) -> pd.DataFrame:
         ], columns=['ID', 'Name', 'Value', 'Unit', 'Reference']
     )
 
+def update_datasheet_preview(datasheet):
+    if datasheet is not None and datasheet.lower().endswith(".pdf"):
+        return gr.update(visible=True, value=datasheet)
+    else:
+        return gr.update(visible=False, value=None)
+
 def extract(
-        pdf_upload,
+        datasheet,
         class_id,
         dictionary,
         client,
@@ -319,14 +325,20 @@ def extract(
         max_values_length,
     ):
 
-    if pdf_upload is None:
+    if datasheet is None:
         yield None, None, None, None, None, gr.update(interactive=False)
         return
-    preprocessor = PDFium()
-    preprocessed_datasheet = preprocessor.convert(pdf_upload)
+    if datasheet.lower().endswith(".pdf"):
+        preprocessor = PDFium()
+    else:
+        preprocessor = Text()
+    preprocessed_datasheet = preprocessor.convert(datasheet)
     if preprocessed_datasheet is None:
         raise gr.Error("Error while preprocessing datasheet.")
-    datasheet_txt = {'text': "\n".join(preprocessed_datasheet), 'entities': []}
+    datasheet_txt = {
+        'text': "\n".join(preprocessed_datasheet) if isinstance(preprocessed_datasheet, list) else preprocessed_datasheet,
+        'entities': []
+    }
     yield None, None, datasheet_txt, None, None, gr.update()
 
     if dictionary is None:
@@ -526,11 +538,11 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         with gr.Tab("Extract"):
             with gr.Column():
                 with gr.Row():
-                    pdf_upload = gr.File(
-                        label="Upload PDF Datasheet",
+                    datasheet_upload = gr.File(
+                        label="Upload Datasheet",
                         scale=2,
                         file_count='single',
-                        file_types=['.pdf'],
+                        file_types=['.pdf', 'text'],
                     )
                     extract_button = gr.Button(
                         "Extract Technical Data",
@@ -726,21 +738,21 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers]
         )
 
-        pdf_upload.change(
-            fn=lambda pdf: pdf,
-            inputs=pdf_upload,
+        datasheet_upload.change(
+            fn=update_datasheet_preview,
+            inputs=datasheet_upload,
             outputs=datasheet_preview
         )
 
         gr.on(
-            triggers=[pdf_upload.change, property_defintions.change],
+            triggers=[datasheet_upload.change, property_defintions.change],
             fn=check_extract_ready,
-            inputs=[pdf_upload, property_defintions, dictionary],
+            inputs=[datasheet_upload, property_defintions, dictionary],
             outputs=[extract_button]
         )
         extraction_started = extract_button.click(
             fn=extract,
-            inputs=[pdf_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
+            inputs=[datasheet_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
             outputs=[extracted_properties, extracted_properties_df, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
