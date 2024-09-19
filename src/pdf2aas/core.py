@@ -1,7 +1,10 @@
+import logging
 from .preprocessor import Preprocessor, PDFium
 from .dictionary import Dictionary, ECLASS
 from .extractor import Extractor, PropertyLLMSearch
 from .generator import Generator, AASSubmodelTechnicalData
+
+logger = logging.getLogger(__name__)
 
 class PDF2AAS:
     def __init__(
@@ -20,6 +23,7 @@ class PDF2AAS:
 
     def convert(self, pdf_filepath: str, classification: str, output_filepath: str = None):
         preprocessed_datasheet = self.preprocessor.convert(pdf_filepath)
+        
         property_definitions = self.dictionary.get_class_properties(classification)
               
         if self.batch_size <= 0:
@@ -36,3 +40,4 @@ class PDF2AAS:
             self.generator.add_classification(self.dictionary, classification)
         self.generator.add_properties(properties)
         self.generator.dump(filepath=output_filepath)
+        logger.info(f"Generated result in: {output_filepath}")

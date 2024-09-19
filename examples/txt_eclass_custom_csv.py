@@ -1,12 +1,11 @@
-import os
 import logging
 import json
 
-
 from dotenv import load_dotenv
 
-from pdf2aas.dictionary import ECLASS
-from pdf2aas.extractor import PropertyLLMSearch,CustomLLMClientHTTP
+from pdf2aas import PDF2AAS
+from pdf2aas.preprocessor import Text
+from pdf2aas.extractor import PropertyLLMSearch, CustomLLMClientHTTP
 from pdf2aas.generator import CSV
 
 logger = logging.getLogger(__name__)
@@ -15,54 +14,34 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 def main(datasheet,class_id,output):
-    datasheet_text=None
-
-    with open(datasheet) as file:
-        datasheet_text=file.read()
-        logger.info(f"Loaded datasheet from: {datasheet}") 
-
-    dictionary = ECLASS()
-    dictionary.load_from_file()
-    property_definitions = dictionary.get_class_properties(class_id)
-    dictionary.save_to_file()
-
     #Format according to demo_gradio settings file expected
     settings=json.load(open('settings.json'))
     settings=settings["settings"]
-    logger.info(f"Loaded settings")   
-
+    logger.info(f"Loaded settings")
+    
     client=CustomLLMClientHTTP(
-            api_key=settings['API Key'],
-            endpoint=settings['Endpoint'],
-            request_template=settings["Custom LLM Request Template"],
-            result_path=settings["Custom LLM Result Path"],
-            headers=json.loads(settings["Custom LLM Headers"]),
-            verify=False,#TODO Careful verify false by default
-            )
+        api_key=settings['API Key'],
+        endpoint=settings['Endpoint'],
+        request_template=settings["Custom LLM Request Template"],
+        result_path=settings["Custom LLM Result Path"],
+        headers=json.loads(settings["Custom LLM Headers"]),
+        verify=False,#TODO Careful verify false by default
+    )
     
     extractor = PropertyLLMSearch(
         settings['Model'], 
         client=client, 
         max_tokens=settings['Max. Tokens'],
         property_keys_in_prompt=['unit','datatype'],
-        )
-    
-    batch_size=settings['Batch Size']
+    )
 
-    if batch_size <= 0:
-        properties = extractor.extract(datasheet_text, property_definitions)
-    elif batch_size == 1:
-        properties = [extractor.extract(datasheet_text, d) for d in property_definitions]
-    else:
-        properties = [] 
-        for i in range(0, len(property_definitions), batch_size):
-            properties.extend(extractor.extract(datasheet_text, property_definitions[i:i + batch_size]))
-                        
-    
-    generator = CSV()
-    generator.add_properties(properties)
-    generator.dump(output)
-    logger.info(f"Generated csv written to: {output}")   
+    pdf_to_aas = PDF2AAS(
+        preprocessor=Text(),
+        extractor=extractor,
+        generator=CSV(),
+        batch_size=settings['Batch Size']
+    )
+    pdf_to_aas.dictionary.save_to_file()
 
   
 if __name__ == '__main__':
