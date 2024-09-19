@@ -27,8 +27,9 @@ class PDF2AAS:
         elif self.batch_size == 1:
             properties = [self.extractor.extract(preprocessed_datasheet, d) for d in property_definitions]
         else:
-            properties = [self.extractor.extract(preprocessed_datasheet, property_definitions[i:i + self.batch_size])
-                          for i in range(0, len(property_definitions), self.batch_size)]
+            properties = [] 
+            for i in range(0, len(property_definitions), self.batch_size):
+                properties.extend(self.extractor.extract(preprocessed_datasheet, property_definitions[i:i + self.batch_size]))
         
         self.generator.reset()
         if isinstance(self.generator, AASSubmodelTechnicalData):
