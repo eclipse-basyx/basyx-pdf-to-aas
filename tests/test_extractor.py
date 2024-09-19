@@ -155,7 +155,7 @@ class TestCustomLLMClientHttp():
             )
 
             mock_post.assert_called_once()
-            assert result_content == self.mock_result['result']['value']
+            assert result_content == str(self.mock_result['result']['value'])
             assert result == self.mock_result
     
     def test_api_key_is_added_as_bearer(self):
