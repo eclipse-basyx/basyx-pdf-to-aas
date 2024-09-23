@@ -345,30 +345,17 @@ def extract(
         gr.Warning("Preprocessed datasheet is none or empty.")
         return None, None, None, None, gr.update(interactive=False)
 
-    if dictionary is None:
-        extractor = PropertyLLM(
-            model_identifier=model,
-            client=client,
-        )
-    else:
-        extractor = PropertyLLMSearch(
-            model_identifier=model,
-            client=client,
-            property_keys_in_prompt=use_in_prompt,
-        )
-    extractor.temperature = temperature
-    extractor.max_tokens = max_tokens if max_tokens > 0 else None
-    extractor.max_values_length = max_values_length
-    extractor.max_definition_chars = max_definition_chars
-
-    definitions = []
     if dictionary is not None:
         definitions = dictionary.get_class_properties(class_id)
-
+    else:
+        definitions = []
     if extract_general_information:
         for property_ in AASSubmodelTechnicalData().general_information.value:
-            if isinstance(dictionary, ECLASS) \
-                    and any(d.id[10:16] == property_.semantic_id.key[0].value[10:16] for d in definitions):
+            if any(
+                ECLASS.check_property_irdi(d.id)
+                and d.id[10:16] == property_.semantic_id.key[0].value[10:16]
+                for d in definitions
+            ):
                 continue
             definitions.append(
                 PropertyDefinition(
@@ -378,6 +365,25 @@ def extract(
                     #TODO add description to submodel and get here (or from concept description)
                 )
             )
+
+    if len(definitions) == 0:
+        extractor = PropertyLLM(
+            model_identifier=model,
+            client=client,
+        )
+        gr.Info("Extracting all properties without definitions to search for.", duration=3)
+    else:
+        extractor = PropertyLLMSearch(
+            model_identifier=model,
+            client=client,
+            property_keys_in_prompt=use_in_prompt,
+        )
+        gr.Info(f"Searching for {len(definitions)} properties.", duration=3)
+        
+    extractor.temperature = temperature
+    extractor.max_tokens = max_tokens if max_tokens > 0 else None
+    extractor.max_values_length = max_values_length
+    extractor.max_definition_chars = max_definition_chars
 
     raw_results=[]
     raw_prompts=[]
