@@ -58,15 +58,15 @@ class AASTemplate(Generator):
         The property id resembles the submodel id plus the id_short hierarchy.
         """
         for property_ in properties:
-            if property_.id is None:
-                continue
-            old_property, aas_property = self._properties.get(property_.id, (None, None))
-            if aas_property is None:
+            old_property, aas_property = self._properties.get(property_.definition_id, (None, None))
+            if aas_property is None or old_property is None:
+                old_property, aas_property = self._properties.get(property_.id, (None, None))
+            if aas_property is None or old_property is None:
                 continue
             old_property.value = property_.value
             if isinstance(aas_property, model.Property):
                 value = cast_property(property_.value, property_.definition)
-                aas_property.value_type = type(value)
+                aas_property.value_type = type(value) if value is not None else model.datatypes.String
                 aas_property.value = value
             elif isinstance(aas_property, model.MultiLanguageProperty):
                 aas_property.value = model.MultiLanguageTextType({property_.language: str(property_.value)})
@@ -87,6 +87,7 @@ class AASTemplate(Generator):
         definitions = []
         for property_, _ in self._properties.values():
             definition = copy.copy(property_.definition)
+            definition.id = property_.id
             if property_.definition_name is None:
                 if property_.label is None or len(property_.label) == 0:
                     definition.name = {}
