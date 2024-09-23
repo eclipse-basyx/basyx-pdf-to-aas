@@ -114,7 +114,7 @@ class ETIM(Dictionary):
             keywords=etim_class['synonyms'],
         )
         for feature in etim_class['features']:
-            feature_id = f'{feature['code']}/{etim_class['code']}/{self.release}'
+            feature_id = f'{self.release}/{etim_class['code']}/{feature['code']}'
             property_ = PropertyDefinition(
                 id=feature_id,
                 name={'en': feature['description']},

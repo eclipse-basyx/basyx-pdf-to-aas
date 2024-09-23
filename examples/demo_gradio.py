@@ -202,7 +202,7 @@ f"""
             return property_details_default_str
     return \
 f"""## {definition.name.get('en')}
-* ID: [{definition.id.split('/')[0] if isinstance(dictionary, ETIM) else definition.id}]({dictionary.get_property_url(definition.id)})
+* ID: [{definition.id}]({dictionary.get_property_url(definition.id)})
 * Type: {definition.type}
 * Definition: {definition.definition.get('en', next(iter(definition.definition.values()), ''))}
 * Unit: {definition.unit}
