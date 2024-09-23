@@ -1,6 +1,6 @@
 import logging
 import json
-import re
+import copy
 
 from basyx.aas import model
 from basyx.aas.util.traversal import walk_submodel
@@ -15,6 +15,12 @@ from ..extractor import Property
 logger = logging.getLogger(__name__)
 
 class AASTemplate(Generator):
+    """
+    Generator, that loads an AAS as template to read and update its properties.
+
+    Attributes:
+        aasx_path (str): The file path to the AASX package which is used as template.
+    """
     def __init__(
         self,
         aasx_path: str,
@@ -73,9 +79,26 @@ class AASTemplate(Generator):
     def get_properties(self) -> list[Property]:
         return [p for (p, _) in self._properties.values()]
     
-    def get_property(self, _id) -> Property | None:
-        property_, _ =  self._properties.get(_id, (None, None))
+    def get_property(self, id_) -> Property | None:
+        property_, _ =  self._properties.get(id_, (None, None))
         return property_
+
+    def get_property_definitions(self):
+        definitions = []
+        for property_, _ in self._properties.values():
+            definition = copy.copy(property_.definition)
+            if property_.definition_name is None:
+                if property_.label is None or len(property_.label) == 0:
+                    definition.name = {}
+                else:
+                    definition.name = {property_.language: property_.label}
+            if definition.definition is None or len(definition.definition) == 0:
+                if property_.reference is None or len(property_.reference) == 0:
+                    definition.definition = {}
+                else:
+                    definition.definition = {property_.language: property_.reference}
+            definitions.append(definition)
+        return definitions
 
     def _walk_properties(self):
         for submodel in self.submodels:
@@ -180,7 +203,7 @@ class AASTemplate(Generator):
                 type_ = get_dict_data_type_from_xsd(aas_property.value_type)
 
             definition = PropertyDefinition(
-                id=aas_property.id_short,
+                id=property_.id,
                 type=type_
             )
             self._fill_definition_from_data_spec(definition, aas_property.embedded_data_specifications)
