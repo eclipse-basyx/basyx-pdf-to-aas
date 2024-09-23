@@ -20,15 +20,12 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-def check_extract_ready(datasheet, definitions, dictionary):
+def check_extract_ready(datasheet, definitions, dictionary, aas_template):
     return gr.Button(interactive=
-        datasheet is not None
+        datasheet is not None and len(datasheet) > 0
         and (
-            dictionary is None
-            or (
-                definitions is not None and
-                len(definitions) > 1
-                )
+            (dictionary is None and aas_template is None) # Search for all properties
+            or (definitions is not None and len(definitions) > 1) # Search for definitions
         )
     )
 
@@ -287,7 +284,7 @@ def mark_extracted_references(datasheet:str | None, properties: list[Property]):
         if property_.definition is None:
             name = property_.label
         else:
-            name = f"{property_.definition_name} ({property_.definition_id})"
+            name = f"{property_.definition_name} ({property_.definition_id.split('/')[-1]})"
         entities.append({
             'entity': f"{name}: {property_.value}{unit}",
             'start': start,
@@ -295,19 +292,23 @@ def mark_extracted_references(datasheet:str | None, properties: list[Property]):
         })
     return gr.update(visible=True, value={"text": datasheet, "entities": entities})
 
-def properties_to_dataframe(properties: list[Property]) -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                'ID' : p.definition_id,
-                'Name': p.label,
-                'Value': p.value,
-                'Unit': p.unit,
-                'Reference': p.reference,
-            }
-            for p in properties
-        ], columns=['ID', 'Name', 'Value', 'Unit', 'Reference']
-    )
+def properties_to_dataframe(properties: list[Property], aas_template : AASTemplate | None = None) -> pd.DataFrame:
+    properties_dict = []
+    for property_ in properties:
+        id_ = property_.definition_id
+        if aas_template is not None and id_ is not None:
+            original_property = aas_template.get_property(id_)
+            if original_property is not None and  original_property.definition_id is not None:
+                id_ = original_property.definition_id
+
+        properties_dict.append({ 
+            'ID' : id_,
+            'Name': property_.label,
+            'Value': property_.value,
+            'Unit': property_.unit,
+            'Reference': property_.reference,
+        })
+    return pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
 
 def change_datasheet(datasheet):
     pdf_preview = gr.update(visible=False, value=None)
@@ -329,6 +330,7 @@ def extract(
         datasheet: str | None,
         class_id: str | None,
         dictionary: Dictionary | None,
+        aas_template: AASTemplate | None,
         client: OpenAI | AzureOpenAI | CustomLLMClientHTTP,
         prompt_hint: str,
         model: str,
@@ -347,9 +349,12 @@ def extract(
 
     if dictionary is not None:
         definitions = dictionary.get_class_properties(class_id)
+    elif aas_template is not None:
+        definitions = aas_template.get_property_definitions()
     else:
         definitions = []
-    if extract_general_information:
+
+    if extract_general_information and aas_template is None:
         for property_ in AASSubmodelTechnicalData().general_information.value:
             if any(
                 ECLASS.check_property_irdi(d.id)
@@ -407,9 +412,9 @@ def extract(
                     prompt_hint=prompt_hint,
                     raw_prompts=raw_prompts)
             properties.extend(extracted)
-            yield properties, properties_to_dataframe(properties), raw_prompts, raw_results, gr.update()
+            yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update()
     gr.Info('Extraction completed.', duration=3)
-    yield properties, properties_to_dataframe(properties), raw_prompts, raw_results, gr.update(interactive=False)
+    yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update(interactive=False)
 
 def create_chat_history(raw_prompts, raw_results, client):
     if raw_prompts is None or len(raw_prompts) == 0:
@@ -431,7 +436,20 @@ def create_chat_history(raw_prompts, raw_results, client):
             history.append(answer)
     return history
 
-def create_download_results(properties: list[Property], property_df: pd.DataFrame, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, class_id):
+def create_download_results(
+        properties: list[Property],
+        property_df: pd.DataFrame,
+        tempdir,
+        prompt_hint,
+        model, temperature,
+        batch_size,
+        use_in_prompt,
+        max_definition_chars,
+        max_values_length,
+        dictionary,
+        class_id,
+        aas_template: AASTemplate | None,
+):
     if properties is None or len(properties) == 0:
         return None
     
@@ -461,22 +479,26 @@ def create_download_results(properties: list[Property], property_df: pd.DataFram
         settings.append(['dictionary_release', dictionary.release if dictionary is not None else ''])
         settings.append(['dictionary_class', class_id])
     
-    submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
-    #TODO set identifier and other properties --> load from a template, that can be specified in settings?
-    submodel = AASSubmodelTechnicalData()
-    if dictionary is not None and class_id is not None:
-        submodel.add_classification(dictionary, class_id)
-    submodel.add_properties(properties)
-    submodel.dump(submodel_path)
+    if aas_template is None:
+        submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
+        submodel = AASSubmodelTechnicalData()
+        if dictionary is not None and class_id is not None:
+            submodel.add_classification(dictionary, class_id)
+        submodel.add_properties(properties)
+        submodel.dump(submodel_path)
 
-    aasx_path = os.path.join(tempdir.name, 'technical_data.aasx')
-    submodel.save_as_aasx(aasx_path)
+        aasx_path = os.path.join(tempdir.name, 'technical_data.aasx')
+        submodel.save_as_aasx(aasx_path)
 
-    submodel.remove_empty_submodel_elements()
-    aasx_path_noneEmpty = os.path.join(tempdir.name, 'technical_data_withoutEmpty.aasx')
-    submodel.save_as_aasx(aasx_path_noneEmpty)
-
-    return [excel_path, properties_path, submodel_path, aasx_path, aasx_path_noneEmpty]
+        submodel.remove_empty_submodel_elements()
+        aasx_path_noneEmpty = os.path.join(tempdir.name, 'technical_data_withoutEmpty.aasx')
+        submodel.save_as_aasx(aasx_path_noneEmpty)
+        return [excel_path, properties_path, submodel_path, aasx_path, aasx_path_noneEmpty]
+    else:
+        aas_template.add_properties(properties)
+        aasx_path = os.path.join(tempdir.name, os.path.basename(aas_template.aasx_path))
+        aas_template.save_as_aasx(aasx_path)
+        return [excel_path, properties_path, aasx_path]
 
 def init_tempdir():
     tempdir =  tempfile.TemporaryDirectory(prefix="pdf2aas_")
@@ -757,17 +779,17 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
         extraction_started = extract_button.click(
             fn=extract,
-            inputs=[datasheet_text, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
+            inputs=[datasheet_text, dictionary_class, dictionary, aas_template, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
             outputs=[extracted_properties, extracted_properties_df, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extraction_started.then(
             fn=create_download_results,
-            inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class],
+            inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class, aas_template],
             outputs=[results]
         )
         gr.on(
-            triggers=[extracted_properties.change, datasheet_text.change],
+            triggers=[extracted_properties_df.change, datasheet_text.change],
             fn=mark_extracted_references,
             inputs=[datasheet_text, extracted_properties],
             outputs=datasheet_text_highlighted,
