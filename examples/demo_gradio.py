@@ -265,15 +265,20 @@ def change_client(
         )
     return None
 
-def mark_extracted_references(datasheet, properties: list[Property]):
+def mark_extracted_references(datasheet:str | None, properties: list[Property]):
+    if datasheet is None:
+        return gr.update(visible=False, value=None)
+    if properties is None:
+        return gr.update(visible=True, value={"text": datasheet, "entities": []})
+    entities = []
     for property_ in properties:
         reference = property_.reference
         if reference is None or len(reference.strip()) == 0:
             continue
     
-        start = datasheet['text'].find(reference)
+        start = datasheet.find(reference)
         if start == -1:
-            start = datasheet['text'].replace('\n',' ').find(reference.replace('\n',' '))
+            start = datasheet.replace('\n',' ').find(reference.replace('\n',' '))
         if start == -1:
             logger.info(f"Reference not found: {reference}")
             # TODO mark red in properties dataframe
@@ -283,11 +288,12 @@ def mark_extracted_references(datasheet, properties: list[Property]):
             name = property_.label
         else:
             name = f"{property_.definition_name} ({property_.definition_id})"
-        datasheet['entities'].append({
+        entities.append({
             'entity': f"{name}: {property_.value}{unit}",
             'start': start,
             'end': start + len(reference)
         })
+    return gr.update(visible=True, value={"text": datasheet, "entities": entities})
 
 def properties_to_dataframe(properties: list[Property]) -> pd.DataFrame:
     return pd.DataFrame(
@@ -312,37 +318,32 @@ def change_datasheet(datasheet):
         preprocessor = PDFium()
         pdf_preview = gr.update(visible=True, value=datasheet)
     else:
-        preprocessor = Text()
+        preprocessor = Text(encoding="utf-8")
     preprocessed_datasheet = preprocessor.convert(datasheet)
     if preprocessed_datasheet is None:
         gr.Warning("Error while preprocessing datasheet.")
         return pdf_preview, None
-    datasheet_txt = {
-        'text': "\n".join(preprocessed_datasheet) if isinstance(preprocessed_datasheet, list) else preprocessed_datasheet,
-        'entities': []
-    }
-    return pdf_preview, datasheet_txt
+    return pdf_preview, "\n".join(preprocessed_datasheet) if isinstance(preprocessed_datasheet, list) else preprocessed_datasheet
 
 def extract(
-        datasheet_txt,
-        class_id,
-        dictionary,
-        client,
-        prompt_hint,
-        model,
-        batch_size,
-        temperature,
-        max_tokens,
-        use_in_prompt,
-        extract_general_information,
-        max_definition_chars,
-        max_values_length,
+        datasheet: str | None,
+        class_id: str | None,
+        dictionary: Dictionary | None,
+        client: OpenAI | AzureOpenAI | CustomLLMClientHTTP,
+        prompt_hint: str,
+        model: str,
+        batch_size: int,
+        temperature: float,
+        max_tokens: int,
+        use_in_prompt: list[str],
+        extract_general_information: bool,
+        max_definition_chars: int,
+        max_values_length: int,
     ):
 
-    preprocessed_datasheet = datasheet_txt.get('text')
-    if preprocessed_datasheet is None or len (preprocessed_datasheet) == 0:
+    if datasheet is None or len (datasheet) == 0:
         gr.Warning("Preprocessed datasheet is none or empty.")
-        return None, None, datasheet_txt, None, None, gr.update(interactive=False)
+        return None, None, None, None, gr.update(interactive=False)
 
     if dictionary is None:
         extractor = PropertyLLM(
@@ -382,33 +383,27 @@ def extract(
     raw_prompts=[]
     if batch_size <= 0:
         properties = extractor.extract(
-            preprocessed_datasheet,
+            datasheet,
             definitions,
             raw_prompts=raw_prompts,
             prompt_hint=prompt_hint,
             raw_results=raw_results
         )
-        if properties is not None:
-            mark_extracted_references(datasheet_txt, properties)
-        else:
-            properties = []
     else:
         properties = []
-        yield None, None, datasheet_txt, None, None, gr.update(interactive=True)
+        yield None, None, None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
             property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
-                    preprocessed_datasheet,
+                    datasheet,
                     property_definition_batch,
                     raw_results=raw_results,
                     prompt_hint=prompt_hint,
                     raw_prompts=raw_prompts)
-            if extracted is not None:
-                properties.extend(extracted)
-                mark_extracted_references(datasheet_txt, extracted)
-                yield properties, properties_to_dataframe(properties), datasheet_txt, raw_prompts, raw_results, gr.update()
+            properties.extend(extracted)
+            yield properties, properties_to_dataframe(properties), raw_prompts, raw_results, gr.update()
     gr.Info('Extraction completed.', duration=3)
-    yield properties, properties_to_dataframe(properties), datasheet_txt, raw_prompts, raw_results, gr.update(interactive=False)
+    yield properties, properties_to_dataframe(properties), raw_prompts, raw_results, gr.update(interactive=False)
 
 def create_chat_history(raw_prompts, raw_results, client):
     if raw_prompts is None or len(raw_prompts) == 0:
@@ -490,6 +485,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         tempdir = gr.State(value=init_tempdir)
         extracted_properties = gr.State()
         aas_template = gr.State()
+        datasheet_text = gr.State()
         
         with gr.Tab(label="Definitions"):
             with gr.Column():
@@ -744,25 +740,31 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         datasheet_upload.change(
             fn=change_datasheet,
             inputs=datasheet_upload,
-            outputs=[datasheet_preview, datasheet_text_highlighted]
+            outputs=[datasheet_preview, datasheet_text]
         )
 
         gr.on(
-            triggers=[datasheet_text_highlighted.change, property_defintions.change],
+            triggers=[datasheet_text.change, property_defintions.change],
             fn=check_extract_ready,
-            inputs=[datasheet_upload, property_defintions, dictionary],
+            inputs=[datasheet_text, property_defintions, dictionary, aas_template],
             outputs=[extract_button]
         )
         extraction_started = extract_button.click(
             fn=extract,
-            inputs=[datasheet_upload, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
-            outputs=[extracted_properties, extracted_properties_df, datasheet_text_highlighted, raw_prompts, raw_results, cancel_extract_button],
+            inputs=[datasheet_text, dictionary_class, dictionary, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
+            outputs=[extracted_properties, extracted_properties_df, raw_prompts, raw_results, cancel_extract_button],
         )
         cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
         extraction_started.then(
             fn=create_download_results,
             inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class],
             outputs=[results]
+        )
+        gr.on(
+            triggers=[extracted_properties.change, datasheet_text.change],
+            fn=mark_extracted_references,
+            inputs=[datasheet_text, extracted_properties],
+            outputs=datasheet_text_highlighted,
         )
         raw_prompts.change(
             fn=create_chat_history,
