@@ -74,8 +74,8 @@ class ETIM(Dictionary):
     def get_property_url(self, property_id: str) -> str:
         return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[0]}"
     
-    def _download_etim_class(self, etim_class_code, language = "EN") -> dict:
-        logger.debug(f"Download etim class details for {etim_class_code} in {language} and release {self.release}")
+    def _download_etim_class(self, etim_class_code) -> dict:
+        logger.debug(f"Download etim class details for {etim_class_code} in {self.language} and release {self.release}")
         access_token = self.__get_access_token()
         if access_token is None:
             return None
@@ -92,7 +92,7 @@ class ETIM(Dictionary):
                     "features"
                 ]
             },
-            "languagecode": language,
+            "languagecode": self.language.upper(),
             "code": etim_class_code,
             "release": f"ETIM-{self.release}" if self.release[0].isdigit() else self.release 
         }
@@ -117,7 +117,7 @@ class ETIM(Dictionary):
             feature_id = f'{self.release}/{etim_class['code']}/{feature['code']}'
             property_ = PropertyDefinition(
                 id=feature_id,
-                name={'en': feature['description']},
+                name={self.language: feature['description']},
                 type=etim_datatype_to_type.get(feature['type'], 'string'),
                 # definition is currently not available via ETIM API
             )

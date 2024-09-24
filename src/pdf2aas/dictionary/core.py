@@ -90,9 +90,10 @@ class Dictionary(ABC):
     supported_releases: list[str] = []
     license: str | None = None
 
-    def __init__(self, release: str, temp_dir: str = None) -> None:
+    def __init__(self, release: str, temp_dir: str = None, language: str = "en") -> None:
         if temp_dir:
             self.temp_dir=temp_dir
+        self.language = language
         if release not in self.supported_releases:
             logger.warning(f"Release {release} unknown. Supported releases are {self.supported_releases}")
         self.release = release

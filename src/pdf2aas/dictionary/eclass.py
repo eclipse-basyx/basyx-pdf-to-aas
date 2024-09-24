@@ -142,6 +142,7 @@ class ECLASS(Dictionary):
         "5.14",
     ]
     license = "https://eclass.eu/en/eclass-standard/licenses"
+    language_idx = {"de": "0", "en": "1", "fr": "2", "cn": "3"}
 
     def __init__(self, release="14.0", temp_dir=None) -> None:
         """
@@ -183,7 +184,7 @@ class ECLASS(Dictionary):
             html_content = download_html(self.get_class_url(class_id))
             if html_content is None:
                 return []
-            eclass_class = self.__parse_html_eclass_class(html_content)
+            eclass_class = self._parse_html_eclass_class(html_content)
         return eclass_class.properties
     
     def get_property(self, property_id: str) -> PropertyDefinition:
@@ -219,7 +220,7 @@ class ECLASS(Dictionary):
             if html_content is None:
                 self.properties_download_failed[self.release].add(property_id)
                 return None
-            property = self.__parse_html_eclass_property(html_content, property_id)
+            property = self._parse_html_eclass_property(html_content, property_id)
             if property is None:
                 self.properties_download_failed[self.release].add(property_id)
                 return None
@@ -227,7 +228,7 @@ class ECLASS(Dictionary):
             self.properties[property_id] = property
         return property
 
-    def __parse_html_eclass_class(self, html_content):
+    def _parse_html_eclass_class(self, html_content):
         soup = BeautifulSoup(html_content, "html.parser")
         # TODO get IRDI instead of id, e.g.: 0173-1#01-AGZ376#020, which is = data-cc in span of value lists
         class_hierarchy = soup.find("ul", attrs={"class": "tree-simple-list"})
@@ -251,10 +252,10 @@ class ECLASS(Dictionary):
                 self.classes[identifier] = eclass_class
             else:
                 logger.debug(f"Found class {identifier}: {eclass_class.name}")
-        eclass_class.properties = self.__parse_html_eclass_properties(soup)
+        eclass_class.properties = self._parse_html_eclass_properties(soup)
         return eclass_class
     
-    def __parse_html_eclass_properties(self, soup: BeautifulSoup):
+    def _parse_html_eclass_properties(self, soup: BeautifulSoup):
         properties = []
         li_elements = soup.find_all("li")
         for li in li_elements:
@@ -273,19 +274,17 @@ class ECLASS(Dictionary):
                 properties.append(property)
         return properties
 
-    def __parse_html_eclass_property(html_content, property_id):
+    def _parse_html_eclass_property(self, html_content, property_id):
         soup = BeautifulSoup(html_content, 'html.parser')
-        # with open("temp/property.html", 'w', encoding="utf-8") as file:
-        #     file.write(html_content)
 
         if not soup.find(lambda tag: tag.name == "th" and tag.text.strip() == "Preferred name"):
             logger.warning(f"Couldn't parse 'preferred name' for {property_id}")
             return None
         property = PropertyDefinition(
             id=property_id,
-            name={'en': extract_attribute_from_eclass_property_soup(soup, "Preferred name")},
+            name={self.language: extract_attribute_from_eclass_property_soup(soup, "Preferred name")},
             type=eclass_datatype_to_type.get(extract_attribute_from_eclass_property_soup(soup, "Data type"), "string"),
-            definition={'en':extract_attribute_from_eclass_property_soup(soup, "Definition")},
+            definition={self.language:extract_attribute_from_eclass_property_soup(soup, "Definition")},
             values=extract_values_from_eclass_property_soup(soup)
         )
         return property
@@ -294,13 +293,13 @@ class ECLASS(Dictionary):
         return self.class_search_pattern.format(
                     class_id=class_id,
                     release=self.release,
-                    language="1",  # 0=de, 1=en, 2=fr, 3=cn
+                    language=self.language_idx.get(self.language, '1')
                 )
     def get_property_url(self,property_id: str) -> str | None:
         return self.property_search_pattern.format(
                     property_id=quote(property_id),
                     release=self.release,
-                    language="1",  # 0=de, 1=en, 2=fr, 3=cn
+                    language=self.language_idx.get(self.language, '1')
                 )
 
     @staticmethod
