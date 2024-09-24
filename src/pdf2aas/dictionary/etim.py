@@ -273,5 +273,9 @@ class ETIM(Dictionary):
         if filepath is None and os.path.exists(self.temp_dir):
             for filename in os.listdir(self.temp_dir):
                 if re.match(f'{self.name}-{self.release}.*CSV.*\\.zip', filename, re.IGNORECASE):
-                    self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
+                    try:
+                        self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
+                        return True
+                    except Exception as e:
+                        logger.warning(f"Error while loading csv zip '{filename}': {e}")
         return super().load_from_file(filepath)
