@@ -67,7 +67,6 @@ def change_dictionary_release(dictionary_type, release):
         dictionary = CDD(release)
     else:
         return None, None
-    dictionary.load_from_file()
     return dictionary, gr.Dropdown(choices=get_class_choices(dictionary))
 
 def change_dictionary_class(dictionary, class_id):

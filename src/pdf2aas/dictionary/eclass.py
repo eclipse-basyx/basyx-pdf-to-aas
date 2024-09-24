@@ -1,7 +1,11 @@
+import os
+import csv
 import json
 import logging
 from urllib.parse import quote
 import re
+import shutil
+from collections import defaultdict
 
 import requests
 from bs4 import BeautifulSoup
@@ -345,3 +349,134 @@ class ECLASS(Dictionary):
             # Because the eclass content-search only lists properties in level 4 for classes
             return None
         return class_id
+
+    def _load_from_release_csv_zip(self, filepath: str):
+        logger.info(f"Load ECLASS dictionary from CSV release zip: {filepath}")
+        
+        zip_dir = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
+        if not os.path.exists(zip_dir):
+            try:
+                os.makedirs(zip_dir)
+                shutil.unpack_archive(filepath, zip_dir)
+            except (shutil.ReadError, FileNotFoundError, PermissionError) as e:
+                logger.warning(f"Error while unpacking ECLASS CSV Release: {e}")
+                if os.path.exists(zip_dir):
+                    shutil.rmtree(zip_dir)
+
+        csv_filename = f"ECLASS{self.release.replace('.','_')}_{{}}_{self.language}.csv" 
+        
+        units = {}
+        with open(os.path.join(zip_dir, csv_filename.format('UN')), encoding='utf-8') as file:
+            #PreferredName;ShortName;Definition;Source;Comment;SINotation;SIName;DINNotation;ECEName;ECECode;NISTName;IECClassification;IrdiUN;NameOfDedicatedQuantity
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            for row in reader:
+                units[row[12]] = row[1] #IrdiUN -> ShortName
+
+        with open(os.path.join(zip_dir, csv_filename.format('PR')), encoding='utf-8') as file:
+            #Supplier;IdPR;Identifier;VersionNumber;VersionDate;RevisionNumber;PreferredName;ShortName;Definition;SourceOfDefinition;Note;Remark;PreferredSymbol;IrdiUN;ISOLanguageCode;ISOCountryCode;Category;AttributeType;DefinitionClass;DataType;IrdiPR;CurrencyAlphaCode
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            for row in reader:
+                irdi = row[20] #IrdiPR
+                property_ = PropertyDefinition(
+                    id=irdi,
+                    name={row[14]: row[6]}, #ISOLanguageCode: PreferredName
+                    type=eclass_datatype_to_type.get(row[19], "string"), #DataType
+                    definition={row[14]: row[8]}, #ISOLanguageCode: Definition
+                    unit=units.get(row[13]), #IrdiUN
+                )
+                self.properties[irdi] = property_
+
+        values = {}
+        with open(os.path.join(zip_dir, csv_filename.format('VA')), encoding='utf-8') as file:
+            #Supplier;IdVA;Identifier;VersionNumber;RevisionNumber;VersionDate;PreferredName;ShortName;Definition;Reference;ISOLanguageCode;ISOCountryCode;IrdiVA;DataType
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            for row in reader:
+                values[row[12]] = { #IrdiVA
+                    "value": row[6], #PreferredName
+                    "id": row[12], #IrdiVA
+                    "definition": row[8], #Definition
+                }
+
+        with open(os.path.join(zip_dir, csv_filename.format('CC_PR_VA_suggested_incl_constraints')), encoding='utf-8') as file:
+            #IrdiCC;IrdiPR;IrdiVA;Constraint
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            current_property_id = None
+            property_values = []
+
+            for row in reader:
+                property_id = row[1]
+                value_id = row[2]
+
+                if current_property_id is None:
+                    current_property_id = property_id
+
+                if property_id != current_property_id:
+                    property_ = self.properties.get(current_property_id)
+                    if property_:
+                        property_.values = property_values
+                    current_property_id = property_id
+                    property_values = []
+
+                value = values.get(value_id)
+                if value:
+                    property_values.append(value)
+
+            # Update the last property
+            if property_values:
+                property_ = self.properties.get(current_property_id)
+                if property_:
+                    property_.values = property_values
+
+        class_property_map = defaultdict(list)
+        with open(os.path.join(zip_dir, csv_filename.format('CC_PR')), encoding='utf-8') as file:
+            #SupplierIdCC;IdCC;ClassCodedName;SupplierIdPR;IdPR;IrdiCC;IrdiPR;PreferredNameBlockAspect
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            for row in reader:
+                class_property_map[row[2]].append(self.properties.get(row[6], [])) #ClassCodedName -> IrdiPR -> PropertyDefinition
+        
+        class_keyword_map = defaultdict(list)
+        with open(os.path.join(zip_dir, csv_filename.format('KWSY')), encoding='utf-8') as file:
+            #SupplierKW/SupplierSY;Identifier;VersionNumber;IdCC/IdPR;KeywordValue/SynonymValue;Explanation;ISOLanguageCode;ISOCountryCode;TypeOfTargetSE;IrdiTarget;IrdiKW/IrdiSY;TypeOfSE
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            for row in reader:
+                if row[8] != 'CC': #TypeOfTargetSE
+                    continue
+                class_keyword_map[row[1]].append(row[4]) #Identifier -> KeywordValue/SynonymValue
+
+        with open(os.path.join(zip_dir, csv_filename.format('CC')), encoding='utf-8') as file:
+            #Supplier;IdCC;Identifier;VersionNumber;VersionDate;RevisionNumber;CodedName;PreferredName;Definition;ISOLanguageCode;ISOCountryCode;Note;Remark;Level;MKSubclass;MKKeyword;IrdiCC
+            reader = csv.reader(file, delimiter=';')
+            next(reader, None)
+            for row in reader:
+                code = row[6] # CodedName
+                # if code in self.classes:
+                #     continue
+                if row[13] != '4': # Level
+                    continue
+                class_ = ClassDefinition(
+                    id=code,
+                    name=row[7], # PreferredName
+                    description=row[8], # Definition
+                    keywords=class_keyword_map[row[2]],
+                    properties=class_property_map[code]
+                )
+                self.classes[code] = class_
+
+    def load_from_file(self, filepath: str | None = None) -> bool:
+        """
+        Loads a whole ECLASS release from CSV zip file.
+
+        Searches in `self.tempdir` for "ECLASS-<release>-...CSV....zip" file, if
+        no filepath is given. Otherwise, searches for cached dict.
+        """
+        if filepath is None and os.path.exists(self.temp_dir):
+            for filename in os.listdir(self.temp_dir):
+                if re.match(f'{self.name}-{self.release}.*CSV.*\\.zip', filename, re.IGNORECASE):
+                    self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
+        return super().load_from_file(filepath)

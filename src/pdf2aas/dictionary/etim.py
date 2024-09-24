@@ -171,7 +171,7 @@ class ETIM(Dictionary):
             return None
         return class_id.group(0)
     
-    def _load_from_etim_release_csv_zip(self, filepath: str):
+    def _load_from_release_csv_zip(self, filepath: str):
         logger.info(f"Load ETIM dictionary from CSV release zip: {filepath}")
         
         zip_dir = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
@@ -264,8 +264,14 @@ class ETIM(Dictionary):
                 self._parse_etim_class(class_dict)
 
     def load_from_file(self, filepath: str | None = None) -> bool:
+        """
+        Loads a whole ETIM release from CSV zip file.
+
+        Searches in `self.tempdir` for "ETIM-<release>-...CSV....zip" file, if
+        no filepath is given.
+        """
         if filepath is None and os.path.exists(self.temp_dir):
             for filename in os.listdir(self.temp_dir):
                 if re.match(f'{self.name}-{self.release}.*CSV.*\\.zip', filename, re.IGNORECASE):
-                    self._load_from_etim_release_csv_zip(os.path.join(self.temp_dir, filename))
+                    self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
         return super().load_from_file(filepath)
