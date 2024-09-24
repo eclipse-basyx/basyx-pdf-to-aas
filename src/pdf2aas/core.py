@@ -7,18 +7,39 @@ from .generator import Generator, AASSubmodelTechnicalData
 logger = logging.getLogger(__name__)
 
 class PDF2AAS:
+    """
+    Convert PDF documents into Asset Administration Shell (AAS) submodels.
+
+    Attributes:
+        preprocessor (Preprocessor): A preprocessing object to handle PDF files.
+            Defaults to PDFium.
+        dictionary (Dictionary): A dictionary object for term mapping.
+            Defaults to ECLASS in current release.
+        extractor (Extractor): An extractor object to pull relevant information
+            from the preprocessed PDF. Defaults to PropertyLLMSearch with 
+            current openai model.
+        generator (Generator): A generator object to create AAS submodels.
+            Defaults to AASSubmodelTechnicalData.
+        batch_size (int): The number of properties that are extracted in one
+            batch. 0 (default) extracts all properties in one. 1 extracts each 
+            property on its own.
+
+    Methods:
+        __init__(preprocessor, dictionary, extractor, generator, batch_size):
+            Initializes the PDF2AAS with given or default components.
+    """
     def __init__(
         self,
-        preprocessor: Preprocessor = PDFium(),
-        dictionary: Dictionary = ECLASS(),
-        extractor: Extractor = PropertyLLMSearch("gpt-4o-mini"),
-        generator: Generator = AASSubmodelTechnicalData(),
+        preprocessor: Preprocessor = None,
+        dictionary: Dictionary = None,
+        extractor: Extractor = None,
+        generator: Generator = None,
         batch_size: int = 0
     ) -> None:
-        self.preprocessor = preprocessor
-        self.dictionary = dictionary
-        self.extractor = extractor
-        self.generator = generator
+        self.preprocessor = PDFium() if preprocessor is None else preprocessor
+        self.dictionary = ECLASS() if dictionary is None else dictionary
+        self.extractor = PropertyLLMSearch("gpt-4o-mini") if extractor is None else extractor
+        self.generator = AASSubmodelTechnicalData() if generator is None else generator
         self.batch_size = batch_size
 
     def convert(self, pdf_filepath: str, classification: str, output_filepath: str = None):
