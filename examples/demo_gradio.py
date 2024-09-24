@@ -39,24 +39,30 @@ def get_class_choices(dictionary: Dictionary):
     return [(f"{class_.id} {class_.name}", class_.id) for class_ in dictionary.classes.values()]
 
 def change_dictionary_type(dictionary_type):
-    if dictionary_type == "ECLASS":
-        dictionary = ECLASS()
-    elif dictionary_type == "ETIM":
-        dictionary = ETIM()
-    elif dictionary_type == "CDD":
-        dictionary = CDD()
+    if dictionary_type in ["ECLASS", "ETIM", "CDD"]:
+        yield (gr.update(),
+                gr.update(visible=True),
+                gr.update(visible=True),
+                gr.update(visible=False)
+            )
+        if dictionary_type == "ECLASS":
+            dictionary = ECLASS()
+        elif dictionary_type == "ETIM":
+            dictionary = ETIM()
+        elif dictionary_type == "CDD":
+            dictionary = CDD()
+        yield (
+            dictionary,
+            gr.update(choices=get_class_choices(dictionary), value=None),
+            gr.update(choices=dictionary.supported_releases, value=dictionary.release),
+            gr.update(value=None),
+        )
     else:
-        return (None,
+        yield (None,
             gr.update(visible=False, value=None),
             gr.update(visible=False, value=None),
             gr.update(visible=dictionary_type == "AAS", value=None)
         )
-    return (
-        dictionary,
-        gr.update(choices=get_class_choices(dictionary), value=None, visible=True),
-        gr.update(choices=dictionary.supported_releases, value=dictionary.release, visible=True),
-        gr.update(visible=False, value=None),
-    )
 
 def change_dictionary_release(dictionary_type, release):
     if dictionary_type == "ECLASS":
@@ -720,13 +726,11 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             fn=change_dictionary_type,
             inputs=dictionary_type,
             outputs=[dictionary, dictionary_class, dictionary_release, aas_template_upload],
-            show_progress="hidden"
         )
         dictionary_release.change(
             fn=change_dictionary_release,
             inputs=[dictionary_type, dictionary_release],
             outputs=[dictionary, dictionary_class],
-            show_progress="hidden"
         )
         gr.on(
             triggers=[dictionary_class.change, dictionary_release.change],
