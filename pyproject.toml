@@ -24,7 +24,8 @@ dev = [
   "pyinstaller",
 ]
 demo = [
-  "gradio",
+  "gradio==4.41.0",
+  "fastapi==0.112.4",
   "gradio_pdf",
   "pandas",
   "openpyxl",
