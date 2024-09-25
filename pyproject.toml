@@ -23,13 +23,11 @@ dev = [
   "pytest",
   "pyinstaller",
 ]
-eval = [
-  "matplotlib",
-  "openpyxl",
+demo = [
   "gradio",
   "gradio_pdf",
-  "levenshtein",
   "pandas",
+  "openpyxl",
 ]
 
 [build-system]

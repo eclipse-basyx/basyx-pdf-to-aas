@@ -18,7 +18,7 @@ jobs:
         python-version: '3.12'
         cache: 'pip'
     - name: Install dependencies
-      run: pip install -r eval-requirements.txt -r dev-requirements.txt
+      run: pip install -r demo-requirements.txt -r dev-requirements.txt
     - name: Install pdf2aas
       run: pip install -e .
     - name: Build executable

@@ -4,7 +4,7 @@
         "pre",
         "ext",
         "gen",
-        "eval"
+        "demo",
     ],
     "python.testing.pytestArgs": [
         "tests"

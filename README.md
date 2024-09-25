@@ -98,7 +98,7 @@ Use `-h` or `--help` argument for more information on command line arguments.
 ### Webui
 
 A gradio based web UI is available by starting [examples/demo_gradio.py]().
-To use it, additional dependencies need to be installed listed in eval-requirements: `pip install -r eval-requirements.txt`
+To use it, additional dependencies need to be installed listed in demo-requirements: `pip install -r demo-requirements.txt`
 The webserver is also build as an windows executable, which can be download from the job artifacts: [![Package gradio example with PyInstaller - Windows](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml/badge.svg?branch=main)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml)
 
 The web UI features the selection of an asset class from ECLASS and ETIM dictionary in different releases.
