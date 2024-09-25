@@ -117,38 +117,4 @@ The extracted properties can be downloaded as xlsx, json, technical data submode
 
 ## Evaluation
 
-To evaluate the extraction process we will use existing manufacturer catalogs, e.g. from WAGO.
-
-```mermaid
-flowchart
-    testset(Testset)
-    stats(Statistic)
-
-    subgraph eval [Evaluator]
-      man[Manufacturer]
-      
-      dict[("Property
-            Dictionary")]
-
-      datasheet(Data Sheet)
-      man_submodel(AAS Submodel)
-
-      pdf2aas[[PDF to AAS]]
-      comp[[Comparator]]
-      download[[Downloader]]
-      download[[Downloader]]
-
-      man --> download --> datasheet & man_submodel
-
-      dict --"class and
-              property definition"--> pdf2aas
-
-      datasheet --pdf--> pdf2aas
-      man_submodel -.classification.-> pdf2aas
-      
-      pdf2aas --json--> comp
-      man_submodel --json--> comp
-    end
-    
-    testset --> eval --> stats
-```
+An evaluation of the extraction process utilizing existing manufacturer catalogs, e.g. from WAGO can be found in the [pdf-to-aas-evaluation](https://github.com/JGrothoff/pdf-to-aas-evaluation) repository.
