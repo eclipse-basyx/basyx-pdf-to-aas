@@ -384,7 +384,7 @@ class ECLASS(Dictionary):
                     name={row[14]: row[6]}, #ISOLanguageCode: PreferredName
                     type=eclass_datatype_to_type.get(row[19], "string"), #DataType
                     definition={row[14]: row[8]}, #ISOLanguageCode: Definition
-                    unit=units.get(row[13]), #IrdiUN
+                    unit=units.get(row[13], ''), #IrdiUN
                 )
                 self.properties[irdi] = property_
 
