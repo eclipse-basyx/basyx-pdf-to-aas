@@ -131,6 +131,13 @@ def get_class_property_definitions(
     )
 
 def get_aas_template_properties(aas_template_upload):
+    if aas_template_upload is None:
+        return (
+            None,
+            gr.update(visible=False),
+            gr.update(visible=False)
+        )
+
     aas_template = AASTemplate(aas_template_upload)
     properties = aas_template.get_properties()
     if len(properties) == 0:
@@ -750,7 +757,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[property_info],
             show_progress='hidden'
         )
-        aas_template_upload.upload(
+        aas_template_upload.change(
             fn=get_aas_template_properties,
             inputs=[aas_template_upload],
             outputs=[aas_template, property_defintions, property_info],
