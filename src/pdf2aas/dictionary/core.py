@@ -1,69 +1,17 @@
+"""Abstract dictionary class to provide class and property definitions."""
 import os
 import logging
 import json
-from dataclasses import dataclass, field, asdict
-from typing import Literal
-from abc import ABC, abstractmethod
+from abc import ABC
+from dataclasses import asdict
+
+from .propertyDefinition import PropertyDefinition
+from .classDefinition import ClassDefinition
 
 logger = logging.getLogger(__name__)
 
-#TODO use ConceptDescription class from aas python package instead?
-#TODO define data types
-@dataclass
-class PropertyDefinition():
-    """
-    A dataclass to represent a property definition within a dictionary.
-
-    Attributes:
-        id (str): The unique identifier for the property, typically an IRDI
-        name (dict[str, str]): A dictionary containing language-specific names or labels for the property.
-        type (str): The data type of the property. Defaults to 'string'. Well known types are: bool, numeric, string, range
-        definition (dict[str, str]): A dictionary containing language-specific definitions for the property.
-        unit (str): The measurement unit associated with the property. Defaults to an empty string.
-        values (list[str|dict]): A list of strings or dictionarys that store possible values for the property. Defaults to an empty list. Well known keys in dictionary form are: value, defintition, id
-        values_list (list[str]): Get possible values as flat list of strings
-    """
-    id: str
-    name: dict[str, str] = field(default_factory= lambda: {})
-    type: Literal['bool', 'numeric', 'string', 'range'] = 'string'
-    definition: dict[str, str] = field(default_factory= lambda: {})
-    unit: str = ''
-    values: list[str | dict [Literal['value', 'id', 'definition'], str]] = field(default_factory= lambda: [])
-
-    @property
-    def values_list(self) -> list[str]:
-        """Get possible values as flat list of strings"""
-        values = []
-        for value in self.values:
-            if isinstance(value, str):
-                values.append(value)
-                continue
-            if "value" in value:
-                values.append(value["value"])
-        return values
-
-    def get_value_id(self, value:str) -> str | int | None:
-        for idx, value_definition in enumerate(self.values):
-            if isinstance(value_definition, str):
-                if value == value_definition:
-                    return idx
-                continue
-            if "value" in value_definition:
-                if value == value_definition['value']:
-                    return value_definition.get('id', idx)
-            continue
-        return None
-
-#TODO use ConceptDescription class from aas python package instead?
-@dataclass
-class ClassDefinition():
-    id: str
-    name: str = ''
-    description: str = ''
-    keywords: list[str] = field(default_factory= lambda: [])
-    properties: list[PropertyDefinition] = field(default_factory= lambda: [])
-
 def dictionary_serializer(obj):
+    """Serialize Class and PropertyDefinitions to save Dictionaries as JSON."""
     if isinstance(obj, PropertyDefinition):
         return asdict(obj)
     if isinstance(obj, ClassDefinition):
@@ -73,15 +21,19 @@ def dictionary_serializer(obj):
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
 class Dictionary(ABC):
-    """
-    Abstract base class for managing a collection of property and class definitions.
+    """Abstract class to manage a collection of property and class definitions.
 
     Attributes:
-        temp_dir (str): The directory path used for loading/saving a cached dictionary.
-        properties (dict[str, PropertyDefinition]): Maps property IDs to PropertyDefinition instances.
-        releases (dict[str, dict[str, object]]): Maps release versions to class objects.
+        temp_dir (str): The directory path used for loading/saving a cached
+            dictionary.
+        properties (dict[str, PropertyDefinition]): Maps property IDs to
+            PropertyDefinition instances.
+        releases (dict[str, dict[str, ClassDefinition]]): Maps release versions
+            to class definition objects.
         supported_releases (list[str]): A list of supported release versions.
-        license: A link or note to the license or copyright of the dictionary.
+        license (str): A link or note to the license or copyright of the
+            dictionary.
+
     """
 
     temp_dir = 'temp/dict'
@@ -90,7 +42,13 @@ class Dictionary(ABC):
     supported_releases: list[str] = []
     license: str | None = None
 
-    def __init__(self, release: str, temp_dir: str = None, language: str = "en") -> None:
+    def __init__(
+            self,
+            release: str,
+            temp_dir: str = None,
+            language: str = "en"
+    ) -> None:
+        """Initialize Dictionary with default release and cache directory."""
         if temp_dir:
             self.temp_dir=temp_dir
         self.language = language
@@ -103,17 +61,20 @@ class Dictionary(ABC):
 
     @property
     def name(self):
+        """Get the type name of the dictionary, e.g. ECLASS, ETIM, ..."""
         return self.__class__.__name__
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        """
-        Retrieves a list of property definitions associated with a given class.
+        """Retrieve a list of property definitions associated with a given class.
 
-        Args:
-            class_id (str): The unique identifier for the class whose properties are to be retrieved.
+        Arguments:
+            class_id (str): The unique identifier for the class whose properties
+                are to be retrieved.
 
         Returns:
-            list[PropertyDefinition]: A list of PropertyDefinition instances associated with the class.
+            properties (list[PropertyDefinition]): A list of PropertyDefinition
+                instances associated with the class.
+
         """
         class_ = self.classes.get(class_id)
         if class_ is None:
@@ -121,33 +82,40 @@ class Dictionary(ABC):
         return class_.properties
 
     def get_property(self, property_id: str) -> PropertyDefinition:
-        """
-        Retrieve a single property definition for the given property ID from the dictionary.
+        """Retrieve a single property definition for the given property ID from the dictionary.
 
-        Args:
+        Arguments:
             property_id (str): The unique identifier of the property.
 
         Returns:
             PropertyDefinition: The definition of the property associated with the given ID.
+
         """
         return self.properties.get(property_id)
 
     @property
     def classes(self) -> dict[str, ClassDefinition]:
-        """
-        Retrieves the class definitions for the currently set release version.
+        """Retrieves the class definitions for the currently set release version.
 
-        Returns:
+        Arguments:
             dict[str, ClassDefinition]: A dictionary of class definitions for the current release, with their class id as key.
+
         """
         return self.releases.get(self.release)
 
     def get_class_url(self, class_id: str) -> str | None:
+        """Get the web URL for the class of the class_id for details."""
         return None
     def get_property_url(self, property_id: str) -> str | None:
+        """Get the web URL for the property id for details."""
         return None
 
     def save_to_file(self, filepath: str | None = None):
+        """Save the dictionary to a file.
+        
+        Saves as json on default. Uses the `temp_dir` with dictionary name and
+        release, if none is provided.
+        """
         if filepath is None:
             filepath = os.path.join(self.temp_dir, f'{self.name}-{self.release}.json')
         logger.info(f"Save dictionary to file: {filepath}")
@@ -166,6 +134,10 @@ class Dictionary(ABC):
             )
 
     def load_from_file(self, filepath: str | None = None) -> bool:
+        """Load the dictionary from a file.
+        
+        Checks the `temp_dir` for dictionary name and release, if none is given.
+        """
         if filepath is None:
             filepath = os.path.join(self.temp_dir, f'{self.name}-{self.release}.json')
         if not os.path.exists(filepath):
@@ -201,6 +173,7 @@ class Dictionary(ABC):
         return True
     
     def save_all_releases(self):
+        """Save all releases currently available in the Dictionary class."""
         original_release = self.release
         for release, classes in self.releases.items():
             if len(classes) == 0:

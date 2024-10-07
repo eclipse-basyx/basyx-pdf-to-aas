@@ -1,6 +1,6 @@
 # PDF to AAS
 
-Python libraries and scripts to extract technical data from PDFs utilizing Transformers and especially **Large Language Models (LLMs)** to format them in an **Asset Administration Shell (AAS)** submodel.
+Python library and scripts to extract technical data from PDFs utilizing transformers and especially **Large Language Models (LLMs)** to export them in an **Asset Administration Shell (AAS)** submodel.
 
 ## Workflow
 
@@ -43,10 +43,10 @@ flowchart LR
 
 Remarks:
 
-* Typical *Property Dictionaries* are ECLASS, CDD, ETIM, EDIBATEC, EPIC, GPC, UniClass
-* The *classification* (e.g. ECLASS or ETIM class of the device) will be done manualy first, but can be automated (e.g. also via LLMs) in the future
+* Typical *Property Dictionaries* are ECLASS, CDD, ETIM, EDIBATEC, EPIC, GPC, UniClass.
+* The *classification* (e.g. ECLASS or ETIM class of the device) will be done manualy first, but can be automated (e.g. also via LLMs, RAG, etc.) in the future.
 * Additional *PDF Preprocessors* might be added in the future, e.g. specialized on table or image extraction.
-LLMs might also be used to preprocess the PDF content first, e.g. summarize it in JSON format
+LLMs might also be used to preprocess the PDF content first, e.g. summarize it in JSON format.
 * Property definitions might be derived from an AAS template (or instance), instead of providing the property definitions from a class of a dictionary directly.
 
 ## Modules

@@ -1,3 +1,4 @@
+"""Extractors that uses two steps to extract and map the properties."""
 import logging
 
 from ..dictionary import PropertyDefinition
@@ -6,10 +7,11 @@ from . import Property
 
 logger = logging.getLogger(__name__)
 
-
 class PropertyLLMMap(PropertyLLM):
-    """
-    PropertyLLM that extracts all properties and maps them to given definitions.
+    """PropertyLLM that extracts all properties and maps them to given definitions.
+    
+    The mapping is done verry naively based on the extracted property label and 
+    the definition name.
     """
 
     def _add_definitions(

@@ -1,3 +1,4 @@
+"""Generator for Technical Data Submodels of Asset Administration Shells."""
 import logging
 import json
 from datetime import date
@@ -17,15 +18,45 @@ from ..extractor import Property
 logger = logging.getLogger(__name__)
 
 class AASSubmodelTechnicalData(Generator):
+    """Generator for technical data submodels according to IDTA Template 02003.
+    
+    Attributes:
+        identifier (str): Submodel identifier.
+        submodel (Submodel): The submodel with added properties.
+        concept_descriptions: (dict[str, model.concept.ConceptDescription]):
+            Id to concept description mapping for added properties.
+        general_information (SubmodelElementCollection): Shortcut to the general
+            information collection of the submodel. Contains only pre defined
+            properties, like ManufacturerName. They are updated, if found in new
+            properties added to the submodel.
+        general_information_semantic_ids_short (dict[str,str]): Maps the 
+            relevant part of the general information IRDIs to their id short.
+        product_classifications (SubmodelElementCollection): Shortcut to the
+            product classifications collection of the submodel. Can be extended
+            via `add_classification()`.
+        technical_properties (SubmodelElementCollection): Shortcut to the 
+            technical properties collection of the submodel. This is were 
+            typically properties are added via `add_properties()`.
+        further_information (SubmodelElementCollection): Shortcut to the 
+            further information collection of the submodel. Holding the date 
+            and a remark, which can be extended.
+
+    """
+
     def __init__(
         self,
         identifier: str | None = None,
     ) -> None:
+        """Initialize the AAS submodel with a specified or uuid identifer."""
         self.identifier = f"https://eclipse.dev/basyx/pdf-to-aas/submodel/{uuid.uuid4()}" if identifier is None else identifier
         self.concept_descriptions: dict[str, model.concept.ConceptDescription] = {}
         self.reset()
-        
+
     def reset(self):
+        """Reset the properties list and concept descriptions.
+        
+        Also resets the submodel by instanciating a new submodel template.
+        """
         super().reset()
         self.concept_descriptions = {}
         self.submodel = self._create_submodel_template()
@@ -113,6 +144,7 @@ class AASSubmodelTechnicalData(Generator):
         return submodel
 
     def add_classification(self, dictionary:Dictionary, class_id:str):
+        """Add a ProductClassificationItem based on the given dictionary and class to the submodel."""
         classification = model.SubmodelElementCollection(
             id_short = f"ProductClassificationItem{len(self.product_classifications.value)+1:02d}",
             semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationItem/1/1")
@@ -151,17 +183,20 @@ class AASSubmodelTechnicalData(Generator):
         if len(defintion.name) == 0:
             return
         data_spec = model.DataSpecificationIEC61360(
-            model.PreferredNameTypeIEC61360({l:v[:255] for l, v in defintion.name.items()}),
+            model.PreferredNameTypeIEC61360({ln:v[:255] for ln, v in defintion.name.items()}),
         )
         match defintion.type:
-            case "bool": data_spec.data_type = model.DataTypeIEC61360.BOOLEAN
-            case "numeric": data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
+            case "bool":
+                data_spec.data_type = model.DataTypeIEC61360.BOOLEAN
+            case "numeric":
+                data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
             case "range":
                 data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
                 # data_spec.level_types = model.IEC61360LevelType.MAX
-            case "string": data_spec.data_type = model.DataTypeIEC61360.STRING
+            case "string":
+                data_spec.data_type = model.DataTypeIEC61360.STRING
         if len(defintion.definition) > 0:
-            data_spec.definition = model.DefinitionTypeIEC61360({l:v[:1023] for l, v in defintion.definition.items()})
+            data_spec.definition = model.DefinitionTypeIEC61360({ln:v[:1023] for ln,v in defintion.definition.items()})
         if defintion.unit is not None and len(defintion.unit) > 0:
             data_spec.unit = defintion.unit
         if defintion.values:
@@ -212,9 +247,9 @@ class AASSubmodelTechnicalData(Generator):
                 name = next(iter(property_defintion.name.values()), None)
             if name is not None:
                 cd.id_short = re.sub(anti_alphanumeric_regex, '_', name)
-                cd.display_name = model.MultiLanguageNameType({l:n[:64] for l,n in property_defintion.name.items()})
+                cd.display_name = model.MultiLanguageNameType({ln:n[:64] for ln,n in property_defintion.name.items()})
             if property_defintion.definition is not None and len(property_defintion.definition) > 0:
-                cd.description = model.MultiLanguageTextType({l:n[:1023] for l,n in property_defintion.definition.items()})
+                cd.description = model.MultiLanguageTextType({ln:n[:1023] for ln,n in property_defintion.definition.items()})
             self._add_embedded_data_spec(cd, property_defintion)
         elif value:
             cd.id_short = re.sub(anti_alphanumeric_regex, '_', value)
@@ -315,7 +350,7 @@ class AASSubmodelTechnicalData(Generator):
             if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
                 logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
             if len(property_.definition.name) > 0:
-                display_name = model.MultiLanguageNameType({l:n[:64] for l,n in property_.definition.name.items()})
+                display_name = model.MultiLanguageNameType({ln:n[:64] for ln,n in property_.definition.name.items()})
         
         if len(display_name) == 0:
             display_name = model.MultiLanguageNameType({property_.language: id_short[:64]})
@@ -339,7 +374,7 @@ class AASSubmodelTechnicalData(Generator):
 
         return self._create_aas_property_recursive(property_, property_.value, id_short, display_name, description)
 
-    general_information_semantic_ids_short = {
+    general_information_semantic_ids_short : dict[str,str] = {
         "AAO677" : "ManufacturerName",
         "AAW338" : "ManufacturerProductDesignation",
         "AAO676" : "ManufacturerArticleNumber",
@@ -390,6 +425,14 @@ class AASSubmodelTechnicalData(Generator):
         return id_short
 
     def add_properties(self, properties: list[Property]):
+        """Add extracted properties to the submodel.
+        
+        Converts the given extracted properties to AAS Property, Range or
+        Collections of them if multiple values are given. If the property seems
+        to be one of the general information fields, it is updated in the
+        respective collection. Also generates concept descriptions and id short
+        etc. when needed.
+        """
         super().add_properties(properties)
         for property_ in properties:
             if self._update_general_information(property_):
@@ -427,6 +470,15 @@ class AASSubmodelTechnicalData(Generator):
         return False
 
     def remove_empty_submodel_elements(self, remove_mandatory=False):
+        """Remove all submodel elements that have a value, which can be considered empty.
+        
+        Only removes mandatory values from general information collection, if
+        `remove_mandatory` is true. This breaks conformance with the submodel
+        template.
+
+        This can not be reverted. To get an AAS with empty values again, one has
+        to call reset() and add_properties() again.
+        """
         if remove_mandatory:
             self.submodel.submodel_element = [
                 element
@@ -452,9 +504,14 @@ class AASSubmodelTechnicalData(Generator):
             ]
 
     def dumps(self):
+        """Serialize and return the submodel to a json string."""
         return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
     
     def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
+        """Save the submodel together with an AAS in an aasx package.
+        
+        A new AAS with a uuid in the identifier will be created, if `aas` is None.
+        """
         if aas is None:
             aas = model.AssetAdministrationShell(
                 id_= f"https://eclipse.dev/basyx/pdf-to-aas/aas/{uuid.uuid4()}",

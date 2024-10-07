@@ -1,3 +1,4 @@
+"""Generator for using Asset Administration Shell files as template."""
 import logging
 import json
 import copy
@@ -8,37 +9,48 @@ from basyx.aas.adapter.aasx import DictSupplementaryFileContainer, AASXWriter, A
 from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
-from .aas import cast_property, cast_range, get_dict_data_type_from_xsd, get_dict_data_type_from_IEC6360, anti_alphanumeric_regex
+from .aas import cast_property, cast_range, get_dict_data_type_from_xsd, get_dict_data_type_from_IEC6360
 from ..dictionary import PropertyDefinition
 from ..extractor import Property
 
 logger = logging.getLogger(__name__)
 
 class AASTemplate(Generator):
-    """
-    Generator, that loads an AAS as template to read and update its properties.
+    """Generator, that loads an AAS as template to read and update its properties.
 
     Attributes:
         aasx_path (str): The file path to the AASX package which is used as template.
+        object_store (DictObjectStore): Objects read from the AASX package.
+        file_store (DictSupplementaryFileContainer): Files read from the AASX package.
+        submodels (list[Submodel]): list of submodels read from the AASX package.
+
     """
+
     def __init__(
         self,
         aasx_path: str,
     ) -> None:
+        """Initialize the AASTemplate with a specified AASX package path."""
         self._properties: dict[str, tuple[Property, model.Property | model.Range | model.MultiLanguageProperty]] = {}
         self._aasx_path = aasx_path
         self.reset()
 
     @property
     def aasx_path(self):
+        """Get the file path to the AASX package used as template."""
         return self._aasx_path
     
     @aasx_path.setter
     def aasx_path(self, value):
+        """Set the file path to the AASX package.
+        
+        This resets the template, which might take some time.
+        """
         self._aasx_path = value
         self.reset()
 
     def reset(self):
+        """Reset the AAS template by loading the AASX package and searching the properties."""
         self.object_store = model.DictObjectStore()
         self.file_store = DictSupplementaryFileContainer()
         try:
@@ -50,8 +62,7 @@ class AASTemplate(Generator):
         self._properties = self._search_properties()
 
     def add_properties(self, properties: list[Property]):
-        """
-        Search the property by its `id` to update the aas property value.
+        """Search the property by its `id` to update the aas property value.
         
         Instead of adding the property, only its value is updated, as the AAS 
         Template defines the properties and their place in the AAS hierarchy.
@@ -77,13 +88,16 @@ class AASTemplate(Generator):
                 aas_property.max = max_
 
     def get_properties(self) -> list[Property]:
+        """Get all properties found in the template with updated values."""
         return [p for (p, _) in self._properties.values()]
     
     def get_property(self, id_) -> Property | None:
+        """"Get a single property by its id."""
         property_, _ =  self._properties.get(id_, (None, None))
         return property_
 
     def get_property_definitions(self):
+        """Derive the property definition from the properties found in the template."""
         definitions = []
         for property_, _ in self._properties.values():
             definition = copy.copy(property_.definition)
@@ -228,9 +242,11 @@ class AASTemplate(Generator):
         return properties
 
     def dumps(self):
+        """Serialize and return the whole object store to a json string."""
         return json.dumps([o for o in self.object_store], cls=json_serialization.AASToJsonEncoder, indent=2)
 
     def save_as_aasx(self, filepath: str):
+        """Save the aas template with updated values to an AASX package."""
         with AASXWriter(filepath) as writer:
             writer.write_aas(
                 aas_ids=[aas.id for aas in self.object_store if isinstance(aas, model.AssetAdministrationShell)],

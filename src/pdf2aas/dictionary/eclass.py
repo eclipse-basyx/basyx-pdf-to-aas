@@ -1,3 +1,4 @@
+"""Class and functions to use ECLASS as dictionary in PDF2AAS workflow."""
 import os
 import csv
 import json
@@ -27,7 +28,7 @@ eclass_datatype_to_type = {
     # TODO Map: DATE, RATIONAL, RATIONAL_MEASURE, REFERENCE, TIME, TIMESTAMP, AXIS1, AXIS2, AXIS3
 }
 
-def extract_attribute_from_eclass_property_soup(soup, search_text):
+def _extract_attribute_from_eclass_property_soup(soup, search_text):
     th = soup.find(lambda tag: tag.name == "th" and tag.text.strip() == search_text)
     if th:
         td = th.find_next_sibling('td')
@@ -35,13 +36,13 @@ def extract_attribute_from_eclass_property_soup(soup, search_text):
             return td.text
     return None
 
-def extract_values_from_eclass_property_soup(soup):
+def _extract_values_from_eclass_property_soup(soup):
     values = []
     for span in soup.find_all('span', attrs={"class": "proper", "data-props": True}):
         values.append(span.text)
     return values
 
-def parse_html_eclass_valuelist(property, span):
+def _parse_html_eclass_valuelist(property, span):
     valuelist_url = (
         "https://eclass.eu/?discharge=basic"
         + "&cc="
@@ -50,7 +51,7 @@ def parse_html_eclass_valuelist(property, span):
         + quote(span["data-json"])
     )
     # https://eclass.eu/?discharge=basic&cc=0173-1%2301-AGZ376%23020&data=%7B%22identifier%22%3A%22BAD853%22%2C%22preferred_name%22%3A%22cascadable%22%2C%22short_name%22%3A%22%22%2C%22definition%22%3A%22whether%20a%20base%20device%20(host)%20can%20have%20a%20subsidiary%20device%20(guest)%20connected%20to%20it%20by%20means%20of%20a%20cable%22%2C%22note%22%3A%22%22%2C%22remark%22%3A%22%22%2C%22formular_symbol%22%3A%22%22%2C%22irdiun%22%3A%22%22%2C%22attribute_type%22%3A%22INDIRECT%22%2C%22definition_class%22%3A%220173-1%2301-RAA001%23001%22%2C%22data_type%22%3A%22BOOLEAN%22%2C%22IRDI_PR%22%3A%220173-1%2302-BAD853%23008%22%2C%22language%22%3A%22en%22%2C%22version%22%3A%2213_0%22%2C%22values%22%3A%5B%7B%22IRDI_VA%22%3A%220173-1%2307-CAA017%23003%22%7D%2C%7B%22IRDI_VA%22%3A%220173-1%2307-CAA016%23001%22%7D%5D%7D
-    valuelist = download_html(valuelist_url)
+    valuelist = _download_html(valuelist_url)
     valuelist_soup = BeautifulSoup(valuelist, "html.parser")
     for valuelist_span in valuelist_soup.find_all("span", attrs={"data-props": True}):
         try:
@@ -64,7 +65,7 @@ def parse_html_eclass_valuelist(property, span):
         except json.decoder.JSONDecodeError:
             logger.warning("Couldn't parse eclass property value:" + valuelist_span["data-props"])
 
-def parse_html_eclass_property(span, data, id):
+def _parse_html_eclass_property(span, data, id):
     property = PropertyDefinition(
         id,
         {data["language"]: data["preferred_name"]},
@@ -84,10 +85,10 @@ def parse_html_eclass_property(span, data, id):
     value_list_span = span.find_next_sibling("span")
     if value_list_span:
         logger.debug("Download value list for " + property.name[data["language"]])
-        parse_html_eclass_valuelist(property, value_list_span)
+        _parse_html_eclass_valuelist(property, value_list_span)
     return property
 
-def split_keywords(li_keywords):
+def _split_keywords(li_keywords):
     if li_keywords is None:
         return []
     keywords = li_keywords.get("title").strip().split(":")[1].split()
@@ -101,7 +102,7 @@ def split_keywords(li_keywords):
             )
     return keyphrases
 
-def download_html(url):
+def _download_html(url):
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -111,18 +112,31 @@ def download_html(url):
         return None
 
 class ECLASS(Dictionary):
-    """
-    ECLASS is a class designed to interact with the eCl@ss standard for classification
-    and product description. It provides functionalities to search for eCl@ss classes
-    and retrieve their properties based on different releases of the standard.
+    """Represent a release of the ECLASS dictionary.
+    
+    Allows to interact with the eCl@ss standard for classification and product 
+    description. It provides functionalities to search for eCl@ss classes and 
+    retrieve their properties based on different releases of the standard.
 
     Attributes:
-        eclass_class_search_pattern (str): URL pattern for class search.
-        eclass_property_search_pattern (str): URL pattern for property search.
-        properties_download_failed (dict[str, set[str]]): Maps release versions to a set of property ids, that could not be downloaded.
+        class_search_pattern (str): URL pattern for class search on ECLASS 
+            website content search.
+        property_search_pattern (str): URL pattern for property search on ECLASS
+            website content search.
+        properties_download_failed (dict[str, set[str]]): Maps release versions
+            to a set of property ids, that could not be downloaded
+        temp_dir (str): Overwrite temporary dictionary for caching the dict.
+        properties (dict[str, PropertyDefinition]): Maps property IDs to
+            PropertyDefinition instances.
+        releases (dict[str, dict[str, ClassDefinition]]): Maps release versions
+            to class definition objects.
+        supported_releases (list[str]): A list of supported release versions.
+        license (str): A link or note to the license or copyright of the
+            dictionary.
+
     """
 
-    class_search_pattern:    str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
+    class_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     releases: dict[dict[str, ClassDefinition]] = {}
     properties: dict[str, PropertyDefinition] = {}
@@ -149,35 +163,38 @@ class ECLASS(Dictionary):
     language_idx = {"de": "0", "en": "1", "fr": "2", "cn": "3"}
 
     def __init__(self, release="14.0", temp_dir=None) -> None:
-        """
-        Initializes the ECLASS instance with a specified eCl@ss release version.
+        """Initialize ECLASS dictionary with a specified eCl@ss release version.
 
-        Args:
-            release (str): The release version of the eCl@ss standard to be used.
-                           Defaults to '14.0'.
+        Arguments:
+            release (str): The release version of the eCl@ss standard to be 
+                used. Defaults to '14.0'.
             temp_dir (str): Set the temporary directory. Will be used to load
-                            releases from file, the first time the release is used.
+                releases from file, the first time the release is used.
+
         """
         super().__init__(release, temp_dir)
         if release not in self.properties_download_failed:
             self.properties_download_failed[release] = set()
 
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        """
-        Retrieves a list of property definitions for the given eCl@ss class ID, e.g. 27274001.
+        """Retrieve a list of property definitions for the given ECLASS class.
 
-        If the class properties are already stored in the `classes` property, they
-        are returned directly. Otherwise, an HTML page is downloaded based on the
-        eclass_class_search_pattern and the parsed HTML is used to obtain the
-        properties.
-        Currently only concrete classes (level 4, not endingin with 00) are supported.
+        If the class properties are already stored in the `classes` property,
+        they are returned directly. Otherwise, an HTML page is downloaded based
+        on the eclass_class_search_pattern and the parsed HTML is used to obtain
+        the properties.
 
-        Args:
-            class_id (str): The ID of the eCl@ss class for which to retrieve properties, e.g. 27274001.
+        Currently only concrete classes (level 4, not endingin with 00) are
+        supported.
+
+        Arguments:
+            class_id (str): The ID of the eCl@ss class for which to retrieve
+            properties, e.g. 27274001.
 
         Returns:
             list[PropertyDefinition]: A list of PropertyDefinition instances
                                       associated with the specified class ID.
+
         """
         class_id = self.parse_class_id(class_id)
         if class_id is None:
@@ -185,30 +202,31 @@ class ECLASS(Dictionary):
         eclass_class = self.classes.get(class_id)
         if eclass_class is None:
             logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
-            html_content = download_html(self.get_class_url(class_id))
+            html_content = _download_html(self.get_class_url(class_id))
             if html_content is None:
                 return []
             eclass_class = self._parse_html_eclass_class(html_content)
         return eclass_class.properties
     
     def get_property(self, property_id: str) -> PropertyDefinition:
-        """
-        Retrieves a single property definition from the dictionary.
+        """Retrieve a single property definition from the dictionary.
 
         It is returned directly, if the property definition is already stored in
-        the `properties` property. Otherwise, an HTML page is downloaded based on
-        the eclass_property_search_pattern and the parsed HTML is used to obtain
-        the definition. The definition is stored in the dictionary class.
-        If the download fails, the property_id is saved in `properties_download_failed`.
-        The download is skipped next time.
+        the `properties` property. Otherwise, an HTML page is downloaded based
+        on the eclass_property_search_pattern and the parsed HTML is used to
+        obtain the definition. The definition is stored in the dictionary class.
+        If the download fails, the property_id is saved in
+        `properties_download_failed`. The download is skipped next time.
         
         The eclass_property_search_pattern based search doesn't retrieve units.
 
-        Args:
-            property_id (str): The IRDI of the eCl@ss property, e.g. 0173-1#02-AAQ326#002.
+        Arguments:
+            property_id (str): The IRDI of the eCl@ss property,
+                e.g. 0173-1#02-AAQ326#002.
 
         Returns:
             PropertyDefinition: The requested PropertyDefinition instance.
+
         """
         if self.check_property_irdi(property_id) is False:
             logger.warning(f"Property id has wrong format, should be IRDI: 0173-1#02-([A-Z]{{3}}[0-9]{{3}})#([0-9]{{3}}), got instead: {property_id}")
@@ -220,7 +238,7 @@ class ECLASS(Dictionary):
                 return None
 
             logger.info(f"Property {property_id} definition not found in dictionary, try download.")
-            html_content = download_html(self.get_property_url(property_id))
+            html_content = _download_html(self.get_property_url(property_id))
             if html_content is None:
                 self.properties_download_failed[self.release].add(property_id)
                 return None
@@ -248,7 +266,7 @@ class ECLASS(Dictionary):
                     description=a_description["title"]
                     if a_description is not None
                     else "",
-                    keywords=split_keywords(
+                    keywords=_split_keywords(
                         li.find("i", attrs={"data-toggle": "tooltip"})
                     ),
                 )
@@ -271,7 +289,7 @@ class ECLASS(Dictionary):
                 property = self.properties.get(id)
                 if property is None:
                     logger.debug(f"Add new property {id}: {data['preferred_name']}")
-                    property = parse_html_eclass_property(span, data, id)
+                    property = _parse_html_eclass_property(span, data, id)
                     self.properties[id] = property
                 else:
                     logger.debug(f"Add existing property {id}: {property.name}")
@@ -286,20 +304,22 @@ class ECLASS(Dictionary):
             return None
         property = PropertyDefinition(
             id=property_id,
-            name={self.language: extract_attribute_from_eclass_property_soup(soup, "Preferred name")},
-            type=eclass_datatype_to_type.get(extract_attribute_from_eclass_property_soup(soup, "Data type"), "string"),
-            definition={self.language:extract_attribute_from_eclass_property_soup(soup, "Definition")},
-            values=extract_values_from_eclass_property_soup(soup)
+            name={self.language: _extract_attribute_from_eclass_property_soup(soup, "Preferred name")},
+            type=eclass_datatype_to_type.get(_extract_attribute_from_eclass_property_soup(soup, "Data type"), "string"),
+            definition={self.language:_extract_attribute_from_eclass_property_soup(soup, "Definition")},
+            values=_extract_values_from_eclass_property_soup(soup)
         )
         return property
 
     def get_class_url(self, class_id: str) -> str | None:
+        """Return the class URL in the ECLASS content search using the class_search_pattern."""
         return self.class_search_pattern.format(
                     class_id=class_id,
                     release=self.release,
                     language=self.language_idx.get(self.language, '1')
                 )
     def get_property_url(self,property_id: str) -> str | None:
+        """Return the property URL in the ECLASS content search using the property_search_pattern."""
         return self.property_search_pattern.format(
                     property_id=quote(property_id),
                     release=self.release,
@@ -308,8 +328,7 @@ class ECLASS(Dictionary):
 
     @staticmethod
     def check_property_irdi(property_id:str) -> bool:
-        """
-        Checks the format of the property IRDI.
+        """Check the format of the property IRDI.
         
         Regex: 0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3})
         IRDI must begin with 0173-1 to belong to ECLASS.
@@ -324,11 +343,10 @@ class ECLASS(Dictionary):
 
     @staticmethod
     def parse_class_id(class_id):
-        """
-        Search for a valid eclass 8 digit class id and returns it.
+        """Search for a valid eclass 8 digit class id and returns it.
         
-        Must be an 8 digit number (underscores, dash and whitespace alike chars are ignored).
-        Only concrete (level 4) classes will be returned.
+        Must be an 8 digit number (underscores, dash and whitespace alike chars
+        are ignored). Only concrete (level 4) classes will be returned.
         """
         #TODO also support eclass IRDIs and prefix "ECLASS" or Postfix "(BASIC)" etc.
         #https://eclass.eu/support/content-creation/release-process/release-numbers-and-versioning
@@ -469,11 +487,10 @@ class ECLASS(Dictionary):
                 self.classes[code] = class_
 
     def load_from_file(self, filepath: str | None = None) -> bool:
-        """
-        Loads a whole ECLASS release from CSV zip file.
+        """Load a whole ECLASS release from CSV zip file.
 
-        Searches in `self.tempdir` for "ECLASS-<release>-...CSV....zip" file, if
-        no filepath is given. Otherwise, searches for cached dict.
+        Searches in `self.tempdir` for "ECLASS-<release>-...CSV....zip" file,
+        if no filepath is given. Otherwise, searches for cached dict.
         """
         if filepath is None and os.path.exists(self.temp_dir):
             for filename in os.listdir(self.temp_dir):

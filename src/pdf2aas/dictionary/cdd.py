@@ -1,3 +1,4 @@
+"""Class and functions to use Common Data Dictionary (CDD) as dictionary in PDF2AAS workflow."""
 import logging
 import re
 import requests
@@ -6,11 +7,12 @@ import xlrd
 from bs4 import BeautifulSoup
 
 from .core import Dictionary, ClassDefinition, PropertyDefinition
-from .eclass import download_html
+from .eclass import _download_html
 
 logger = logging.getLogger(__name__)
 
 def cdd_datatype_to_type(data_type:str):
+    """Convert a cdd datatype to "class", "bool", "range", "numeric" or "string"."""
     if data_type.startswith("CLASS_REFERENCE_TYPE"):
         return "class"
     if data_type.startswith("ENUM_BOOLEAN_TYPE"):
@@ -38,15 +40,30 @@ IDX_SHORT_NAME = 6
 IDX_SYMBOL = 12
 
 class CDD(Dictionary):
-    """
-    Common Data Dictionary of IEC
+    """Common Data Dictionary of IEC.
 
     Dictionary for multiple ISO/IEC standards (referred to as `domains`).
     The implementation uses "Free Attributes" from https://cdd.iec.ch/.
     C.f. `licence` for details.
     Class and property ids are IRDIs, e.g.: 0112/2///62683#ACC501#002
     Only the currently available release from the website is available.
+
+    Attributes:
+        temp_dir (str): The directory path used for loading/saving a cached
+            dictionary.
+        properties (dict[str, PropertyDefinition]): Maps property IDs to
+            PropertyDefinition instances.
+        releases (dict[str, dict[str, ClassDefinition]]): Maps release versions
+            to class definition objects.
+        supported_releases (list[str]): A list of supported release versions.
+        license (str): A link or note to the license or copyright of the
+            dictionary.
+        domains (dict): Lists IEC standards called "domains" in context of CDD
+            with their representation in the URL, the standard name and the 
+            root class.
+
     """
+
     releases: dict[dict[str, ClassDefinition]] = {}
     properties: dict[str, PropertyDefinition] = {}
     supported_releases = [
@@ -97,14 +114,21 @@ class CDD(Dictionary):
     def __init__(
         self,
         release: str = "V2.0018.0002",
-        temp_dir=None,
+        temp_dir: str = None,
     ) -> None:
+        """Initialize CDD dictionary.
+
+        Arguments:
+            release (str): Only the currently available release is supported,
+                so that the release is only used for storing and loading files.
+            temp_dir (str): Overwrite temporary dictionary for caching the dict.
+
+        """
         super().__init__(release, temp_dir)
         #TODO implement release based lookup?
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
-        """
-        Get class properties from class in the dictionary or try to download otherwise.
+        """Get class properties from class in the dictionary or try to download otherwise.
 
         We are only using "FREE ATTRIBUTES" according to the IEC license agreement, c.f. section 5:
         ```
@@ -134,8 +158,7 @@ class CDD(Dictionary):
         return class_.properties
 
     def get_class_url(self, class_id: str) -> str :
-        """
-        Converts the class id into a URL from https://cdd.iec.ch
+        """Convert the class id into a URL from https://cdd.iec.ch.
 
         The class id needs to be a IRDI starting with 0112/2////.
         Currently the version of the IRDI is ignored and the link leads to
@@ -152,8 +175,7 @@ class CDD(Dictionary):
         return f"{self.domains[standard_id_version[0]]['url']}/classes/0112-2---{standard_id_version[0]}%23{standard_id_version[1]}?OpenDocument"
 
     def get_property_url(self, property_id: str) -> str:
-        """
-        Converts the property id into a URL from https://cdd.iec.ch
+        """Convert the property id into a URL from https://cdd.iec.ch.
 
         The property id needs to be a IRDI starting with 0112/2////.
         Currently the version of the IRDI is ignored and the link leads to
@@ -177,7 +199,7 @@ class CDD(Dictionary):
         return None
 
     def _download_cdd_class(self, url) -> ClassDefinition | None:
-        html_content = download_html(url)
+        html_content = _download_html(url)
         if html_content is None:
             return None
         soup = BeautifulSoup(html_content, "html.parser")
@@ -221,7 +243,7 @@ class CDD(Dictionary):
         # export6 corresponds menu Export > All > Class and superclasses
         export_id = class_html_soup.find('input', {'id': 'export6'}).get('onclick').split("'")[1]
         export_url = f"{class_url}&Click={export_id}"
-        export_html_content = download_html(export_url)
+        export_html_content = _download_html(export_url)
         if export_html_content is None:
             return []
 
@@ -299,8 +321,7 @@ class CDD(Dictionary):
     
     @staticmethod
     def parse_class_id(class_id:str) -> str | None:
-        """
-        Search for a valid CDD IRDI in `class_id` and returns it.
+        """Search for a valid CDD IRDI in `class_id` and returns it.
         
         The IRDI is searched by regex containing:
         Regex: 0112/2///[A-Z0-9_]+#[A-Z]{3}[0-9]{3}#[0-9]{3}
@@ -318,15 +339,14 @@ class CDD(Dictionary):
         return class_id.group(0)
 
     def download_sub_class_instances(self, class_id:str):
-        """
-        Downloads all instances below the class with the given class id.
+        """Download all instances below the class with the given class id.
 
         Instances are recognized by downloading the export xls file
         "Attributes > Class and subclasses" and checking the column
         "InstanceShareable".
         """
         class_url = self.get_class_url(class_id)
-        html_content = download_html(class_url)
+        html_content = _download_html(class_url)
         if html_content is None:
             return
         class_soup = BeautifulSoup(html_content, "html.parser")
@@ -334,7 +354,7 @@ class CDD(Dictionary):
         # export2 corresponds menu Export > Attributes > Class and subclasses
         export_id = class_soup.find('input', {'id': 'export2'}).get('onclick').split("'")[1]
         export_url = f"{class_url}&Click={export_id}"
-        export_html_content = download_html(export_url)
+        export_html_content = _download_html(export_url)
         if export_html_content is None:
             return
         
@@ -350,10 +370,10 @@ class CDD(Dictionary):
                 logger.info(f"Parsed {class_.id} with {len(class_.properties)} properties.")
 
     def download_full_release(self):
-        """
-        Downloads all class instances from the defined`domains`.
+        """Download all class instances from the defined`domains`.
 
-        Make sure to comply with CDD license agreement, especially section 7 and 8.
+        Make sure to comply with CDD license agreement, especially section 7
+        and 8.
         """
         logger.warning("Make sure to comply with CDD license agreement, especially section 7 and 8.")
         for domain in self.domains.values():

@@ -1,17 +1,20 @@
+"""Classes to dfeine custom clients to be used by the LLM extractors."""
 import logging
 import requests
 from copy import deepcopy
 import json
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
-class CustomLLMClient:
-    """
-    Abstract base class for a custom LLM client.
+class CustomLLMClient(ABC):
+    """Abstract base class for a custom LLM client.
     
     This class defines the interface for creating completions using a language model.
     Subclasses must implement the `create_completions` method.
     """
+
+    @abstractmethod
     def create_completions(
             self,
             messages: list[dict[str, str]],
@@ -20,30 +23,46 @@ class CustomLLMClient:
             max_tokens: int,
             response_format: dict
     ) -> tuple[str, str]:
-        """
-        Create completions using a language model.
+        """Create completions using a language model.
         
-        Parameters:
-        - messages (list[dict[str, str]]): List of message dictionaries with role and content.
-        - model (str): The model to use for generating completions.
-        - temperature (float): Sampling temperature.
-        - max_tokens (int): Maximum number of tokens to generate.
-        - response_format (str): The desired format of the response, e.g. {"type": "json_object"}
+        Arguments:
+            messages (list[dict[str, str]]): List of message dictionaries with
+                role and content.
+            model (str): The model to use for generating completions.
+            temperature (float): Sampling temperature.
+            max_tokens (int): Maximum number of tokens to generate.
+            response_format (str): The desired format of the response,
+                e.g. {"type": "json_object"}
         
         Returns:
-        - tuple[str, str]: A tuple containing the extracted response and the raw result.
+            result (tuple[str, str]): A tuple containing the extracted response
+                and the raw result.
         
-        Raises:
-        - NotImplementedError: If the method is not implemented by a subclass.
         """
-        raise NotImplementedError()
 
 class CustomLLMClientHTTP(CustomLLMClient):
-    """
-    Custom LLM client that communicates with an HTTP endpoint.
+    """Custom LLM client that communicates with an HTTP endpoint.
     
-    This client sends requests to a specified HTTP endpoint to generate chat completions.
+    This client sends requests to a specified HTTP endpoint to generate chat
+    completions. It can be customized via string templates.
+
+    Attributes:
+        endpoint (str): The URL of the HTTP endpoint.
+        api_key (str, optional): The API key for authentication.
+        request_template (str, optional): The string template for the request
+            payload. Supported placeholders are messages, message_system,
+            message_user, model, temperature,max_tokens, response_format.
+        result_path (str, optional): A simple path for extracting the result
+            from the response after parsing it with json.loads, e.g.
+            "choices[0].message.content".
+        headers (dict[str, str], optional): Overwrite headers. Default is
+            "Content-Type": "application/json", "Accept": "application/json"
+        retries (int, optional): Number of retries, if request fails
+        verify (bool, optional): False will skip request SSL verification.
+            C.f. `requests.post` argument.
+
     """
+
     def __init__(self,
                  endpoint: str,
                  api_key: str = None,
@@ -53,18 +72,9 @@ class CustomLLMClientHTTP(CustomLLMClient):
                  retries: int  = 0,
                  verify: bool | None = None,
     ) -> None:
-        """
-        A custom LLM client that uses http requests, which can be customized via string templates
+        """Initialize a custom LLM client for HTTP connections with defaults.
         
-        Parameters:
-        - endpoint (str): The URL of the HTTP endpoint.
-        - api_key (str, optional): The API key for authentication.
-        - request_template (str, optional): The string template for the request payload. Supported placeholders:
-          messages, message_system, message_user, model, temperature,max_tokens, response_format
-        - result_path (str, optional): A simple path for extracting the result from the response after parsing it with json.loads, e.g. "choices[0].message.content"
-        - headers (dict[str, str], optional): Overwrite headers. Default is "Content-Type": "application/json", "Accept": "application/json"
-        - retries (int, optional): Number of retries, if request fails
-        - verify (bool, optional): False will skip request SSL verification. C.f. `requests.post` argument.
+        If now rquest template is given, one similiar to open AI API is created.
         """
         super().__init__()
         self.endpoint = endpoint
@@ -90,18 +100,20 @@ class CustomLLMClientHTTP(CustomLLMClient):
         self.verify = verify
 
     def create_completions(self, messages: list[dict[str, str]], model: str, temperature: float, max_tokens: int, response_format: dict) -> tuple[str, str]:
-        """
-        Create completions using the specified HTTP endpoint.
+        """Create completions using the specified HTTP endpoint.
         
-        Parameters:
-        - messages (list[dict[str, str]]): List of message dictionaries with role and content.
-        - model (str): The model to use for generating completions.
-        - temperature (float): Sampling temperature.
-        - max_tokens (int): Maximum number of tokens to generate.
-        - response_format (str): The format of the response.
+        Arguments:
+            messages (list[dict[str, str]]): List of message dictionaries with
+                role and content.
+            model (str): The model to use for generating completions.
+            temperature (float): Sampling temperature.
+            max_tokens (int): Maximum number of tokens to generate.
+            response_format (str): The format of the response.
         
         Returns:
-        - tuple[str, str]: A tuple containing the extracted response and the raw result.
+            result (tuple[str, str]): A tuple containing the extracted response
+             and the raw result.
+
         """
         request_payload = self.request_template.format(
             messages=json.dumps(messages),
@@ -143,9 +155,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
         return self.evaluate_result_path(result), result
     
     def evaluate_result_path(self, raw_result: dict | list | None) -> str | None:
-        """
-        Gets the answer as string from the raw_result using the `result_path`
-        """
+        """Get the answer as string from the raw_result using the `result_path`."""
         if self.result_path is None or raw_result is None:
             return raw_result
         try:

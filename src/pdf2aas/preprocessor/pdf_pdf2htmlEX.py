@@ -1,3 +1,4 @@
+"""Preprocessor using pdf2htmlEX library."""
 import logging
 import os.path
 import re
@@ -12,8 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class ReductionLevel(IntEnum):
-    """
-    An enumeration to define the levels of HTML text reduction.
+    """Level of HTML text reduction.
+
+    Higher integer values resemble higher reduction.
 
     Attributes:
         NONE (0): No reduction, preserve all HTML content.
@@ -22,6 +24,7 @@ class ReductionLevel(IntEnum):
         DIVS (3): Remove 'span' elements.
         STRUCTURE (4): Remove classes from 'div' elements.
         TEXT (5): Reduce to text content only, without any tags.
+
     """
 
     NONE = 0
@@ -33,22 +36,29 @@ class ReductionLevel(IntEnum):
 
 
 class PDF2HTMLEX(Preprocessor):
-    """
-    A preprocessor that converts PDF files to HTML using pdf2htmlEX and applies reductions to the HTML structure.
+    """A preprocessor that converts PDF files to HTML using pdf2htmlEX.
+     
+      It additionally applies reductions to the HTML structure according to the
+      configured `reduction_level`.
 
     Attributes:
         reduction_level (ReductionLevel): The default level of HTML reduction to apply after conversion.
         temp_dir (str): The directory where temporary HTML files will be stored.
+
     """
 
-    def __init__(self, reduction_level=ReductionLevel.NONE, temp_dir="temp/html"):
+    def __init__(
+            self,
+            reduction_level=ReductionLevel.NONE,
+            temp_dir="temp/html"
+    ):
+        """Initiliaze preprocessor with no reduction and 'temp/html' temp directory."""
         self.reduction_level = reduction_level
         self.temp_dir = temp_dir
 
     # TODO add possibility to specify pages
     def convert(self, filepath: str) -> list[str] | str | None:
-        """
-        Converts a PDF file at the given filepath to HTML text.
+        """Convert a PDF file at the given filepath to HTML text.
 
         Args:
             filepath (str): The file path to the PDF document to be converted.
@@ -57,6 +67,7 @@ class PDF2HTMLEX(Preprocessor):
             Union[List[str], str, None]: The whole html text as string
             or a list of strings, where each element represents a page of the pdf file if the ReductionLevel is greater or equal to PAGES
             or None if the conversion fails.
+
         """
         logger.info(f"Converting to html from pdf: {filepath}")
         filename = Path(filepath).stem
@@ -121,8 +132,7 @@ class PDF2HTMLEX(Preprocessor):
         return self.reduce_datasheet(Path(dest_dir, filename + ".html").read_text())
 
     def reduce_datasheet(self, datasheet: str, level: ReductionLevel = None) -> str:
-        """
-        Reduces the HTML content of a datasheet according to the specified reduction level.
+        """Reduce the HTML content of a datasheet according to the specified reduction level.
 
         Args:
             datasheet (str): The HTML content of the datasheet to be reduced.
@@ -130,6 +140,7 @@ class PDF2HTMLEX(Preprocessor):
 
         Returns:
             str: The reduced HTML content.
+
         """
         if level is None:
             level = self.reduction_level
@@ -159,11 +170,9 @@ class PDF2HTMLEX(Preprocessor):
         return reduced_datasheet
 
     def clear_temp_dir(self):
-        """
-        Clears the temporary directory used for storing intermediate HTML files.
-        """
-        if os.path.isdir(self.temp_dir):
-            logger.info(
-                f"Clearing temporary directory: {os.path.realpath(self.temp_dir)}"
-            )
-            shutil.rmtree(self.temp_dir, ignore_errors=True)
+        """Clear the temporary directory used for storing intermediate HTML files."""
+        if not os.path.isdir(self.temp_dir):
+            return
+        
+        logger.info(f"Clearing temporary directory: {os.path.realpath(self.temp_dir)}")
+        shutil.rmtree(self.temp_dir, ignore_errors=True)

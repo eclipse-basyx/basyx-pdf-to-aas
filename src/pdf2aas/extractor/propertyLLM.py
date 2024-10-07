@@ -1,3 +1,4 @@
+"""Extractor for technical properties using an LLM or similar backend."""
 import json
 import logging
 import re
@@ -12,14 +13,31 @@ from . import Extractor
 
 logger = logging.getLogger(__name__)
 
-
 class PropertyLLM(Extractor):
-    """
-    Extractor that prompts an LLM client to extract properties from a datasheet.
+    """Extractor that prompts an LLM client to extract properties from a datasheet.
     
     Will ignore the property definitions given and extract all technical data
     without definitions.
+
+    Attributes:
+        system_prompt_template (str): A string that is sent as system message to
+            the LLM, typically to clarify the user message instruction.
+            Currently, it contains no placeholders.
+        user_prompt_template (str): A string with a {datasheet} placeholder,
+            that contains instruction, e.g. which properties to extract.
+        client (OpenAI | AzureOpenAI | CustomLLMClient): client which is used,
+            to execute the prompts.
+        model_identifier (str): String identifying the model to use, e.g. gpt-3.5.
+        temperature (float): Temperature value for the LLM. Typically between 0
+            and 2, where 0 indicates taking the most probable value to be more 
+            deterministic.
+        max_tokens (int): Maximum number of tokes the LLM should generate in
+            one run. 0 corresponds to no limit.
+        response_format (dict | None): Leverage structured output from the LLM,
+            by specifing a response format, if the LLM supports it.
+        
     """
+
     system_prompt_template = \
 """You act as an text API to extract technical properties from a given datasheet.
 The datasheet will be surrounded by triple backticks (```).
@@ -53,6 +71,11 @@ Example result:
         max_tokens: int | None = None,
         response_format: dict | None = {"type": "json_object"}
     ) -> None:
+        """Initialize the Property LLM extractor with default values.
+        
+        If no `client` is given or the `api_endpoint` is not equal to "input", 
+        a OpenAI client is created using the specified `api_endpoint`.
+        """
         super().__init__()
         self.model_identifier = model_identifier
         self.temperature = temperature
@@ -74,6 +97,18 @@ Example result:
         raw_results: list[str] | None = None,
         prompt_hint: str | None = None,
     ) -> list[Property]:
+        """Try to extract all properties found in the given datasheet text.
+        
+        Ignores the `property_definition` list. Use a more specific PropertyLLM,
+        e.g. PropertyLLMSearch extractor, if specific property definitions
+        should be searched.
+
+        If a `raw_prompt` or `raw_result` list is given, the created prompts and 
+        returned results are added to these lists.
+
+        The `prompt_hint` can be used to add context or additional instructions
+        to the prompt before it is sent to the LLM.
+        """
         logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
         if isinstance(datasheet, list):
             logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
@@ -103,6 +138,17 @@ Example result:
         language: str = "en",
         hint: str | None = None
     ) -> str:
+        """Create the prompt from the given datasheet.
+        
+        Can be used to check the prompt upfront, overwrite it or display it
+        afterwards.
+
+        The `properties` and `language` arguments are not used, but kept to be
+        compatible with more specific implementations.
+
+        A `hint` (c.f. "prompt_hint" in :meth: extract) is added to the top of
+        the prompt.
+        """
         prompt = '' if hint is None else hint
         prompt += self.user_prompt_template.format(datasheet=datasheet)
         return prompt
@@ -193,7 +239,7 @@ Example result:
                 properties = [properties]
             else:
                 properties = list(properties.values())
-                logger.debug(f"Extracted properties are a dict, try to encapsulate them in a list.")
+                logger.debug("Extracted properties are a dict, try to encapsulate them in a list.")
         
         return [Property.from_dict(p) for p in properties if isinstance(p, dict)]
 

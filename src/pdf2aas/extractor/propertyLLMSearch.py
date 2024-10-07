@@ -1,3 +1,4 @@
+"""Extractors that search for property definitions directly."""
 import logging
 from typing import Literal
 
@@ -10,11 +11,26 @@ from . import Property
 
 logger = logging.getLogger(__name__)
 
-
 class PropertyLLMSearch(PropertyLLM):
+    """PropertyLLM that searches for given property definitions.
+    
+    Attributes:
+        system_prompt_template (str): String that instructs the LLM to search 
+            for the defined properties.
+        use_property_definition (bool): Add the property definition text in the 
+            prompt.
+        use_property_unit (bool): Add the desired unit of measurement in the
+            prompt.
+        use_property_values (bool): Add a list of allowed values in the prompt.
+        use_property_datatype (bool): Add the property datatype in the prompt.
+        max_definition_chars (int): Limit the lenght of the definition text to
+            the amount of chars. 0 means no limit. Only active with
+            `use_property_definition`.
+        max_values_length (int): Limit the number values from the value list.
+            0 means no limit. Only active with `use_property_values`.
+
     """
-    PropertyLLM that searches for given property definitions only.
-    """
+
     system_prompt_template = PropertyLLM.system_prompt_template + """
 
 Search exactly for the reuqested properties.
@@ -35,6 +51,7 @@ Represent ranges as json list of two values.
             response_format: dict | None = {"type": "json_object"},
             property_keys_in_prompt: list[Literal["definition", "unit", "values", "datatype"]] = [],
     ) -> None:
+        """Initialize the property LLM search with default values."""
         super().__init__(model_identifier, api_endpoint, client, temperature, max_tokens, response_format)
         self.use_property_definition = 'definition' in property_keys_in_prompt
         self.use_property_unit = 'unit' in property_keys_in_prompt
@@ -50,7 +67,21 @@ Represent ranges as json list of two values.
         language: str = "en",
         hint: str | None = None
     ) -> str:
+        """Create the prompt from the given datasheet and property definiions.
+        
+        Can be used to check the prompt upfront, overwrite it or display it
+        afterwards.
 
+        First the properties are added to the prompt. A PropertyDefinition is 
+        formated different (more descriptiv, c.f. :meth: create_property_prompt)
+        than a list of PropertyDefinitions (c.f. :meth: create_property_list_prompt), 
+        even if only one definition is part of the list. 
+
+        A `hint` (c.f. "prompt_hint" in :meth: extract) is added after the 
+        property definitions.
+
+        At the end the datasheet text is added.
+        """
         if isinstance(properties, list):
             prompt = self.create_property_list_prompt(properties, language)
         else: 
@@ -62,7 +93,16 @@ Represent ranges as json list of two values.
         prompt+= f"\nThe following text enclosed in triple backticks (```) is the datasheet of the technical device. It was converted from pdf.\n```\n{datasheet}\n```"
         return prompt
 
-    def create_property_prompt(self, property_: PropertyDefinition, language: str = "en") -> str:
+    def create_property_prompt(
+            self,
+            property_: PropertyDefinition,
+            language: str = "en"
+    ) -> str:
+        """Create the prompt to search for a given property.
+        
+        Formats it as descriptive text using the configured fields from the
+        property defintion.
+        """
         if len(property_.name) == 0:
             raise ValueError(f"Property {property_.id} has no name.")
         property_name = property_.name.get(language)
@@ -91,7 +131,18 @@ Represent ranges as json list of two values.
         prompt +=f'What is the "{property_name}" of the device?\n'
         return prompt
 
-    def create_property_list_prompt(self, property_list: list[PropertyDefinition], language: str = "en") -> str:
+    def create_property_list_prompt(
+            self,
+            property_list: list[PropertyDefinition],
+            language: str = "en"
+    ) -> str:
+        """Create the prompt to search for a list of property definitions.
+        
+        Formats them as a markdown table using the configured fields from the
+        property definitions.
+
+        Limits the definition and values according to the configured values.
+        """
         prompt = "Extract the following properties from the provided datasheet:\n"
         prompt+= "| Property |"
         separator = "| - |"

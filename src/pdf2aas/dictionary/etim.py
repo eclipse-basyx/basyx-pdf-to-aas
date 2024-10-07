@@ -1,3 +1,4 @@
+"""Class and functions to use ETIM as dictionary in PDF2AAS workflow."""
 import os
 import logging
 import requests
@@ -23,6 +24,25 @@ etim_datatype_to_type = {
 }
 
 class ETIM(Dictionary):
+    """Represent a release of the ETIM dictionary.
+    
+    Allows to interact with the ETIM standard for classification and product 
+    description. It provides functionalities to search for ETIM classes and 
+    retrieve their properties based on different releases of the standard.
+
+    Attributes:
+        temp_dir (str): The directory path used for loading/saving a cached
+            dictionary.
+        properties (dict[str, PropertyDefinition]): Maps property IDs to
+            PropertyDefinition instances.
+        releases (dict[str, dict[str, ClassDefinition]]): Maps release versions
+            to class definition objects.
+        supported_releases (list[str]): A list of supported release versions.
+        license (str): A link or note to the license or copyright of the
+            dictionary.
+
+    """
+
     releases: dict[dict[str, ClassDefinition]] = {}
     properties: dict[str, PropertyDefinition] = {}
     supported_releases = [
@@ -39,13 +59,27 @@ class ETIM(Dictionary):
     def __init__(
         self,
         release: str = "9.0",
-        temp_dir=None,
+        temp_dir: str = None,
         client_id: str | None = None,
         client_secret: str | None = None,
         auth_url: str = "https://etimauth.etim-international.com",
         base_url: str = "https://etimapi.etim-international.com",
         scope: str = "EtimApi",
     ) -> None:
+        """Initialize the ETIM dictionary with default values.
+        
+        Arguments:
+            release (str): Release this dictionary represents. Defaults to "9.0"
+            temp_dir (str): Overwrite temporary dictionary for caching the dict.
+            client_id (str): Client id for the ETIM API.
+            client_secret (str): Client secret to use the ETIM API.
+            auth_url (str): Authorization URL for the ETIM API. Defaults to
+                "https://etimauth.etim-international.com".
+            base_url (str): Base URL for the ETIM API. Defaults to 
+                "https://etimapi.etim-international.com",
+            scope (str): ETIM API scrope. Defaults to "EtimApi".
+
+        """
         super().__init__(release, temp_dir)
         self.client_id = client_id if client_id is not None else os.environ.get("ETIM_CLIENT_ID")
         self.client_secret = client_secret if client_secret is not None else os.environ.get("ETIM_CLIENT_SECRET")
@@ -56,6 +90,11 @@ class ETIM(Dictionary):
         self.__expire_time = None
     
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
+        """Get all properties (called features in ETIM) of a given class.
+        
+        The class ID should start with EC and a 6 digit number. Tries to 
+        download the class if it is not in memory.
+        """
         class_id = self.parse_class_id(class_id)
         if class_id is None:
             return []
@@ -68,15 +107,17 @@ class ETIM(Dictionary):
         return class_.properties
     
     def get_class_url(self, class_id: str) -> str :
+        """Get the URL to the class in the class management tool (CMT)."""
         # Alternative: f"https://viewer.etim-international.com/class/{class_id}"
         return f"https://prod.etim-international.com/Class/Details/?classid={class_id}"
 
     def get_property_url(self, property_id: str) -> str:
+        """Get the URL to the feature in the class management tool (CMT)."""
         return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[0]}"
     
     def _download_etim_class(self, etim_class_code) -> dict:
         logger.debug(f"Download etim class details for {etim_class_code} in {self.language} and release {self.release}")
-        access_token = self.__get_access_token()
+        access_token = self._get_access_token()
         if access_token is None:
             return None
         url = f"{self.base_url}/api/v2/Class/DetailsForRelease"
@@ -135,7 +176,7 @@ class ETIM(Dictionary):
         self.classes[etim_class['code']] = class_
         return class_
 
-    def __get_access_token(self) -> str:
+    def _get_access_token(self) -> str:
         if (self.__access_token is not None) and (time.time() < self.__expire_time):
             return self.__access_token
         
@@ -163,9 +204,14 @@ class ETIM(Dictionary):
     
     @staticmethod
     def parse_class_id(class_id:str) -> str | None:
+        """Try to find a ETIM conform class id in the given string and return it.
+        
+        Is case insensitive and ignores minus, underscores and spaces.
+        Matches any string that starts with EC followed by 6 digits.
+        """
         if class_id is None:
             return None
-        class_id = re.sub(r'[-_]|\s', '', class_id)
+        class_id = re.sub(r'[-_ ]|\s', '', class_id)
         class_id = re.search("EC[0-9]{6}", class_id, re.IGNORECASE)
         if class_id is None:
             return None
@@ -264,8 +310,7 @@ class ETIM(Dictionary):
                 self._parse_etim_class(class_dict)
 
     def load_from_file(self, filepath: str | None = None) -> bool:
-        """
-        Loads a whole ETIM release from CSV zip file.
+        """Load a whole ETIM release from CSV zip file.
 
         Searches in `self.tempdir` for "ETIM-<release>-...CSV....zip" file, if
         no filepath is given.
