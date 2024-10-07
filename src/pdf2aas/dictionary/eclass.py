@@ -1,17 +1,17 @@
 """Class and functions to use ECLASS as dictionary in PDF2AAS workflow."""
-import os
 import csv
 import json
 import logging
-from urllib.parse import quote
+import os
 import re
 import shutil
 from collections import defaultdict
+from urllib.parse import quote
 
 import requests
 from bs4 import BeautifulSoup
 
-from .core import Dictionary, ClassDefinition, PropertyDefinition
+from .core import ClassDefinition, Dictionary, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +31,14 @@ eclass_datatype_to_type = {
 def _extract_attribute_from_eclass_property_soup(soup, search_text):
     th = soup.find(lambda tag: tag.name == "th" and tag.text.strip() == search_text)
     if th:
-        td = th.find_next_sibling('td')
+        td = th.find_next_sibling("td")
         if td:
             return td.text
     return None
 
 def _extract_values_from_eclass_property_soup(soup):
     values = []
-    for span in soup.find_all('span', attrs={"class": "proper", "data-props": True}):
+    for span in soup.find_all("span", attrs={"class": "proper", "data-props": True}):
         values.append(span.text)
     return values
 
@@ -58,7 +58,7 @@ def _parse_html_eclass_valuelist(property, span):
             valuelist_data = json.loads(valuelist_span["data-props"].replace("'", " "))
             value = {"value": valuelist_data["preferred_name"]}
             if len(valuelist_data["definition"].strip()) > 0:
-                value['definition'] = valuelist_data["definition"]
+                value["definition"] = valuelist_data["definition"]
             # valuelist_data["short_name"]
             # valuelist_data["data_type"]
             property.values.append(value)
@@ -207,7 +207,7 @@ class ECLASS(Dictionary):
                 return []
             eclass_class = self._parse_html_eclass_class(html_content)
         return eclass_class.properties
-    
+
     def get_property(self, property_id: str) -> PropertyDefinition:
         """Retrieve a single property definition from the dictionary.
 
@@ -267,7 +267,7 @@ class ECLASS(Dictionary):
                     if a_description is not None
                     else "",
                     keywords=_split_keywords(
-                        li.find("i", attrs={"data-toggle": "tooltip"})
+                        li.find("i", attrs={"data-toggle": "tooltip"}),
                     ),
                 )
                 logger.debug(f"Add class {identifier}: {eclass_class.name}")
@@ -276,7 +276,7 @@ class ECLASS(Dictionary):
                 logger.debug(f"Found class {identifier}: {eclass_class.name}")
         eclass_class.properties = self._parse_html_eclass_properties(soup)
         return eclass_class
-    
+
     def _parse_html_eclass_properties(self, soup: BeautifulSoup):
         properties = []
         li_elements = soup.find_all("li")
@@ -297,7 +297,7 @@ class ECLASS(Dictionary):
         return properties
 
     def _parse_html_eclass_property(self, html_content, property_id):
-        soup = BeautifulSoup(html_content, 'html.parser')
+        soup = BeautifulSoup(html_content, "html.parser")
 
         if not soup.find(lambda tag: tag.name == "th" and tag.text.strip() == "Preferred name"):
             logger.warning(f"Couldn't parse 'preferred name' for {property_id}")
@@ -307,7 +307,7 @@ class ECLASS(Dictionary):
             name={self.language: _extract_attribute_from_eclass_property_soup(soup, "Preferred name")},
             type=eclass_datatype_to_type.get(_extract_attribute_from_eclass_property_soup(soup, "Data type"), "string"),
             definition={self.language:_extract_attribute_from_eclass_property_soup(soup, "Definition")},
-            values=_extract_values_from_eclass_property_soup(soup)
+            values=_extract_values_from_eclass_property_soup(soup),
         )
         return property
 
@@ -316,14 +316,14 @@ class ECLASS(Dictionary):
         return self.class_search_pattern.format(
                     class_id=class_id,
                     release=self.release,
-                    language=self.language_idx.get(self.language, '1')
+                    language=self.language_idx.get(self.language, "1"),
                 )
     def get_property_url(self,property_id: str) -> str | None:
         """Return the property URL in the ECLASS content search using the property_search_pattern."""
         return self.property_search_pattern.format(
                     property_id=quote(property_id),
                     release=self.release,
-                    language=self.language_idx.get(self.language, '1')
+                    language=self.language_idx.get(self.language, "1"),
                 )
 
     @staticmethod
@@ -352,17 +352,17 @@ class ECLASS(Dictionary):
         #https://eclass.eu/support/content-creation/release-process/release-numbers-and-versioning
         if class_id is None:
             return None
-        class_id = str(class_id) 
-        class_id = re.sub(r'[-_]|\s', '', class_id)
+        class_id = str(class_id)
+        class_id = re.sub(r"[-_]|\s", "", class_id)
         class_id = class_id[:8]
         if len(class_id) != 8 or not class_id.isdigit():
             logger.warning(
-                f"Class id has unknown format. Should be 8 digits, but got: {class_id}"
+                f"Class id has unknown format. Should be 8 digits, but got: {class_id}",
             )
             return None
         if class_id.endswith("00"):
             logger.warning(
-                f"No properties for {class_id}. Currently only concrete (level 4) classes are supported."
+                f"No properties for {class_id}. Currently only concrete (level 4) classes are supported.",
             )
             # Because the eclass content-search only lists properties in level 4 for classes
             return None
@@ -370,7 +370,7 @@ class ECLASS(Dictionary):
 
     def _load_from_release_csv_zip(self, filepath: str):
         logger.info(f"Load ECLASS dictionary from CSV release zip: {filepath}")
-        
+
         zip_dir = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
         if not os.path.exists(zip_dir):
             try:
@@ -381,19 +381,19 @@ class ECLASS(Dictionary):
                 if os.path.exists(zip_dir):
                     shutil.rmtree(zip_dir)
 
-        csv_filename = f"ECLASS{self.release.replace('.','_')}_{{}}_{self.language}.csv" 
-        
+        csv_filename = f"ECLASS{self.release.replace('.','_')}_{{}}_{self.language}.csv"
+
         units = {}
-        with open(os.path.join(zip_dir, csv_filename.format('UN')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("UN")), encoding="utf-8") as file:
             #PreferredName;ShortName;Definition;Source;Comment;SINotation;SIName;DINNotation;ECEName;ECECode;NISTName;IECClassification;IrdiUN;NameOfDedicatedQuantity
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             for row in reader:
                 units[row[12]] = row[1] #IrdiUN -> ShortName
 
-        with open(os.path.join(zip_dir, csv_filename.format('PR')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("PR")), encoding="utf-8") as file:
             #Supplier;IdPR;Identifier;VersionNumber;VersionDate;RevisionNumber;PreferredName;ShortName;Definition;SourceOfDefinition;Note;Remark;PreferredSymbol;IrdiUN;ISOLanguageCode;ISOCountryCode;Category;AttributeType;DefinitionClass;DataType;IrdiPR;CurrencyAlphaCode
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             for row in reader:
                 irdi = row[20] #IrdiPR
@@ -402,14 +402,14 @@ class ECLASS(Dictionary):
                     name={row[14]: row[6]}, #ISOLanguageCode: PreferredName
                     type=eclass_datatype_to_type.get(row[19], "string"), #DataType
                     definition={row[14]: row[8]}, #ISOLanguageCode: Definition
-                    unit=units.get(row[13], ''), #IrdiUN
+                    unit=units.get(row[13], ""), #IrdiUN
                 )
                 self.properties[irdi] = property_
 
         values = {}
-        with open(os.path.join(zip_dir, csv_filename.format('VA')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("VA")), encoding="utf-8") as file:
             #Supplier;IdVA;Identifier;VersionNumber;RevisionNumber;VersionDate;PreferredName;ShortName;Definition;Reference;ISOLanguageCode;ISOCountryCode;IrdiVA;DataType
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             for row in reader:
                 values[row[12]] = { #IrdiVA
@@ -418,9 +418,9 @@ class ECLASS(Dictionary):
                     "definition": row[8], #Definition
                 }
 
-        with open(os.path.join(zip_dir, csv_filename.format('CC_PR_VA_suggested_incl_constraints')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("CC_PR_VA_suggested_incl_constraints")), encoding="utf-8") as file:
             #IrdiCC;IrdiPR;IrdiVA;Constraint
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             current_property_id = None
             property_values = []
@@ -450,39 +450,39 @@ class ECLASS(Dictionary):
                     property_.values = property_values
 
         class_property_map = defaultdict(list)
-        with open(os.path.join(zip_dir, csv_filename.format('CC_PR')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("CC_PR")), encoding="utf-8") as file:
             #SupplierIdCC;IdCC;ClassCodedName;SupplierIdPR;IdPR;IrdiCC;IrdiPR;PreferredNameBlockAspect
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             for row in reader:
                 class_property_map[row[2]].append(self.properties.get(row[6], [])) #ClassCodedName -> IrdiPR -> PropertyDefinition
-        
+
         class_keyword_map = defaultdict(list)
-        with open(os.path.join(zip_dir, csv_filename.format('KWSY')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("KWSY")), encoding="utf-8") as file:
             #SupplierKW/SupplierSY;Identifier;VersionNumber;IdCC/IdPR;KeywordValue/SynonymValue;Explanation;ISOLanguageCode;ISOCountryCode;TypeOfTargetSE;IrdiTarget;IrdiKW/IrdiSY;TypeOfSE
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             for row in reader:
-                if row[8] != 'CC': #TypeOfTargetSE
+                if row[8] != "CC": #TypeOfTargetSE
                     continue
                 class_keyword_map[row[1]].append(row[4]) #Identifier -> KeywordValue/SynonymValue
 
-        with open(os.path.join(zip_dir, csv_filename.format('CC')), encoding='utf-8') as file:
+        with open(os.path.join(zip_dir, csv_filename.format("CC")), encoding="utf-8") as file:
             #Supplier;IdCC;Identifier;VersionNumber;VersionDate;RevisionNumber;CodedName;PreferredName;Definition;ISOLanguageCode;ISOCountryCode;Note;Remark;Level;MKSubclass;MKKeyword;IrdiCC
-            reader = csv.reader(file, delimiter=';')
+            reader = csv.reader(file, delimiter=";")
             next(reader, None)
             for row in reader:
                 code = row[6] # CodedName
                 # if code in self.classes:
                 #     continue
-                if row[13] != '4': # Level
+                if row[13] != "4": # Level
                     continue
                 class_ = ClassDefinition(
                     id=code,
                     name=row[7], # PreferredName
                     description=row[8], # Definition
                     keywords=class_keyword_map[row[2]],
-                    properties=class_property_map[code]
+                    properties=class_property_map[code],
                 )
                 self.classes[code] = class_
 
@@ -494,7 +494,7 @@ class ECLASS(Dictionary):
         """
         if filepath is None and os.path.exists(self.temp_dir):
             for filename in os.listdir(self.temp_dir):
-                if re.match(f'{self.name}-{self.release}.*CSV.*\\.zip', filename, re.IGNORECASE):
+                if re.match(f"{self.name}-{self.release}.*CSV.*\\.zip", filename, re.IGNORECASE):
                     try:
                         self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
                         return True

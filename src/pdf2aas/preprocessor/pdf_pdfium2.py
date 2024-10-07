@@ -33,6 +33,6 @@ class PDFium(Preprocessor):
             logger.error(f"Error reading {filepath}: {e}")
             return None
         return [
-            page.get_textpage().get_text_bounded().replace('\r\n', '\n').replace('\r', '\n')
+            page.get_textpage().get_text_bounded().replace("\r\n", "\n").replace("\r", "\n")
             for page in doc
         ]

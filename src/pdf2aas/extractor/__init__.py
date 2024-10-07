@@ -9,5 +9,5 @@ __all__ = [
     "PropertyLLM",
     "PropertyLLMSearch",
     "CustomLLMClient",
-    "CustomLLMClientHTTP"
+    "CustomLLMClientHTTP",
 ]

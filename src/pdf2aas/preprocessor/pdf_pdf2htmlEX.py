@@ -50,7 +50,7 @@ class PDF2HTMLEX(Preprocessor):
     def __init__(
             self,
             reduction_level=ReductionLevel.NONE,
-            temp_dir="temp/html"
+            temp_dir="temp/html",
     ):
         """Initiliaze preprocessor with no reduction and 'temp/html' temp directory."""
         self.reduction_level = reduction_level
@@ -110,7 +110,7 @@ class PDF2HTMLEX(Preprocessor):
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
+                text=True, check=False,
             )
         except FileNotFoundError:
             logger.error("pdf2htmlEX executable not found in path.")
@@ -123,7 +123,7 @@ class PDF2HTMLEX(Preprocessor):
 
         if pdf2htmlEX.returncode != 0:
             logger.error(
-                f"Call to pdf2htmlEX failed with returncode: {pdf2htmlEX.returncode}"
+                f"Call to pdf2htmlEX failed with returncode: {pdf2htmlEX.returncode}",
             )
             logger.debug(f"pdf2htmlEX arguments: {pdf2htmlEX.args}")
             # TODO raise custom PDF2HTML error instead
@@ -148,7 +148,7 @@ class PDF2HTMLEX(Preprocessor):
         if level >= ReductionLevel.BODY:
             logger.debug("Reducing datasheet to ReductionLevel.BODY")
             reduced_datasheet = re.search(
-                r"<body>\n((?:.*\n)*.*)\n</body>", reduced_datasheet
+                r"<body>\n((?:.*\n)*.*)\n</body>", reduced_datasheet,
             ).group(1)
         if level >= ReductionLevel.PAGES:
             logger.debug("Reducing datasheet to ReductionLevel.PAGES")
@@ -173,6 +173,6 @@ class PDF2HTMLEX(Preprocessor):
         """Clear the temporary directory used for storing intermediate HTML files."""
         if not os.path.isdir(self.temp_dir):
             return
-        
+
         logger.info(f"Clearing temporary directory: {os.path.realpath(self.temp_dir)}")
         shutil.rmtree(self.temp_dir, ignore_errors=True)

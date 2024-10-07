@@ -1,11 +1,11 @@
 """Abstract dictionary class to provide class and property definitions."""
-import os
-import logging
 import json
+import logging
+import os
 from abc import ABC
 from dataclasses import asdict
 
-from ..model import PropertyDefinition, ClassDefinition
+from ..model import ClassDefinition, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ def dictionary_serializer(obj):
         return asdict(obj)
     if isinstance(obj, ClassDefinition):
         class_dict = asdict(obj)
-        class_dict['properties'] = [prop.id for prop in obj.properties]
+        class_dict["properties"] = [prop.id for prop in obj.properties]
         return class_dict
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
@@ -35,7 +35,7 @@ class Dictionary(ABC):
 
     """
 
-    temp_dir = 'temp/dict'
+    temp_dir = "temp/dict"
     properties: dict[str, PropertyDefinition] = {}
     releases: dict[dict[str, ClassDefinition]] = {}
     supported_releases: list[str] = []
@@ -45,7 +45,7 @@ class Dictionary(ABC):
             self,
             release: str,
             temp_dir: str = None,
-            language: str = "en"
+            language: str = "en",
     ) -> None:
         """Initialize Dictionary with default release and cache directory."""
         if temp_dir:
@@ -62,7 +62,7 @@ class Dictionary(ABC):
     def name(self):
         """Get the type name of the dictionary, e.g. ECLASS, ETIM, ..."""
         return self.__class__.__name__
-    
+
     def get_class_properties(self, class_id: str) -> list[PropertyDefinition]:
         """Retrieve a list of property definitions associated with a given class.
 
@@ -116,7 +116,7 @@ class Dictionary(ABC):
         release, if none is provided.
         """
         if filepath is None:
-            filepath = os.path.join(self.temp_dir, f'{self.name}-{self.release}.json')
+            filepath = os.path.join(self.temp_dir, f"{self.name}-{self.release}.json")
         logger.info(f"Save dictionary to file: {filepath}")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w") as file:
@@ -138,18 +138,18 @@ class Dictionary(ABC):
         Checks the `temp_dir` for dictionary name and release, if none is given.
         """
         if filepath is None:
-            filepath = os.path.join(self.temp_dir, f'{self.name}-{self.release}.json')
+            filepath = os.path.join(self.temp_dir, f"{self.name}-{self.release}.json")
         if not os.path.exists(filepath):
             logger.debug(
-                f"Couldn't load dictionary from file. File does not exist: {filepath}"
+                f"Couldn't load dictionary from file. File does not exist: {filepath}",
             )
             return False
         logger.info(f"Load dictionary from file: {filepath}")
-        with open(filepath, "r") as file:
+        with open(filepath) as file:
             dict = json.load(file)
             if dict["release"] != self.release:
                 logger.warning(
-                    f"Loading release {dict['release']} for dictionary with release {self.release}."
+                    f"Loading release {dict['release']} for dictionary with release {self.release}.",
                 )
             for id, property in dict["properties"].items():
                 if id not in self.properties.keys():
@@ -161,7 +161,7 @@ class Dictionary(ABC):
                 classes = self.releases[dict["release"]]
                 if id not in classes.keys():
                     logger.debug(
-                        f"Load class {class_['id']}: {class_['name']}"
+                        f"Load class {class_['id']}: {class_['name']}",
                     )
                     new_class = ClassDefinition(**class_)
                     new_class.properties = [
@@ -170,7 +170,7 @@ class Dictionary(ABC):
                     ]
                     classes[id] = new_class
         return True
-    
+
     def save_all_releases(self):
         """Save all releases currently available in the Dictionary class."""
         original_release = self.release

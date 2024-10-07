@@ -5,15 +5,15 @@ import re
 from basyx.aas import model
 from basyx.aas.model import datatypes
 
-from ..model import PropertyDefinition, Property
+from ..model import Property, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
-anti_alphanumeric_regex = re.compile(r'[^a-zA-Z0-9]')
+anti_alphanumeric_regex = re.compile(r"[^a-zA-Z0-9]")
 
 def cast_property(
         value,
-        definition: PropertyDefinition
+        definition: PropertyDefinition,
     ) -> model.ValueDataType:
     """Cast a value to an XSD DataType from the AAS module.
     
@@ -24,9 +24,9 @@ def cast_property(
         return None
     if definition is not None:
         match definition.type:
-            case 'bool':
+            case "bool":
                 return datatypes.Boolean(value)
-            case 'numeric' | 'range':
+            case "numeric" | "range":
             # Range should be catched using cast_range and should not be reached here
                 try:
                     casted = float(value)
@@ -36,9 +36,9 @@ def cast_property(
                     casted = int(casted)
                     return datatypes.Integer(casted)
                 return datatypes.Float(casted)
-            case 'string':
+            case "string":
                 return datatypes.String(value)
-    
+
     if isinstance(value, bool):
         return datatypes.Boolean(value)
     if isinstance(value, int):
@@ -62,9 +62,8 @@ def cast_range(property_: Property):
         return None if min is None else float(min), None if max is None else float(max), datatypes.Float
     if isinstance(min, int) or isinstance(max, int):
         return None if min is None else int(min), None if max is None else int(max), datatypes.Integer
-    else:
-        return None, None, datatypes.String # XSD has no equivalent to None
-    
+    return None, None, datatypes.String # XSD has no equivalent to None
+
 def get_dict_data_type_from_xsd(datatype: model.DataTypeDefXsd):
     """Map XSD DataType to None, "bool", "numeric" or "string".
     
@@ -90,7 +89,7 @@ def get_dict_data_type_from_xsd(datatype: model.DataTypeDefXsd):
             datatypes.UnsignedLong,
             datatypes.UnsignedInt,
             datatypes.UnsignedShort,
-            datatypes.UnsignedByte
+            datatypes.UnsignedByte,
             ]:
         return "numeric"
     # Duration, DateTime, Date, Time, GYearMonth, GYear, GMonthDay, GMonth, GDay, Base64Binary, HexBinary,  AnyURI, String, NormalizedString

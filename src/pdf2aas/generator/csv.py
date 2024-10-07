@@ -30,8 +30,8 @@ class CSV(Generator):
             fieldnames=self.header,
             extrasaction="ignore",
             quoting=csv.QUOTE_ALL,
-            delimiter=';',
-            lineterminator='\n'
+            delimiter=";",
+            lineterminator="\n",
         )
         writer.writeheader()
         for property_ in self._properties:

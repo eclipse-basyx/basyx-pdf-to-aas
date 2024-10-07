@@ -1,19 +1,19 @@
 """Generator for Technical Data Submodels of Asset Administration Shells."""
-import logging
 import json
-from datetime import date
+import logging
 import re
 import uuid
+from datetime import date
 
 from basyx.aas import model
-from basyx.aas.model.base import AASConstraintViolation
 from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
 from basyx.aas.adapter.json import json_serialization
+from basyx.aas.model.base import AASConstraintViolation
 
-from ..model import PropertyDefinition, Property
-from ..dictionary import Dictionary, ECLASS
+from ..dictionary import ECLASS, Dictionary
+from ..model import Property, PropertyDefinition
+from .aas import anti_alphanumeric_regex, cast_property, cast_range
 from .core import Generator
-from .aas import cast_property, cast_range, anti_alphanumeric_regex
 
 logger = logging.getLogger(__name__)
 
@@ -65,80 +65,80 @@ class AASSubmodelTechnicalData(Generator):
         submodel = model.Submodel(
             id_= self.identifier,
             id_short = "TechnicalData",
-            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2")
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"),
         )
-        
+
         self.general_information = model.SubmodelElementCollection(
             id_short ="GeneralInformation",
-            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1")
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1"),
         )
         self.general_information.value.add(
             model.Property(
-                    id_short='ManufacturerName',
+                    id_short="ManufacturerName",
                     value_type = model.datatypes.String,
                     category = "PARAMETER",
-                    semantic_id = self._create_semantic_id("0173-1#02-AAO677#002")
-            )
+                    semantic_id = self._create_semantic_id("0173-1#02-AAO677#002"),
+            ),
         )
         # ManufacturerLogo is optional
         self.general_information.value.add(
             model.MultiLanguageProperty(
-                    id_short='ManufacturerProductDesignation',
+                    id_short="ManufacturerProductDesignation",
                     category = "PARAMETER",
-                    semantic_id = self._create_semantic_id("0173-1#02-AAW338#001")
-            )
+                    semantic_id = self._create_semantic_id("0173-1#02-AAW338#001"),
+            ),
         )
         self.general_information.value.add(
             model.Property(
-                    id_short='ManufacturerArticleNumber',
+                    id_short="ManufacturerArticleNumber",
                     value_type = model.datatypes.String,
                     category = "PARAMETER",
-                    semantic_id = self._create_semantic_id("0173-1#02-AAO676#003")
-            )
+                    semantic_id = self._create_semantic_id("0173-1#02-AAO676#003"),
+            ),
         )
         self.general_information.value.add(
             model.Property(
-                    id_short='ManufacturerOrderCode',
+                    id_short="ManufacturerOrderCode",
                     value_type = model.datatypes.String,
                     category = "PARAMETER",
-                    semantic_id = self._create_semantic_id("0173-1#02-AAO227#002")
-            )
+                    semantic_id = self._create_semantic_id("0173-1#02-AAO227#002"),
+            ),
         )
          # ProductImage is optional
         submodel.submodel_element.add(self.general_information)
 
         self.product_classifications = model.SubmodelElementCollection(
             id_short = "ProductClassifications",
-            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1")
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1"),
         )
         submodel.submodel_element.add(self.product_classifications)
 
         self.technical_properties = model.SubmodelElementCollection(
             id_short = "TechnicalProperties",
-            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1")
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1"),
         )
         submodel.submodel_element.add(self.technical_properties)
 
         self.further_information = model.SubmodelElementCollection(
             id_short = "FurtherInformation",
-            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1")
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1"),
         )
         self.further_information.value.add(
             model.MultiLanguageProperty(
-                id_short = 'TextStatement01',
-                value = model.MultiLanguageTextType({'en': 'Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information.'}),
+                id_short = "TextStatement01",
+                value = model.MultiLanguageTextType({"en": "Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information."}),
                 category = "PARAMETER",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1")
-            )
+                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1"),
+            ),
         )
         self.further_information.value.add(
             model.Property(
-                    id_short='ValidDate',
+                    id_short="ValidDate",
                     value_type = model.datatypes.Date,
                     value = date.today(),
                     category = "PARAMETER",
-                    semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1")
-            )
+                    semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1"),
+            ),
         )
         submodel.submodel_element.add(self.further_information)
         return submodel
@@ -147,34 +147,34 @@ class AASSubmodelTechnicalData(Generator):
         """Add a ProductClassificationItem based on the given dictionary and class to the submodel."""
         classification = model.SubmodelElementCollection(
             id_short = f"ProductClassificationItem{len(self.product_classifications.value)+1:02d}",
-            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationItem/1/1")
+            semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationItem/1/1"),
         )
         classification.value.add(
             model.Property(
-                id_short = 'ProductClassificationSystem',
+                id_short = "ProductClassificationSystem",
                 value_type = model.datatypes.String,
                 value = dictionary.name,
                 category = "PARAMETER",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationSystem/1/1")
-            )
+                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationSystem/1/1"),
+            ),
         )
         classification.value.add(
             model.Property(
-                id_short = 'ClassificationSystemVersion',
+                id_short = "ClassificationSystemVersion",
                 value_type = model.datatypes.String,
                 value = dictionary.release,
                 category = "PARAMETER",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ClassificationSystemVersion/1/1")
-            )
+                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ClassificationSystemVersion/1/1"),
+            ),
         )
         classification.value.add(
             model.Property(
-                id_short='ProductClassId',
+                id_short="ProductClassId",
                 value_type = model.datatypes.String,
                 value = class_id,
                 category = "PARAMETER",
-                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassId/1/1")
-            )
+                semantic_id = self._create_semantic_id("https://admin-shell.io/ZVEI/TechnicalData/ProductClassId/1/1"),
+            ),
         )
         self.product_classifications.value.add(classification)
 
@@ -213,19 +213,19 @@ class AASSubmodelTechnicalData(Generator):
                 if value_id is None:
                     value_id = f"{defintion.id}/{value}"
                 data_spec.value_list.add(
-                    model.ValueReferencePair(value[:2000], 
+                    model.ValueReferencePair(value[:2000],
                         model.ExternalReference(
                             (model.Key(
                                 type_= model.KeyTypes.GLOBAL_REFERENCE,
-                                value=value_id[:2000]
-                            ),)
-                        )
-                    )
+                                value=value_id[:2000],
+                            ),),
+                        ),
+                    ),
                 )
         cd.embedded_data_specifications.append(
             model.EmbeddedDataSpecification(
                 data_specification=next(iter(cd.is_case_of)),
-                data_specification_content=data_spec
+                data_specification_content=data_spec,
             ))
 
     def _add_concept_description(self, reference, property_defintion: PropertyDefinition | None = None, value: str = None):
@@ -236,24 +236,24 @@ class AASSubmodelTechnicalData(Generator):
             is_case_of = {model.ExternalReference((
                 model.Key(
                     type_= model.KeyTypes.GLOBAL_REFERENCE,
-                    value=reference
+                    value=reference,
                 ), ),
             )},
-            category = "PROPERTY" if value is None else "VALUE"
+            category = "PROPERTY" if value is None else "VALUE",
         )
         if property_defintion:
-            name = property_defintion.name.get('en')
+            name = property_defintion.name.get("en")
             if name is None:
                 name = next(iter(property_defintion.name.values()), None)
             if name is not None:
-                cd.id_short = re.sub(anti_alphanumeric_regex, '_', name)
+                cd.id_short = re.sub(anti_alphanumeric_regex, "_", name)
                 cd.display_name = model.MultiLanguageNameType({ln:n[:64] for ln,n in property_defintion.name.items()})
             if property_defintion.definition is not None and len(property_defintion.definition) > 0:
                 cd.description = model.MultiLanguageTextType({ln:n[:1023] for ln,n in property_defintion.definition.items()})
             self._add_embedded_data_spec(cd, property_defintion)
         elif value:
-            cd.id_short = re.sub(anti_alphanumeric_regex, '_', value)
-            cd.display_name = model.MultiLanguageNameType({'en': value[:64]})
+            cd.id_short = re.sub(anti_alphanumeric_regex, "_", value)
+            cd.display_name = model.MultiLanguageNameType({"en": value[:64]})
 
         self.concept_descriptions[reference] = cd
 
@@ -264,15 +264,15 @@ class AASSubmodelTechnicalData(Generator):
         return model.ModelReference((
                     model.Key(
                         type_= model.KeyTypes.CONCEPT_DESCRIPTION,
-                        value=reference
-                    ), ), type_=model.concept.ConceptDescription
+                        value=reference,
+                    ), ), type_=model.concept.ConceptDescription,
                 )
 
     @staticmethod
     def _create_id_short(proposal:str | None = None):
-        id_short = re.sub(anti_alphanumeric_regex, '_', proposal) if proposal is not None else ''
+        id_short = re.sub(anti_alphanumeric_regex, "_", proposal) if proposal is not None else ""
         if len(id_short) == 0:
-            id_short = "ID_" + str(uuid.uuid4()).replace('-', '_')
+            id_short = "ID_" + str(uuid.uuid4()).replace("-", "_")
         elif not id_short[0].isalpha():
             id_short = "ID_" + id_short
         return id_short[:128]
@@ -303,15 +303,15 @@ class AASSubmodelTechnicalData(Generator):
                             self._create_aas_property_recursive(
                                 property_,
                                 val,
-                                id_short+'_'+str(key),
+                                id_short+"_"+str(key),
                                 None,
                                 None,
-                            )
+                            ),
                         )
                     except AASConstraintViolation as error:
                         logger.warning(f"Couldn't add {type(value)} item to property {display_name}: {error}")
                 return smc
-    
+
         value_id = None
         if property_.definition is not None and len(property_.definition.values) > 0 and value is not None:
             value_id = property_.definition.get_value_id(str(value))
@@ -330,7 +330,7 @@ class AASSubmodelTechnicalData(Generator):
             value_type = type(value) if value is not None else model.datatypes.String,
             value = value,
             value_id = value_id,
-            semantic_id = self._create_semantic_id(property_.definition_id, property_.definition)
+            semantic_id = self._create_semantic_id(property_.definition_id, property_.definition),
         )
 
     def _create_aas_property(self, property_: Property) -> model.DataElement | None:
@@ -343,7 +343,7 @@ class AASSubmodelTechnicalData(Generator):
         else:
             logger.warning(f"No id_short for: {property_}")
             return None
-        
+
         display_name = {}
         if property_.definition is not None:
             unit = property_.unit
@@ -351,10 +351,10 @@ class AASSubmodelTechnicalData(Generator):
                 logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
             if len(property_.definition.name) > 0:
                 display_name = model.MultiLanguageNameType({ln:n[:64] for ln,n in property_.definition.name.items()})
-        
+
         if len(display_name) == 0:
             display_name = model.MultiLanguageNameType({property_.language: id_short[:64]})
-        
+
         if property_.reference is None:
             description = None
         else:
@@ -369,7 +369,7 @@ class AASSubmodelTechnicalData(Generator):
                 min=min,
                 max=max,
                 value_type = type_,
-                semantic_id = self._create_semantic_id(property_.definition_id, property_.definition)
+                semantic_id = self._create_semantic_id(property_.definition_id, property_.definition),
             )
 
         return self._create_aas_property_recursive(property_, property_.value, id_short, display_name, description)
@@ -385,16 +385,16 @@ class AASSubmodelTechnicalData(Generator):
         id_short = None
         if property_.definition_id is not None and ECLASS.check_property_irdi(property_.definition_id):
             id_short = self.general_information_semantic_ids_short.get(property_.definition_id[10:16])
-         
+
         if property_.label is not None:
             for label in self.general_information_semantic_ids_short.values():
-                if re.sub(anti_alphanumeric_regex,'', property_.label.lower()) == label.lower():
+                if re.sub(anti_alphanumeric_regex,"", property_.label.lower()) == label.lower():
                     id_short = label
                     break
         if id_short is None:
             return False
-        
-        general_info = self.general_information.value.get('id_short', id_short)
+
+        general_info = self.general_information.value.get("id_short", id_short)
         if isinstance(general_info, model.MultiLanguageProperty):
             general_info.value = model.MultiLanguageTextType({property_.language: str(property_.value)})
         else:
@@ -403,13 +403,13 @@ class AASSubmodelTechnicalData(Generator):
 
     @staticmethod
     def _generate_next_free_id_short(container: model.NamespaceSet, id_short):
-        while(container.contains_id('id_short', id_short)):
+        while(container.contains_id("id_short", id_short)):
             i = len(id_short) - 1
             while i >= 0 and id_short[i].isdigit():
                 i -= 1
 
             if i == len(id_short) - 1:
-                next_id_short = id_short + '_1'
+                next_id_short = id_short + "_1"
             else:
                 prefix = id_short[:i + 1]
                 num = int(id_short[i + 1:]) + 1
@@ -417,7 +417,7 @@ class AASSubmodelTechnicalData(Generator):
 
             if len(next_id_short) > 128:
                 if i == len(id_short) - 1:
-                    next_id_short = id_short[:126] + '_1'
+                    next_id_short = id_short[:126] + "_1"
                 else:
                     prefix = id_short[:128 - len(str(num))]
                     next_id_short = prefix + str(num)
@@ -437,19 +437,19 @@ class AASSubmodelTechnicalData(Generator):
         for property_ in properties:
             if self._update_general_information(property_):
                 continue
-            
+
             aas_property = self._create_aas_property(property_)
             if aas_property is None:
                 continue
-            
+
             aas_property.id_short = self._generate_next_free_id_short(
                 self.technical_properties.value, aas_property.id_short)
-            
+
             try:
                 self.technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
                 logger.warning(f"Couldn't add property to submodel: {error}")
-    
+
     @staticmethod
     def _remove_empty_submodel_element(element):
         if isinstance(element, (model.SubmodelElementCollection, model.SubmodelElementList)):
@@ -459,7 +459,7 @@ class AASSubmodelTechnicalData(Generator):
         elif isinstance(element, model.Property):
             if element.value is None:
                 return True
-            if hasattr(element.value, '__len__') and len(element.value) == 0:
+            if hasattr(element.value, "__len__") and len(element.value) == 0:
                 return True
         elif isinstance(element, model.MultiLanguageProperty):
             if element.value is None:
@@ -506,7 +506,7 @@ class AASSubmodelTechnicalData(Generator):
     def dumps(self):
         """Serialize and return the submodel to a json string."""
         return json.dumps(self.submodel, cls=json_serialization.AASToJsonEncoder, indent=2)
-    
+
     def save_as_aasx(self, filepath: str, aas: model.AssetAdministrationShell | None = None):
         """Save the submodel together with an AAS in an aasx package.
         
@@ -517,8 +517,8 @@ class AASSubmodelTechnicalData(Generator):
                 id_= f"https://eclipse.dev/basyx/pdf-to-aas/aas/{uuid.uuid4()}",
                 asset_information=model.AssetInformation(
                     asset_kind=model.AssetKind.TYPE,
-                    global_asset_id=f"https://eclipse.dev/basyx/pdf-to-aas/asset/{uuid.uuid4()}"
-                    )
+                    global_asset_id=f"https://eclipse.dev/basyx/pdf-to-aas/asset/{uuid.uuid4()}",
+                    ),
             )
 
         aas.submodel.add(model.ModelReference.from_referable(self.submodel))

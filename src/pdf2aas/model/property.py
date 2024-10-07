@@ -1,7 +1,6 @@
 """Classes and functions to work with extracted technical properties."""
 import re
 import uuid
-
 from dataclasses import dataclass, field
 
 from .propertyDefinition import PropertyDefinition
@@ -20,7 +19,7 @@ def try_cast_number(value) -> float | int | None:
     return value
 
 @dataclass
-class Property():
+class Property:
     """A dataclass to represent a property with a value that was extracted.
 
     Attributes:
@@ -39,14 +38,14 @@ class Property():
     unit: str | None = None
     reference: str | None = None
     definition: PropertyDefinition | None = field(default=None, repr=False)
-    language: str =  field(default='en', repr=False)
+    language: str =  field(default="en", repr=False)
     id: str = field(default_factory=lambda: str(uuid.uuid4()), repr=False, compare=False)
 
     @property
     def definition_id(self) -> str | None:
         """Get the id of the definition if available, else None."""
         return self.definition.id if self.definition is not None else None
-    
+
     @property
     def definition_name(self)  -> str | None:
         """Get the definition name for the property language.
@@ -58,7 +57,7 @@ class Property():
             return None
         name = self.definition.name.get(self.language)
         if name is None:
-            name = next(iter(self.definition.name.values()), '')
+            name = next(iter(self.definition.name.values()), "")
         return name
 
     def parse_numeric_range(self) -> tuple[float|int| None, float|int|None]:
@@ -101,28 +100,28 @@ class Property():
 
         """
         return {
-            'property': self.label,
-            'value': self.value,
-            'unit': self.unit,
-            'reference': self.reference,
-            'id': self.definition.id if self.definition else '',
-            'name': self.definition_name
+            "property": self.label,
+            "value": self.value,
+            "unit": self.unit,
+            "reference": self.reference,
+            "id": self.definition.id if self.definition else "",
+            "name": self.definition_name,
         }
 
     @classmethod
     def from_dict(cls, property_dict:dict):
         """Parse a Property from a dictionary."""
-        label = property_dict.get('property')
+        label = property_dict.get("property")
         if label is None:
-            label = property_dict.get('label')
+            label = property_dict.get("label")
         if label is None:
             label = ""
-        
+
         return cls(
             label,
-            property_dict.get('value'),
-            property_dict.get('unit'),
-            property_dict.get('reference'),
+            property_dict.get("value"),
+            property_dict.get("unit"),
+            property_dict.get("reference"),
             None,
-            property_dict.get('language', 'en')
+            property_dict.get("language", "en"),
         )

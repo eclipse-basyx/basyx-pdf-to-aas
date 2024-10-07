@@ -35,3 +35,7 @@ demo = [
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = ["setuptools", "setuptools-scm"]
+
+
+[tool.ruff.lint]
+select = ["ALL"]

@@ -1,16 +1,25 @@
 """Generator for using Asset Administration Shell files as template."""
-import logging
-import json
 import copy
+import json
+import logging
 
 from basyx.aas import model
-from basyx.aas.util.traversal import walk_submodel
-from basyx.aas.adapter.aasx import DictSupplementaryFileContainer, AASXWriter, AASXReader
+from basyx.aas.adapter.aasx import (
+    AASXReader,
+    AASXWriter,
+    DictSupplementaryFileContainer,
+)
 from basyx.aas.adapter.json import json_serialization
+from basyx.aas.util.traversal import walk_submodel
 
+from ..model import Property, PropertyDefinition
+from .aas import (
+    cast_property,
+    cast_range,
+    get_dict_data_type_from_IEC6360,
+    get_dict_data_type_from_xsd,
+)
 from .core import Generator
-from .aas import cast_property, cast_range, get_dict_data_type_from_xsd, get_dict_data_type_from_IEC6360
-from ..model import PropertyDefinition, Property
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +47,7 @@ class AASTemplate(Generator):
     def aasx_path(self):
         """Get the file path to the AASX package used as template."""
         return self._aasx_path
-    
+
     @aasx_path.setter
     def aasx_path(self, value):
         """Set the file path to the AASX package.
@@ -89,7 +98,7 @@ class AASTemplate(Generator):
     def get_properties(self) -> list[Property]:
         """Get all properties found in the template with updated values."""
         return [p for (p, _) in self._properties.values()]
-    
+
     def get_property(self, id_) -> Property | None:
         """"Get a single property by its id."""
         property_, _ =  self._properties.get(id_, (None, None))
@@ -125,8 +134,7 @@ class AASTemplate(Generator):
         if string_dict is not None and len(string_dict) > 0:
             if language in string_dict:
                 return string_dict[language], language
-            else:
-                next(iter(string_dict.items()))
+            next(iter(string_dict.items()))
         return None, language
 
     @staticmethod
@@ -138,7 +146,7 @@ class AASTemplate(Generator):
                     None)
         if data_spec is None:
             return
-        
+
         if (definition.name is None or len(definition.name) == 0):
             if data_spec.preferred_name is not None and len(data_spec.preferred_name) > 0:
                 definition.name = data_spec.preferred_name._dict
@@ -147,13 +155,13 @@ class AASTemplate(Generator):
 
         if definition.type is None and data_spec.data_type is not None:
             definition.type = get_dict_data_type_from_IEC6360(data_spec.data_type)
-        
+
         if len(definition.definition) == 0 and data_spec.definition is not None:
             definition.definition = data_spec.definition._dict
 
         if len(definition.unit) == 0 and data_spec.unit is not None:
             definition.unit = data_spec.unit
-        
+
         if definition.values is None or len(definition.values) == 0 and \
                 data_spec.value_list is not None and len(data_spec.value_list) > 0:
             definition.values = [{"value": value.value, "id": value.value_id.key[0].value} #TODO get key more robust
@@ -181,7 +189,7 @@ class AASTemplate(Generator):
                 if isinstance(item, model.Identifiable):
                     parent_path.append(item.id)
                     break
-                elif isinstance(item, model.Referable):
+                if isinstance(item, model.Referable):
                     if isinstance(item.parent, model.SubmodelElementList):
                         parent_path.append(f"{item.parent.id_short}[{item.parent.value.index(item)}]")
                         item = item.parent
@@ -196,15 +204,15 @@ class AASTemplate(Generator):
             property_ = Property(
                 id=self._create_id_from_path(aas_property),
             )
-            
+
             property_.label, property_.language = self._get_multilang_string(
                 aas_property.display_name, property_.language)
             if property_.label is None:
                 property_.label = aas_property.id_short
-            
+
             property_.reference, _ = self._get_multilang_string(
                 aas_property.description, property_.language)
-            
+
             if isinstance(aas_property, model.Range):
                 property_.value = [aas_property.min, aas_property.max]
                 type_ = "range"
@@ -218,10 +226,10 @@ class AASTemplate(Generator):
 
             definition = PropertyDefinition(
                 id=property_.id,
-                type=type_
+                type=type_,
             )
             self._fill_definition_from_data_spec(definition, aas_property.embedded_data_specifications)
-            
+
             semantic_id = aas_property.semantic_id
             if semantic_id:
                 definition.id = semantic_id.key[0].value # TODO handle types and multiple keys etc.
@@ -235,7 +243,7 @@ class AASTemplate(Generator):
                         if cd.display_name:
                             definition.name = cd.display_name._dict
                         else:
-                            definition.name = {'en': cd.id_short}
+                            definition.name = {"en": cd.id_short}
             property_.definition = definition
             properties[property_.id] = (property_, aas_property)
         return properties

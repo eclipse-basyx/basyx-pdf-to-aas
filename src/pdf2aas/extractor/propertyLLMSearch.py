@@ -2,11 +2,10 @@
 import logging
 from typing import Literal
 
-from openai import OpenAI, AzureOpenAI
+from openai import AzureOpenAI, OpenAI
 
-from ..model import PropertyDefinition, Property
-from . import PropertyLLM
-from . import CustomLLMClient
+from ..model import Property, PropertyDefinition
+from . import CustomLLMClient, PropertyLLM
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +51,10 @@ Represent ranges as json list of two values.
     ) -> None:
         """Initialize the property LLM search with default values."""
         super().__init__(model_identifier, api_endpoint, client, temperature, max_tokens, response_format)
-        self.use_property_definition = 'definition' in property_keys_in_prompt
-        self.use_property_unit = 'unit' in property_keys_in_prompt
-        self.use_property_values = 'values' in property_keys_in_prompt
-        self.use_property_datatype = 'datatype' in property_keys_in_prompt
+        self.use_property_definition = "definition" in property_keys_in_prompt
+        self.use_property_unit = "unit" in property_keys_in_prompt
+        self.use_property_values = "values" in property_keys_in_prompt
+        self.use_property_datatype = "datatype" in property_keys_in_prompt
         self.max_definition_chars = 0
         self.max_values_length = 0
 
@@ -64,7 +63,7 @@ Represent ranges as json list of two values.
         datasheet: str,
         properties: PropertyDefinition | list[PropertyDefinition],
         language: str = "en",
-        hint: str | None = None
+        hint: str | None = None,
     ) -> str:
         """Create the prompt from the given datasheet and property definiions.
         
@@ -83,19 +82,19 @@ Represent ranges as json list of two values.
         """
         if isinstance(properties, list):
             prompt = self.create_property_list_prompt(properties, language)
-        else: 
+        else:
             prompt = self.create_property_prompt(properties, language)
 
         if hint:
             prompt+= "\n" + hint
-        
+
         prompt+= f"\nThe following text enclosed in triple backticks (```) is the datasheet of the technical device. It was converted from pdf.\n```\n{datasheet}\n```"
         return prompt
 
     def create_property_prompt(
             self,
             property_: PropertyDefinition,
-            language: str = "en"
+            language: str = "en",
     ) -> str:
         """Create the prompt to search for a given property.
         
@@ -108,9 +107,9 @@ Represent ranges as json list of two values.
         if property_name is None:
             property_name = property_.name
             logger.warning(
-                f"Property {property_.id} name not defined for language {language}. Using {property_name}."
+                f"Property {property_.id} name not defined for language {language}. Using {property_name}.",
             )
-        
+
         prompt = ""
         property_definition = property_.definition.get(language)
         if self.use_property_definition and property_definition:
@@ -133,7 +132,7 @@ Represent ranges as json list of two values.
     def create_property_list_prompt(
             self,
             property_list: list[PropertyDefinition],
-            language: str = "en"
+            language: str = "en",
     ) -> str:
         """Create the prompt to search for a list of property definitions.
         
@@ -167,32 +166,32 @@ Represent ranges as json list of two values.
             if property_name is None:
                 property_name = next(iter(property_.name.values()))
                 logger.warning(
-                    f"Property {property_.id} name not defined for language {language}. Using {property_name}."
+                    f"Property {property_.id} name not defined for language {language}. Using {property_name}.",
                 )
-            
+
             property_row = f"| {property_name} |"
             if self.use_property_datatype:
                 property_row += f" {property_.type} |"
             if self.use_property_unit:
                 property_row += f" {property_.unit} |"
             if self.use_property_definition:
-                property_definition = property_.definition.get(language, '')
+                property_definition = property_.definition.get(language, "")
                 if property_definition and self.max_definition_chars > 0 and len(property_definition) > self.max_definition_chars:
                     property_definition = property_definition[:self.max_definition_chars] + " ..."
                 property_row += f" {property_definition} |"
             if self.use_property_values:
-                property_values = property_.values_list if len(property_.values) > 0 else ''
+                property_values = property_.values_list if len(property_.values) > 0 else ""
                 if self.max_values_length > 0 and len(property_values) > self.max_values_length:
                     property_values = property_.values_list[:self.max_values_length] + ["..."]
                 property_row += f" {property_values} |"
-            prompt += property_row.replace('\n', ' ') + "\n"
+            prompt += property_row.replace("\n", " ") + "\n"
             #TODO escape | sign in name, type, unit, definition, values, etc.
         return prompt
 
     def _add_definitions(
             self,
             properties: list[Property],
-            property_definition: list[PropertyDefinition] | PropertyDefinition
+            property_definition: list[PropertyDefinition] | PropertyDefinition,
     ) -> list[Property]:
         if len(properties) == 0:
             return []

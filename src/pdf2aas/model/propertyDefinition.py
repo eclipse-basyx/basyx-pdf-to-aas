@@ -2,8 +2,9 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
+
 @dataclass
-class PropertyDefinition():
+class PropertyDefinition:
     """A dataclass to represent a property definition within a dictionary.
 
     Attributes:
@@ -23,11 +24,11 @@ class PropertyDefinition():
     """
 
     id: str
-    name: dict[str, str] = field(default_factory= lambda: {})
-    type: Literal['bool', 'numeric', 'string', 'range'] = 'string'
-    definition: dict[str, str] = field(default_factory= lambda: {})
-    unit: str = ''
-    values: list[str | dict [Literal['value', 'id', 'definition'], str]] = field(default_factory= lambda: [])
+    name: dict[str, str] = field(default_factory= dict)
+    type: Literal["bool", "numeric", "string", "range"] = "string"
+    definition: dict[str, str] = field(default_factory= dict)
+    unit: str = ""
+    values: list[str | dict [Literal["value", "id", "definition"], str]] = field(default_factory= list)
 
     @property
     def values_list(self) -> list[str]:
@@ -53,7 +54,7 @@ class PropertyDefinition():
                     return idx
                 continue
             if "value" in value_definition:
-                if value == value_definition['value']:
-                    return value_definition.get('id', idx)
+                if value == value_definition["value"]:
+                    return value_definition.get("id", idx)
             continue
         return None

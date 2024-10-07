@@ -3,8 +3,9 @@ from dataclasses import dataclass, field
 
 from .propertyDefinition import PropertyDefinition
 
+
 @dataclass
-class ClassDefinition():
+class ClassDefinition:
     """Class to represent product, device or article classes in a dictionary.
     
     Arguments:
@@ -18,7 +19,7 @@ class ClassDefinition():
     """
 
     id: str
-    name: str = ''
-    description: str = ''
-    keywords: list[str] = field(default_factory= lambda: [])
-    properties: list[PropertyDefinition] = field(default_factory= lambda: [])
+    name: str = ""
+    description: str = ""
+    keywords: list[str] = field(default_factory= list)
+    properties: list[PropertyDefinition] = field(default_factory= list)

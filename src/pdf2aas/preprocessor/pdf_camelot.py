@@ -25,13 +25,13 @@ class Camelot(Preprocessor):
 
     def __init__(
         self,
-        output_format: Literal['html', 'markdown', 'json,', 'csv'] = 'html',
+        output_format: Literal["html", "markdown", "json,", "csv"] = "html",
         accuracy_limit: float = 0.8,
     ) -> None:
         """Initilialize preprocessor with html format and accuracy limit 0.8."""
         self.output_format = output_format
         self.accuracy_limit = accuracy_limit
-    
+
     def convert(self, filepath: str) -> list[str] | str | None:
         """Convert the content of a PDF file into a list of tables as strings.
         
@@ -41,7 +41,7 @@ class Camelot(Preprocessor):
         """
         logger.debug(f"Extracting tables from PDF: {filepath}")
         try:
-            tables = camelot.read_pdf(filepath, pages='all', strip_text=' ')
+            tables = camelot.read_pdf(filepath, pages="all", strip_text=" ")
         except FileNotFoundError as e:
             logger.error(f"Error reading {filepath}: {e}")
             return None
@@ -51,12 +51,12 @@ class Camelot(Preprocessor):
             if table.accuracy < self.accuracy_limit:
                 continue
             match self.output_format:
-                case 'html':
+                case "html":
                     result.append(table.df.to_html())
-                case 'json':
+                case "json":
                     result.append(table.df.to_json())
-                case 'csv':
+                case "csv":
                     result.append(table.df.to_csv())
-                case 'markdown':
+                case "markdown":
                     result.append(table.df.to_markdown())
         return result

@@ -1,9 +1,10 @@
 """Classes to dfeine custom clients to be used by the LLM extractors."""
-import logging
-import requests
-from copy import deepcopy
 import json
+import logging
 from abc import ABC, abstractmethod
+from copy import deepcopy
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class CustomLLMClient(ABC):
             model: str,
             temperature: float,
             max_tokens: int,
-            response_format: dict
+            response_format: dict,
     ) -> tuple[str, str]:
         """Create completions using a language model.
         
@@ -93,7 +94,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
         if headers is None:
             headers = {
                 "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Accept": "application/json",
             }
         self.headers = headers
         self.retries = retries
@@ -117,12 +118,12 @@ class CustomLLMClientHTTP(CustomLLMClient):
         """
         request_payload = self.request_template.format(
             messages=json.dumps(messages),
-            message_system=json.dumps(messages[0]['content']),
-            message_user=json.dumps(messages[1]['content']),
+            message_system=json.dumps(messages[0]["content"]),
+            message_user=json.dumps(messages[1]["content"]),
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            response_format=json.dumps(response_format)
+            response_format=json.dumps(response_format),
         )
         try:
             # Normalize payload: delete, escape \n, ...
@@ -131,18 +132,18 @@ class CustomLLMClientHTTP(CustomLLMClient):
             logger.error(f"Request payload is not JSON deserializeable: {e}.\n{request_payload}")
             return None, None
         logger.debug(f"Formated and normalized request payload: {request_payload}")
-        
+
         headers = deepcopy(self.headers)
         if self.api_key:
-            headers['Authorization']=headers.get('Authorization', 'Bearer {api_key}').format(api_key=self.api_key)
-        
+            headers["Authorization"]=headers.get("Authorization", "Bearer {api_key}").format(api_key=self.api_key)
+
         for attempt in range(self.retries+1):
             try:
                 response = requests.post(
                     self.endpoint,
                     headers=headers,
                     data=request_payload,
-                    verify=self.verify
+                    verify=self.verify,
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -153,17 +154,17 @@ class CustomLLMClientHTTP(CustomLLMClient):
         if result is None:
             return None, None
         return self.evaluate_result_path(result), result
-    
+
     def evaluate_result_path(self, raw_result: dict | list | None) -> str | None:
         """Get the answer as string from the raw_result using the `result_path`."""
         if self.result_path is None or raw_result is None:
             return raw_result
         try:
-            keys = self.result_path.replace('[', '.').replace(']', '').split('.')
+            keys = self.result_path.replace("[", ".").replace("]", "").split(".")
             for key in keys:
                 if isinstance(raw_result, list):
                     key = int(key)
                 raw_result = raw_result[key]
-        except (KeyError, ValueError, TypeError): 
+        except (KeyError, ValueError, TypeError):
             return None
         return str(raw_result)

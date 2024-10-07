@@ -4,11 +4,10 @@ import logging
 import re
 import unicodedata
 
-from openai import OpenAI, AzureOpenAI, OpenAIError
+from openai import AzureOpenAI, OpenAI, OpenAIError
 
-from ..model import PropertyDefinition, Property
-from . import CustomLLMClient
-from . import Extractor
+from ..model import Property, PropertyDefinition
+from . import CustomLLMClient, Extractor
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ Example result:
         client: OpenAI | AzureOpenAI | CustomLLMClient | None = None,
         temperature: str = 0,
         max_tokens: int | None = None,
-        response_format: dict | None = {"type": "json_object"}
+        response_format: dict | None = {"type": "json_object"},
     ) -> None:
         """Initialize the Property LLM extractor with default values.
         
@@ -129,13 +128,13 @@ Example result:
         properties = self._parse_properties(properties)
         properties = self._add_definitions(properties, property_definition)
         return properties
-    
+
     def create_prompt(
         self,
         datasheet: str,
         properties: PropertyDefinition | list[PropertyDefinition],
         language: str = "en",
-        hint: str | None = None
+        hint: str | None = None,
     ) -> str:
         """Create the prompt from the given datasheet.
         
@@ -148,7 +147,7 @@ Example result:
         A `hint` (c.f. "prompt_hint" in :meth: extract) is added to the top of
         the prompt.
         """
-        prompt = '' if hint is None else hint
+        prompt = "" if hint is None else hint
         prompt += self.user_prompt_template.format(datasheet=datasheet)
         return prompt
 
@@ -189,17 +188,17 @@ Example result:
                 response_format=self.response_format,
             )
         result = chat_completion.choices[0].message.content
-        if chat_completion.choices[0].finish_reason not in ['stop', 'None']:
+        if chat_completion.choices[0].finish_reason not in ["stop", "None"]:
             logger.warning(f"Chat completion finished with reason '{chat_completion.choices[0].finish_reason}'. (max_tokens={self.max_tokens})")
         return result, chat_completion.to_dict(mode="json")
-    
+
     def _parse_result(self, result):
         if result is None:
             return None
         try:
             properties = json.loads("".join(ch for ch in result if unicodedata.category(ch)[0]!="C"))
         except json.decoder.JSONDecodeError:
-            md_block = re.search(r'```(?:json)?\s*(.*?)\s*```', result, re.DOTALL)
+            md_block = re.search(r"```(?:json)?\s*(.*?)\s*```", result, re.DOTALL)
             if md_block is None:
                 logger.error("Couldn't decode LLM result: " + result)
                 return None
@@ -211,7 +210,7 @@ Example result:
                 return None
         if isinstance(properties, dict):
             found_key = False
-            for key in ['result', 'results', 'items', 'data', 'properties']:
+            for key in ["result", "results", "items", "data", "properties"]:
                 if key in properties:
                     properties = properties.get(key)
                     logger.debug(f"Heuristicly took '{key}' from LLM result.")
@@ -221,7 +220,7 @@ Example result:
                 logger.debug(f"Took '{next(iter(properties.keys()))}' from LLM result.")
                 properties = next(iter(properties.values()))
         return properties
-    
+
     def _parse_properties(
             self,
             properties: dict | list | None,
@@ -233,18 +232,18 @@ Example result:
             return []
 
         if isinstance(properties, dict):
-            if all(key in properties for key in ['property', 'value', 'unit', 'reference']):
+            if all(key in properties for key in ["property", "value", "unit", "reference"]):
                 # only one property returned
                 properties = [properties]
             else:
                 properties = list(properties.values())
                 logger.debug("Extracted properties are a dict, try to encapsulate them in a list.")
-        
+
         return [Property.from_dict(p) for p in properties if isinstance(p, dict)]
 
     def _add_definitions(
             self,
             properties: list[Property],
-            property_definition: list[PropertyDefinition] | PropertyDefinition
+            property_definition: list[PropertyDefinition] | PropertyDefinition,
     ) -> list[Property]:
         return properties

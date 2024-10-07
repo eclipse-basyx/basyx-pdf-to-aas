@@ -32,7 +32,7 @@ class Text(Preprocessor):
         try:
             with open(filepath, encoding=self.encoding, newline=self.newline) as file:
                 text = file.read()
-        except (FileNotFoundError, PermissionError, IsADirectoryError, IOError) as e:
-            logging.error(f"Couldn't load file: {e}")
+        except (OSError, FileNotFoundError, PermissionError, IsADirectoryError) as e:
+            logging.exception(f"Couldn't load file: {e}")
             return None
         return text

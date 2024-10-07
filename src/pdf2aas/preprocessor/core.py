@@ -1,6 +1,7 @@
 """Abstract definitions for preprocessors."""
 from abc import ABC, abstractmethod
 
+
 class Preprocessor(ABC):
     """Abstract base class for preprocessing files for the PDF2AAS workflow.
 

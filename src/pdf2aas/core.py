@@ -1,9 +1,10 @@
 """Core class with default toolchain for the PDF to AAS conversion."""
 import logging
-from .preprocessor import Preprocessor, PDFium
-from .dictionary import Dictionary, ECLASS
+
+from .dictionary import ECLASS, Dictionary
 from .extractor import Extractor, PropertyLLMSearch
-from .generator import Generator, AASSubmodelTechnicalData
+from .generator import AASSubmodelTechnicalData, Generator
+from .preprocessor import PDFium, Preprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class PDF2AAS:
         dictionary: Dictionary = None,
         extractor: Extractor = None,
         generator: Generator = None,
-        batch_size: int = 0
+        batch_size: int = 0,
     ) -> None:
         """Initialize the PDF2AAS toolchain with optional custom components.
 
@@ -54,7 +55,7 @@ class PDF2AAS:
             self,
             pdf_filepath: str,
             classification: str,
-            output_filepath: str = None
+            output_filepath: str = None,
     ) -> None:
         """Convert a PDF document into an AAS submodel.
 
@@ -70,18 +71,18 @@ class PDF2AAS:
 
         """
         preprocessed_datasheet = self.preprocessor.convert(pdf_filepath)
-        
+
         property_definitions = self.dictionary.get_class_properties(classification)
-              
+
         if self.batch_size <= 0:
             properties = self.extractor.extract(preprocessed_datasheet, property_definitions)
         elif self.batch_size == 1:
             properties = [self.extractor.extract(preprocessed_datasheet, d) for d in property_definitions]
         else:
-            properties = [] 
+            properties = []
             for i in range(0, len(property_definitions), self.batch_size):
                 properties.extend(self.extractor.extract(preprocessed_datasheet, property_definitions[i:i + self.batch_size]))
-        
+
         self.generator.reset()
         if isinstance(self.generator, AASSubmodelTechnicalData):
             self.generator.add_classification(self.dictionary, classification)

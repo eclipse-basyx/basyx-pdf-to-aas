@@ -1,6 +1,7 @@
 """Generic generator class to export property lists to different formats."""
 from pdf2aas.model import Property
 
+
 class Generator:
     """Generic and simple generator class.
     
@@ -30,5 +31,5 @@ class Generator:
 
     def dump(self, filepath:str) -> None:
         """Write the string representation of the properties to a file."""
-        with open(filepath, 'w', encoding="utf-8") as file:
+        with open(filepath, "w", encoding="utf-8") as file:
             file.write(self.dumps())
