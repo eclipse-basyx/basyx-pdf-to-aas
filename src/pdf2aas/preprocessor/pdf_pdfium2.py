@@ -26,11 +26,11 @@ class PDFium(Preprocessor):
         and returns None.
 
         """
-        logger.debug(f"Converting to text from pdf: {filepath}")
+        logger.debug("Converting to text from pdf: %s", {filepath})
         try:
             doc = PdfDocument(filepath, autoclose=True)
-        except (PdfiumError, FileNotFoundError) as e:
-            logger.error(f"Error reading {filepath}: {e}")
+        except (PdfiumError, FileNotFoundError) as error:
+            logger.error("Error reading filepath: %s. %s", filepath, error)
             return None
         return [
             page.get_textpage().get_text_bounded().replace("\r\n", "\n").replace("\r", "\n")

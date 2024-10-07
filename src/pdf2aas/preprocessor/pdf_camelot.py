@@ -39,11 +39,11 @@ class Camelot(Preprocessor):
         (default html). If an error occurs during the reading of the PDF file,
         it logs the error and returns None.
         """
-        logger.debug(f"Extracting tables from PDF: {filepath}")
+        logger.debug("Extracting tables from PDF: %s", filepath)
         try:
             tables = camelot.read_pdf(filepath, pages="all", strip_text=" ")
-        except FileNotFoundError as e:
-            logger.error(f"Error reading {filepath}: {e}")
+        except FileNotFoundError:
+            logger.error("File not found: %s", filepath)
             return None
 
         result = []

@@ -102,13 +102,11 @@ Represent ranges as json list of two values.
         property defintion.
         """
         if len(property_.name) == 0:
-            raise ValueError(f"Property {property_.id} has no name.")
+            raise ValueError("Property %s has no name.", property_.id)
         property_name = property_.name.get(language)
         if property_name is None:
             property_name = property_.name
-            logger.warning(
-                f"Property {property_.id} name not defined for language {language}. Using {property_name}.",
-            )
+            logger.warning("Property %s name not defined for language %s. Using %s.", property_.id, language, property_name)
 
         prompt = ""
         property_definition = property_.definition.get(language)
@@ -160,14 +158,12 @@ Represent ranges as json list of two values.
 
         for property_ in property_list:
             if len(property_.name) == 0:
-                logger.warning(f"Property {property_.id} has no name.")
+                logger.warning("Property %s has no name.", property_.id)
                 continue
             property_name = property_.name.get(language)
             if property_name is None:
                 property_name = next(iter(property_.name.values()))
-                logger.warning(
-                    f"Property {property_.id} name not defined for language {language}. Using {property_name}.",
-                )
+                logger.warning("Property %s name not defined for language %s. Using %s.",property_.id, language, property_name)
 
             property_row = f"| {property_name} |"
             if self.use_property_datatype:
@@ -202,11 +198,11 @@ Represent ranges as json list of two values.
             for i, property_ in enumerate(properties):
                 property_.definition = property_definition[i]
         elif len(property_definition) == 1 and len(properties) > 1:
-            logger.warning(f"Extracted {len(properties)} properties for one definition.")
+            logger.warning("Extracted %s properties for one definition.", len(properties))
             for property_ in properties:
                 property_.definition = property_definition[0]
         else:
-            logger.warning(f"Extracted {len(properties)} properties for {len(property_definition)} definitions.")
+            logger.warning("Extracted %s properties for %s definitions.", len(properties), len(property_definition))
             property_definition_dict = {next(iter(p.name.values()), p.id).lower(): p for p in property_definition}
             for property_ in properties:
                 property_.definition = property_definition_dict.get(

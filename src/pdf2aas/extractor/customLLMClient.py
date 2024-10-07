@@ -129,9 +129,9 @@ class CustomLLMClientHTTP(CustomLLMClient):
             # Normalize payload: delete, escape \n, ...
             request_payload = json.dumps(json.loads(request_payload))
         except json.JSONDecodeError as e:
-            logger.error(f"Request payload is not JSON deserializeable: {e}.\n{request_payload}")
+            logger.error("Request payload is not JSON deserializeable: %s.\n%s", e, request_payload)
             return None, None
-        logger.debug(f"Formated and normalized request payload: {request_payload}")
+        logger.debug("Formated and normalized request payload: %s", request_payload)
 
         headers = deepcopy(self.headers)
         if self.api_key:
@@ -148,8 +148,8 @@ class CustomLLMClientHTTP(CustomLLMClient):
                 response.raise_for_status()
                 result = response.json()
                 break
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Error requesting the custom LLM endpoint (attempt {attempt}): {e}")
+            except requests.exceptions.RequestException:
+                logger.error("Error requesting the custom LLM endpoint (attempt {attempt}): {e}")
                 result = None
         if result is None:
             return None, None

@@ -69,7 +69,7 @@ class PDF2HTMLEX(Preprocessor):
             or None if the conversion fails.
 
         """
-        logger.info(f"Converting to html from pdf: {filepath}")
+        logger.info("Converting to html from pdf: %s", filepath)
         filename = Path(filepath).stem
         dest_dir = Path(self.temp_dir, filename)
         try:
@@ -122,10 +122,8 @@ class PDF2HTMLEX(Preprocessor):
             logger.warning("Call to pdf2htmlEX stderr:\n%s", pdf2htmlEX.stderr)
 
         if pdf2htmlEX.returncode != 0:
-            logger.error(
-                f"Call to pdf2htmlEX failed with returncode: {pdf2htmlEX.returncode}",
-            )
-            logger.debug(f"pdf2htmlEX arguments: {pdf2htmlEX.args}")
+            logger.error("Call to pdf2htmlEX failed with returncode: %s", pdf2htmlEX.returncode)
+            logger.debug("pdf2htmlEX arguments: %s", pdf2htmlEX.args)
             # TODO raise custom PDF2HTML error instead
             return None
 
@@ -165,7 +163,7 @@ class PDF2HTMLEX(Preprocessor):
             logger.debug("Reducing datasheet to ReductionLevel.TEXT")
             for idx, page in enumerate(reduced_datasheet):
                 reduced_datasheet[idx] = re.sub(r"<div.*?>|</div>", "", page)
-        logger.info(f"Reduced datasheet to ReductionLevel {level.name}")
+        logger.info("Reduced datasheet to ReductionLevel %s", level.name)
         logger.debug("reduced datasheet:\n" + str(reduced_datasheet))
         return reduced_datasheet
 
@@ -174,5 +172,5 @@ class PDF2HTMLEX(Preprocessor):
         if not os.path.isdir(self.temp_dir):
             return
 
-        logger.info(f"Clearing temporary directory: {os.path.realpath(self.temp_dir)}")
+        logger.info("Clearing temporary directory: %s", os.path.realpath(self.temp_dir))
         shutil.rmtree(self.temp_dir, ignore_errors=True)

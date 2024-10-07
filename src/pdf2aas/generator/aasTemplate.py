@@ -65,7 +65,7 @@ class AASTemplate(Generator):
             with AASXReader(self.aasx_path) as reader:
                 reader.read_into(self.object_store, self.file_store)
         except (ValueError, OSError) as e:
-            logger.error(f"Couldn't load aasx template from '{self.aasx_path}':{e}")
+            logger.error("Couldn't load aasx template from: %s. %s", self.aasx_path, e)
         self.submodels = [submodel for submodel in self.object_store if isinstance(submodel, model.Submodel)]
         self._properties = self._search_properties()
 

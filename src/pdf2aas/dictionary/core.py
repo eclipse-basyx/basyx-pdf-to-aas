@@ -52,7 +52,7 @@ class Dictionary(ABC):
             self.temp_dir=temp_dir
         self.language = language
         if release not in self.supported_releases:
-            logger.warning(f"Release {release} unknown. Supported releases are {self.supported_releases}")
+            logger.warning("Release %s unknown. Supported releases are %s", release, self.supported_releases)
         self.release = release
         if release not in self.releases:
             self.releases[release] = {}
@@ -117,7 +117,7 @@ class Dictionary(ABC):
         """
         if filepath is None:
             filepath = os.path.join(self.temp_dir, f"{self.name}-{self.release}.json")
-        logger.info(f"Save dictionary to file: {filepath}")
+        logger.info("Save dictionary to file: %s", filepath)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w") as file:
             json.dump(
@@ -140,29 +140,23 @@ class Dictionary(ABC):
         if filepath is None:
             filepath = os.path.join(self.temp_dir, f"{self.name}-{self.release}.json")
         if not os.path.exists(filepath):
-            logger.debug(
-                f"Couldn't load dictionary from file. File does not exist: {filepath}",
-            )
+            logger.debug("Couldn't load dictionary from file. File does not exist: %s",filepath)
             return False
-        logger.info(f"Load dictionary from file: {filepath}")
+        logger.info("Load dictionary from file: %s", filepath)
         with open(filepath) as file:
             dict = json.load(file)
             if dict["release"] != self.release:
-                logger.warning(
-                    f"Loading release {dict['release']} for dictionary with release {self.release}.",
-                )
+                logger.warning("Loading release %s for dictionary with release %s.",dict["release"], self.release)
             for id, property in dict["properties"].items():
                 if id not in self.properties.keys():
-                    logger.debug(f"Load property {property['id']}: {property['name']}")
+                    logger.debug("Load property %s: %s", property["id"], property["name"])
                     self.properties[id] = PropertyDefinition(**property)
             if dict["release"] not in self.releases:
                 self.releases[dict["release"]] = {}
             for id, class_ in dict["classes"].items():
                 classes = self.releases[dict["release"]]
                 if id not in classes.keys():
-                    logger.debug(
-                        f"Load class {class_['id']}: {class_['name']}",
-                    )
+                    logger.debug("Load class %s: %s", class_["id"], class_["name"])
                     new_class = ClassDefinition(**class_)
                     new_class.properties = [
                         self.properties[property_id]

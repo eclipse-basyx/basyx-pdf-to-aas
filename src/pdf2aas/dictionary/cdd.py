@@ -151,7 +151,7 @@ class CDD(Dictionary):
         """
         class_ = self.classes.get(class_id)
         if class_ is None:
-            logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
+            logger.info("Download class and property definitions for %s in release %s", class_id, self.release)
             class_ = self._download_cdd_class(self.get_class_url(class_id))
             if class_ is None:
                 return []
@@ -234,7 +234,7 @@ class CDD(Dictionary):
             response = requests.get(export_url)
             response.raise_for_status()
         except requests.RequestException as e:
-            logger.error(f"XLS download failed: {e}")
+            logger.error("XLS download failed: %s", e)
             return None
         workbook = xlrd.open_workbook(file_contents=response.content)
         return workbook.sheet_by_index(0)
@@ -363,11 +363,11 @@ class CDD(Dictionary):
             if row[0].value.startswith("#"):
                 continue
             if row[IDX_INSTANCE_SHAREABLE].value != "true":
-                logger.debug(f"Skipped {row[1].value} because InstanceSharable value '{row[IDX_INSTANCE_SHAREABLE].value}' != true.")
+                logger.debug("Skipped %s because InstanceSharable value '%s' != true.", row[1].value, row[IDX_INSTANCE_SHAREABLE].value)
                 continue
             class_ = self._download_cdd_class(self.get_class_url(f"{row[IDX_CODE].value}#{int(row[IDX_VERSION].value):03d}"))
             if class_ is not None:
-                logger.info(f"Parsed {class_.id} with {len(class_.properties)} properties.")
+                logger.info("Parsed %s with %s properties.", class_.id, len(class_.properties))
 
     def download_full_release(self):
         """Download all class instances from the defined`domains`.
@@ -377,5 +377,5 @@ class CDD(Dictionary):
         """
         logger.warning("Make sure to comply with CDD license agreement, especially section 7 and 8.")
         for domain in self.domains.values():
-            logger.info(f"Downloading classes of domain: {domain['name']} ({domain['standard']})")
+            logger.info("Downloading classes of domain: %s (%s)", domain["name"], domain["standard"])
             self.download_sub_class_instances(domain["class"])

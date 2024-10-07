@@ -83,7 +83,7 @@ Example result:
             try:
                 client = OpenAI(base_url=api_endpoint)
             except OpenAIError as error:
-                logger.warning(f"Couldn't init OpenAI client, falling back to 'input'. {error}")
+                logger.warning("Couldn't init OpenAI client, falling back to 'input'. %s", error)
                 client = None
         self.client = client
 
@@ -107,12 +107,15 @@ Example result:
         The `prompt_hint` can be used to add context or additional instructions
         to the prompt before it is sent to the LLM.
         """
-        logger.info(f"Extracting {f'{len(property_definition)} properties' if isinstance(property_definition, list) else property_definition.id}")
+        if isinstance(property_definition, list):
+            logger.info("Extracting %s properties.", len(property_definition))
+        else:
+            logger.info("Extracting %s", property_definition.id)
         if isinstance(datasheet, list):
-            logger.debug(f"Processing datasheet with {len(datasheet)} pages and {sum(len(p) for p in datasheet)} chars.")
+            logger.debug("Processing datasheet with %s pages and %s chars.", len(datasheet), sum(len(p) for p in datasheet))
             datasheet = "\n".join(datasheet)
         else:
-            logger.debug(f"Processing datasheet with {len(datasheet)} chars.")
+            logger.debug("Processing datasheet with %s chars.", len(datasheet))
 
         messages = [
             {"role": "system", "content": self.system_prompt_template},
@@ -163,10 +166,10 @@ Example result:
             try:
                 result, raw_result = self._prompt_llm_openai(messages)
             except OpenAIError as error:
-                logger.error(f"Error calling openai endpoint: {error}")
+                logger.error("Error calling openai endpoint: %s", error)
                 raw_result = error
                 result = None
-        logger.debug(f"Response from LLM: {result}")
+        logger.debug("Response from LLM: %s", result)
         if isinstance(raw_results, list):
             raw_results.append(raw_result)
         return result
@@ -189,7 +192,7 @@ Example result:
             )
         result = chat_completion.choices[0].message.content
         if chat_completion.choices[0].finish_reason not in ["stop", "None"]:
-            logger.warning(f"Chat completion finished with reason '{chat_completion.choices[0].finish_reason}'. (max_tokens={self.max_tokens})")
+            logger.warning("Chat completion finished with reason '%s'. (max_tokens=%s)", chat_completion.choices[0].finish_reason, self.max_tokens)
         return result, chat_completion.to_dict(mode="json")
 
     def _parse_result(self, result):
@@ -213,11 +216,11 @@ Example result:
             for key in ["result", "results", "items", "data", "properties"]:
                 if key in properties:
                     properties = properties.get(key)
-                    logger.debug(f"Heuristicly took '{key}' from LLM result.")
+                    logger.debug("Heuristicly took '%s' from LLM result.", key)
                     found_key = True
                     break
             if not found_key and len(properties) == 1:
-                logger.debug(f"Took '{next(iter(properties.keys()))}' from LLM result.")
+                logger.debug("Took '%s' from LLM result.", next(iter(properties.keys())))
                 properties = next(iter(properties.values()))
         return properties
 
@@ -228,7 +231,7 @@ Example result:
         if properties is None:
             return []
         if not isinstance(properties, (list, dict)):
-            logger.warning(f"Extraction result type is {type(properties)} instead of list or dict.")
+            logger.warning("Extraction result type is %s instead of list or dict.", type(properties))
             return []
 
         if isinstance(properties, dict):

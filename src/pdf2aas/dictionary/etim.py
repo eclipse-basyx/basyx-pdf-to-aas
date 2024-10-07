@@ -117,7 +117,7 @@ class ETIM(Dictionary):
         return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[0]}"
 
     def _download_etim_class(self, etim_class_code) -> dict:
-        logger.debug(f"Download etim class details for {etim_class_code} in {self.language} and release {self.release}")
+        logger.debug("Download etim class details for %s in %s and release %s", etim_class_code, self.language, self.release)
         access_token = self._get_access_token()
         if access_token is None:
             return None
@@ -141,12 +141,12 @@ class ETIM(Dictionary):
         try:
             response = requests.post(url, json=data, headers=headers)
             response.raise_for_status()
-            logger.debug(f"ETIM API Response: {response}")
+            logger.debug("ETIM API Response: %s", response)
             return response.json()
         except requests.HTTPError as http_err:
-            logger.error(f"Can't find class {etim_class_code}. HTTP error occurred: {http_err}")
+            logger.error("Can't find class %s. HTTP error occurred: %s", etim_class_code, http_err)
         except Exception as err:
-            logger.error(f"Can't find class {etim_class_code}. An error occurred: {err}")
+            logger.error("Can't find class %s. An error occurred: %s", etim_class_code, err)
         return None
 
     def _parse_etim_class(self, etim_class: dict) -> ClassDefinition:
@@ -196,11 +196,11 @@ class ETIM(Dictionary):
             response = requests.post(url, data=data)
             response.raise_for_status()
         except requests.RequestException as e:
-            logger.error(f"Authorization at ETIM API failed: {e}")
+            logger.error("Authorization at ETIM API failed: %s", e)
             return None
         self.__expire_time = timestamp + response.json()["expires_in"]
         self.__access_token = response.json()["access_token"]
-        logger.debug(f"Got new access token '{self.__access_token}'. Expires in: {response.json()['expires_in']}[s]")
+        logger.debug("Got new access token '%s'. Expires in: %s [s]", self.__access_token, response.json()["expires_in"])
         return self.__access_token
 
     @staticmethod
@@ -219,7 +219,7 @@ class ETIM(Dictionary):
         return class_id.group(0)
 
     def _load_from_release_csv_zip(self, filepath: str):
-        logger.info(f"Load ETIM dictionary from CSV release zip: {filepath}")
+        logger.info("Load ETIM dictionary from CSV release zip: %s", filepath)
 
         zip_dir = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
         if not os.path.exists(zip_dir):
@@ -227,7 +227,7 @@ class ETIM(Dictionary):
                 os.makedirs(zip_dir)
                 shutil.unpack_archive(filepath, zip_dir)
             except (shutil.ReadError, FileNotFoundError, PermissionError) as e:
-                logger.warning(f"Error while unpacking ETIM CSV Release: {e}")
+                logger.warning("Error while unpacking ETIM CSV Release: %s", e)
                 if os.path.exists(zip_dir):
                     shutil.rmtree(zip_dir)
 
@@ -323,5 +323,5 @@ class ETIM(Dictionary):
                         self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
                         return True
                     except Exception as e:
-                        logger.warning(f"Error while loading csv zip '{filename}': {e}")
+                        logger.warning("Error while loading csv zip '%s': %s", filename, e)
         return super().load_from_file(filepath)

@@ -309,14 +309,14 @@ class AASSubmodelTechnicalData(Generator):
                             ),
                         )
                     except AASConstraintViolation as error:
-                        logger.warning(f"Couldn't add {type(value)} item to property {display_name}: {error}")
+                        logger.warning("Couldn't add %s item to property %s: %s", type(value), display_name, error)
                 return smc
 
         value_id = None
         if property_.definition is not None and len(property_.definition.values) > 0 and value is not None:
             value_id = property_.definition.get_value_id(str(value))
             if value_id is None:
-                logger.warning(f"Value '{value}' of '{property_.label}' not found in defined values.")
+                logger.warning("Value '%s' of '%s' not found in defined values.", value, property_.label)
             else:
                 if isinstance(value_id, int):
                     value_id = property_.definition_id + "/" + str(value_id)
@@ -341,14 +341,14 @@ class AASSubmodelTechnicalData(Generator):
             if id_short is None or len(id_short) == 0:
                 id_short = property_.definition_id
         else:
-            logger.warning(f"No id_short for: {property_}")
+            logger.warning("No id_short for: %s", property_)
             return None
 
         display_name = {}
         if property_.definition is not None:
             unit = property_.unit
             if property_.unit is not None and len(unit.strip()) > 0 and len(property_.definition.unit) > 0 and unit != property_.definition.unit:
-                logger.warning(f"Unit '{unit}' of '{property_.label}' differs from definition '{property_.definition.unit}'")
+                logger.warning("Unit '%s' of '%s' differs from definition '%s'", unit, property_.label, property_.definition.unit)
             if len(property_.definition.name) > 0:
                 display_name = model.MultiLanguageNameType({ln:n[:64] for ln,n in property_.definition.name.items()})
 
@@ -448,7 +448,7 @@ class AASSubmodelTechnicalData(Generator):
             try:
                 self.technical_properties.value.add(aas_property)
             except AASConstraintViolation as error:
-                logger.warning(f"Couldn't add property to submodel: {error}")
+                logger.warning("Couldn't add property to submodel: %s", error)
 
     @staticmethod
     def _remove_empty_submodel_element(element):

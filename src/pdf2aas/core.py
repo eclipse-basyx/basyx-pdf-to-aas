@@ -89,4 +89,4 @@ class PDF2AAS:
         self.generator.add_properties(properties)
         if output_filepath is not None:
             self.generator.dump(filepath=output_filepath)
-            logger.info(f"Generated result in: {output_filepath}")
+            logger.info("Generated result in: %s", output_filepath)

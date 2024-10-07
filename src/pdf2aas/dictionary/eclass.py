@@ -108,7 +108,7 @@ def _download_html(url):
         response.raise_for_status()
         return response.text
     except requests.RequestException as e:
-        logger.error(f"HTML download failed: {e}")
+        logger.error("HTML download failed: %s", e)
         return None
 
 class ECLASS(Dictionary):
@@ -201,7 +201,7 @@ class ECLASS(Dictionary):
             return []
         eclass_class = self.classes.get(class_id)
         if eclass_class is None:
-            logger.info(f"Download class and property definitions for {class_id} in release {self.release}")
+            logger.info("Download class and property definitions for %s in release %s", class_id, self.release)
             html_content = _download_html(self.get_class_url(class_id))
             if html_content is None:
                 return []
@@ -229,15 +229,15 @@ class ECLASS(Dictionary):
 
         """
         if self.check_property_irdi(property_id) is False:
-            logger.warning(f"Property id has wrong format, should be IRDI: 0173-1#02-([A-Z]{{3}}[0-9]{{3}})#([0-9]{{3}}), got instead: {property_id}")
+            logger.warning("Property id has wrong format, should be IRDI: 0173-1#02-([A-Z]{3}[0-9]{3})#([0-9]{3}), got instead: %s", property_id)
             return None
         property = self.properties.get(property_id)
         if property is None:
             if property_id in self.properties_download_failed.get(self.release):
-                logger.debug(f"Property {property_id} definition download failed already. Skipping download.")
+                logger.debug("Property %s definition download failed already. Skipping download.", property_id)
                 return None
 
-            logger.info(f"Property {property_id} definition not found in dictionary, try download.")
+            logger.info("Property %s definition not found in dictionary, try download.", property_id)
             html_content = _download_html(self.get_property_url(property_id))
             if html_content is None:
                 self.properties_download_failed[self.release].add(property_id)
@@ -246,7 +246,7 @@ class ECLASS(Dictionary):
             if property is None:
                 self.properties_download_failed[self.release].add(property_id)
                 return None
-            logger.debug(f"Add new property {property_id} without class to dictionary: {property.name}")
+            logger.debug("Add new property %s without class to dictionary: %s", property_id, property.name)
             self.properties[property_id] = property
         return property
 
@@ -270,10 +270,10 @@ class ECLASS(Dictionary):
                         li.find("i", attrs={"data-toggle": "tooltip"}),
                     ),
                 )
-                logger.debug(f"Add class {identifier}: {eclass_class.name}")
+                logger.debug("Add class %s: %s", identifier, eclass_class.name)
                 self.classes[identifier] = eclass_class
             else:
-                logger.debug(f"Found class {identifier}: {eclass_class.name}")
+                logger.debug("Found class %s: %s", identifier, eclass_class.name)
         eclass_class.properties = self._parse_html_eclass_properties(soup)
         return eclass_class
 
@@ -288,11 +288,11 @@ class ECLASS(Dictionary):
                 id = data["IRDI_PR"]
                 property = self.properties.get(id)
                 if property is None:
-                    logger.debug(f"Add new property {id}: {data['preferred_name']}")
+                    logger.debug("Add new property %s: %s", id, data["preferred_name"])
                     property = _parse_html_eclass_property(span, data, id)
                     self.properties[id] = property
                 else:
-                    logger.debug(f"Add existing property {id}: {property.name}")
+                    logger.debug("Add existing property %s: %s", id, property.name)
                 properties.append(property)
         return properties
 
@@ -300,7 +300,7 @@ class ECLASS(Dictionary):
         soup = BeautifulSoup(html_content, "html.parser")
 
         if not soup.find(lambda tag: tag.name == "th" and tag.text.strip() == "Preferred name"):
-            logger.warning(f"Couldn't parse 'preferred name' for {property_id}")
+            logger.warning("Couldn't parse 'preferred name' for %s", property_id)
             return None
         property = PropertyDefinition(
             id=property_id,
@@ -356,20 +356,16 @@ class ECLASS(Dictionary):
         class_id = re.sub(r"[-_]|\s", "", class_id)
         class_id = class_id[:8]
         if len(class_id) != 8 or not class_id.isdigit():
-            logger.warning(
-                f"Class id has unknown format. Should be 8 digits, but got: {class_id}",
-            )
+            logger.warning("Class id has unknown format. Should be 8 digits, but got: %s", class_id)
             return None
         if class_id.endswith("00"):
-            logger.warning(
-                f"No properties for {class_id}. Currently only concrete (level 4) classes are supported.",
-            )
+            logger.warning("No properties for %s. Currently only concrete (level 4) classes are supported.", class_id)
             # Because the eclass content-search only lists properties in level 4 for classes
             return None
         return class_id
 
     def _load_from_release_csv_zip(self, filepath: str):
-        logger.info(f"Load ECLASS dictionary from CSV release zip: {filepath}")
+        logger.info("Load ECLASS dictionary from CSV release zip: %s", filepath)
 
         zip_dir = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
         if not os.path.exists(zip_dir):
@@ -377,7 +373,7 @@ class ECLASS(Dictionary):
                 os.makedirs(zip_dir)
                 shutil.unpack_archive(filepath, zip_dir)
             except (shutil.ReadError, FileNotFoundError, PermissionError) as e:
-                logger.warning(f"Error while unpacking ECLASS CSV Release: {e}")
+                logger.warning("Error while unpacking ECLASS CSV Release: %s", e)
                 if os.path.exists(zip_dir):
                     shutil.rmtree(zip_dir)
 
@@ -499,5 +495,5 @@ class ECLASS(Dictionary):
                         self._load_from_release_csv_zip(os.path.join(self.temp_dir, filename))
                         return True
                     except Exception as e:
-                        logger.warning(f"Error while loading csv zip '{filename}': {e}")
+                        logger.warning("Error while loading csv zip '%s': %s", filename, e)
         return super().load_from_file(filepath)
