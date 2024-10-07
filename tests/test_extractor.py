@@ -3,8 +3,8 @@ from unittest.mock import patch, MagicMock
 import json
 import requests
 
-from pdf2aas.dictionary import PropertyDefinition
-from pdf2aas.extractor import CustomLLMClient, CustomLLMClientHTTP, PropertyLLMSearch, Property
+from pdf2aas.model import PropertyDefinition, Property
+from pdf2aas.extractor import CustomLLMClient, CustomLLMClientHTTP, PropertyLLMSearch
 
 example_property_definition_numeric = PropertyDefinition("p1", {'en': 'property1'}, 'numeric', {'en': 'definition of p1'}, 'T')
 example_property_definition_string = PropertyDefinition("p2", {'en': 'property2'}, 'string', {'en': 'definition of p2'}, values=['a', 'b'])

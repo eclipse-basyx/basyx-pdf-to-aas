@@ -1,9 +1,8 @@
 """Extractors that uses two steps to extract and map the properties."""
 import logging
 
-from ..dictionary import PropertyDefinition
+from ..model import PropertyDefinition, Property
 from . import PropertyLLM
-from . import Property
 
 logger = logging.getLogger(__name__)
 

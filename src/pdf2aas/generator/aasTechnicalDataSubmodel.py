@@ -10,10 +10,10 @@ from basyx.aas.model.base import AASConstraintViolation
 from basyx.aas.adapter.aasx import AASXWriter, DictSupplementaryFileContainer
 from basyx.aas.adapter.json import json_serialization
 
+from ..model import PropertyDefinition, Property
+from ..dictionary import Dictionary, ECLASS
 from .core import Generator
 from .aas import cast_property, cast_range, anti_alphanumeric_regex
-from ..dictionary import Dictionary, PropertyDefinition, ECLASS
-from ..extractor import Property
 
 logger = logging.getLogger(__name__)
 

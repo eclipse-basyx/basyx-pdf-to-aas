@@ -4,7 +4,7 @@ import uuid
 
 from dataclasses import dataclass, field
 
-from ..dictionary import PropertyDefinition
+from .propertyDefinition import PropertyDefinition
 
 _number_regex = r"([-+]?[0-9_]*\.?[0-9_]+)"
 _numeric_range_regex = _number_regex + r".+?" + _number_regex

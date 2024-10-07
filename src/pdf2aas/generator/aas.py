@@ -5,8 +5,7 @@ import re
 from basyx.aas import model
 from basyx.aas.model import datatypes
 
-from ..extractor import Property
-from ..dictionary import PropertyDefinition
+from ..model import PropertyDefinition, Property
 
 logger = logging.getLogger(__name__)
 

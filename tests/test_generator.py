@@ -6,8 +6,8 @@ import pytest
 import basyx.aas.model
 
 from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData, AASTemplate
-from pdf2aas.extractor import Property
-from pdf2aas.dictionary import PropertyDefinition, ECLASS, ETIM
+from pdf2aas.model import Property, PropertyDefinition
+from pdf2aas.dictionary import ECLASS, ETIM
 
 from test_extractor import example_property_numeric, example_property_string, example_property_range
 

@@ -11,9 +11,10 @@ from dotenv import load_dotenv
 from openai import OpenAI, AzureOpenAI
 import pandas as pd
 
-from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM, PropertyDefinition
+from pdf2aas.model import PropertyDefinition, Property
+from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM
 from pdf2aas.preprocessor import PDFium, Text
-from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP, Property
+from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP
 from pdf2aas.generator import AASSubmodelTechnicalData, AASTemplate
 
 logger = logging.getLogger(__name__)

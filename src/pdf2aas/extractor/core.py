@@ -2,8 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from .property import Property
-from ..dictionary import PropertyDefinition
+from ..model.property import Property, PropertyDefinition
 
 class Extractor(ABC):
     """Abstract class that provides an `extract` method to be used in PDF2AAS toolchain."""

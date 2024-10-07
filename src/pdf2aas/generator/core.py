@@ -1,5 +1,5 @@
 """Generic generator class to export property lists to different formats."""
-from pdf2aas.extractor import Property
+from pdf2aas.model import Property
 
 class Generator:
     """Generic and simple generator class.

@@ -76,6 +76,7 @@ LLMs might also be used to preprocess the PDF content first, e.g. summarize it i
   * **AASSubmodelTechnicalData**: outputs the properties in a [technical data submodel](https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data/1/2).
   * **AASTemplate**: loads an aasx file as template to search for and update all contained properties. 
   * **CSV**: outputs the extracted properties as csv file
+* **model**: python classes to handle properties, their definitions and dictionary classes inside the library.
 
 ## Setup
 

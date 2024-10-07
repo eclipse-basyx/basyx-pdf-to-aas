@@ -10,8 +10,7 @@ from basyx.aas.adapter.json import json_serialization
 
 from .core import Generator
 from .aas import cast_property, cast_range, get_dict_data_type_from_xsd, get_dict_data_type_from_IEC6360
-from ..dictionary import PropertyDefinition
-from ..extractor import Property
+from ..model import PropertyDefinition, Property
 
 logger = logging.getLogger(__name__)
 

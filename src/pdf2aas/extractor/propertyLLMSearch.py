@@ -4,10 +4,9 @@ from typing import Literal
 
 from openai import OpenAI, AzureOpenAI
 
-from ..dictionary import PropertyDefinition
+from ..model import PropertyDefinition, Property
 from . import PropertyLLM
 from . import CustomLLMClient
-from . import Property
 
 logger = logging.getLogger(__name__)
 

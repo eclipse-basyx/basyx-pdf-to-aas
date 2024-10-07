@@ -5,8 +5,7 @@ import json
 from abc import ABC
 from dataclasses import asdict
 
-from .propertyDefinition import PropertyDefinition
-from .classDefinition import ClassDefinition
+from ..model import PropertyDefinition, ClassDefinition
 
 logger = logging.getLogger(__name__)
 

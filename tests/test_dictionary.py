@@ -1,4 +1,5 @@
-from pdf2aas.dictionary import CDD, ECLASS, PropertyDefinition
+from pdf2aas.model import PropertyDefinition
+from pdf2aas.dictionary import CDD, ECLASS
 
 class TestCDD:
     @staticmethod

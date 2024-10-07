@@ -6,8 +6,7 @@ import unicodedata
 
 from openai import OpenAI, AzureOpenAI, OpenAIError
 
-from ..dictionary import PropertyDefinition
-from . import Property
+from ..model import PropertyDefinition, Property
 from . import CustomLLMClient
 from . import Extractor
 
