@@ -1,10 +1,11 @@
 """Generic generator class to export property lists to different formats."""
+
 from pdf2aas.model import Property
 
 
 class Generator:
     """Generic and simple generator class.
-    
+
     Holds a list of extracted properties. Allows to dump them via str
     representation. More specific generators derived from this class are available.
     """
@@ -13,7 +14,7 @@ class Generator:
         """Initialize the Generator with an empty list of properties."""
         self._properties: list[Property] = []
 
-    def reset(self):
+    def reset(self) -> None:
         """Reset the list of properties to an empty list."""
         self._properties: list[Property] = []
 
@@ -29,7 +30,7 @@ class Generator:
         """Get a string representation of the list of properties."""
         return str(self._properties)
 
-    def dump(self, filepath:str) -> None:
+    def dump(self, filepath: str) -> None:
         """Write the string representation of the properties to a file."""
         with open(filepath, "w", encoding="utf-8") as file:
             file.write(self.dumps())

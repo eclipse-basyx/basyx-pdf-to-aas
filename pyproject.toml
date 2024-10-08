@@ -36,6 +36,24 @@ demo = [
 build-backend = "setuptools.build_meta"
 requires = ["setuptools", "setuptools-scm"]
 
+[tool.ruff]
+include = ["pyproject.toml", "src/**/*.py"]
+line-length = 100
 
 [tool.ruff.lint]
 select = ["ALL"]
+ignore = [
+  "D203", # conflicts with D211
+  "D213", # conflicts with D212
+  "PTH123", # Allow to use builtin open() function
+  "TD002", # Don't force todo authors
+  "TD003", # Don't force todo issues
+  "FIX002", # Don't force to fix todos
+  "PD011", # Pandas use of dot values, often false positive
+  "PLR0913", # Allow more than 5 function arguments, especially for initializers
+  "ANN401", # Allow Any as type argument
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 80

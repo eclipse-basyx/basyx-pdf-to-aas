@@ -114,6 +114,7 @@ class TestCustomLLMClientHttp():
                 headers=self.default_headers,
                 data=self.default_payload,
                 verify=None,
+                timeout=client.timeout,
             )
             assert result_content == self.mock_result
             assert result == self.mock_result

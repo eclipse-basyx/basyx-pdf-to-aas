@@ -1,6 +1,7 @@
 """Module containing different generators for the PDF2AAS workflow."""
-from .aasTechnicalDataSubmodel import AASSubmodelTechnicalData
-from .aasTemplate import AASTemplate
+
+from .aas_technical_data_submodel import AASSubmodelTechnicalData
+from .aas_template import AASTemplate
 from .core import Generator
 from .csv import CSV
 

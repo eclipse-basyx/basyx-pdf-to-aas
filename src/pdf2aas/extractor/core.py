@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from ..model.property import Property, PropertyDefinition
+from pdf2aas.model.property import Property, PropertyDefinition
 
 
 class Extractor(ABC):

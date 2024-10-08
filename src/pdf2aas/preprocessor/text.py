@@ -1,9 +1,11 @@
 """Preprocessor to use text files."""
+
 import logging
 
 from .core import Preprocessor
 
 logger = logging.getLogger(__name__)
+
 
 class Text(Preprocessor):
     """Text preprocessor for loading text from txt, csv, html files.
@@ -12,9 +14,9 @@ class Text(Preprocessor):
     """
 
     def __init__(
-            self,
-            encoding: str | None = None,
-            newline : str | None = None,
+        self,
+        encoding: str | None = None,
+        newline: str | None = None,
     ) -> None:
         r"""Init preprocessor.
 

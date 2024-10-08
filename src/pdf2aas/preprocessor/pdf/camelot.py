@@ -1,22 +1,24 @@
 """Preprocessor using camelot library."""
+
 import logging
 from typing import Literal
 
 import camelot
 
-from .core import Preprocessor
+from pdf2aas.preprocessor import Preprocessor
 
 logger = logging.getLogger(__name__)
 
+
 class Camelot(Preprocessor):
     """Extract tables from PDF files using camelot library.
-    
+
     Args:
         output_format (Literal['html', 'markdown', 'json', 'csv']): The format
             in which the extracted tables should be output. Default is 'html'.
         accuracy_level (float): The minimum accuracy level required for tables
             to be included in the output. Default is 0.8.
-    
+
     Note:
         - Needs to have ghostscript installed.
         - Best table extraction quality based on camelot benchmark: https://github.com/camelot-dev/camelot/wiki/Comparison-with-other-PDF-Table-Extraction-libraries-and-tools
@@ -34,8 +36,8 @@ class Camelot(Preprocessor):
 
     def convert(self, filepath: str) -> list[str] | str | None:
         """Convert the content of a PDF file into a list of tables as strings.
-        
-        Each string represents a table from the pdf in the desired `output_format` 
+
+        Each string represents a table from the pdf in the desired `output_format`
         (default html). If an error occurs during the reading of the PDF file,
         it logs the error and returns None.
         """
@@ -43,7 +45,7 @@ class Camelot(Preprocessor):
         try:
             tables = camelot.read_pdf(filepath, pages="all", strip_text=" ")
         except FileNotFoundError:
-            logger.error("File not found: %s", filepath)
+            logger.exception("File not found: %s", filepath)
             return None
 
         result = []

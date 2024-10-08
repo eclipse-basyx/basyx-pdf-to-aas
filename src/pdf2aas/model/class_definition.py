@@ -1,13 +1,14 @@
 """Class to represent product, device or article classes."""
+
 from dataclasses import dataclass, field
 
-from .propertyDefinition import PropertyDefinition
+from .property_definition import PropertyDefinition
 
 
 @dataclass
 class ClassDefinition:
     """Class to represent product, device or article classes in a dictionary.
-    
+
     Arguments:
       id (str): Identifier of the class, e.g. an IRDI.
       name (str): Name or label of the class.
@@ -21,5 +22,5 @@ class ClassDefinition:
     id: str
     name: str = ""
     description: str = ""
-    keywords: list[str] = field(default_factory= list)
-    properties: list[PropertyDefinition] = field(default_factory= list)
+    keywords: list[str] = field(default_factory=list)
+    properties: list[PropertyDefinition] = field(default_factory=list)

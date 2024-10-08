@@ -1,11 +1,12 @@
 """Classes to handle properties their definitions and classes inside the library."""
 
-from .classDefinition import ClassDefinition
+from .class_definition import ClassDefinition
 from .property import Property
-from .propertyDefinition import PropertyDefinition
+from .property_definition import PropertyDefinition, SimplePropertyDataType
 
 __all__ = [
     "PropertyDefinition",
     "ClassDefinition",
     "Property",
+    "SimplePropertyDataType",
 ]
