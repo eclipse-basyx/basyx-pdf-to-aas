@@ -7,6 +7,8 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, ClassVar
 
+import requests
+
 from pdf2aas.model import ClassDefinition, PropertyDefinition
 
 logger = logging.getLogger(__name__)
@@ -37,6 +39,8 @@ class Dictionary(ABC):
         supported_releases (list[str]): A list of supported release versions.
         license (str): A link or note to the license or copyright of the
             dictionary.
+        timeout (float): Time limit in seconds for property or class information
+            downloads. Defaults to 120s.
 
     """
 
@@ -45,6 +49,7 @@ class Dictionary(ABC):
     releases: ClassVar[dict[dict[str, ClassDefinition]]] = {}
     supported_releases: ClassVar[list[str]] = []
     license: str | None = None
+    timeout: float = 120
 
     def __init__(
         self,
@@ -194,3 +199,12 @@ class Dictionary(ABC):
             self.release = release
             self.save_to_file()
         self.release = original_release
+
+    def _download_html(self, url: str) -> str | None:
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+        except requests.RequestException:
+            logger.exception("HTML download failed.")
+            return None
+        return response.text

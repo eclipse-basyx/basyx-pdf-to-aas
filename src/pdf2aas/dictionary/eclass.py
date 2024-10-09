@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import quote
 
-import requests
 from bs4 import BeautifulSoup
 
 from .core import ClassDefinition, Dictionary, PropertyDefinition
@@ -71,12 +70,6 @@ class ECLASS(Dictionary):
     retrieve their properties based on different releases of the standard.
 
     Attributes:
-        class_search_pattern (str): URL pattern for class search on ECLASS
-            website content search.
-        property_search_pattern (str): URL pattern for property search on ECLASS
-            website content search.
-        properties_download_failed (dict[str, set[str]]): Maps release versions
-            to a set of property ids, that could not be downloaded
         temp_dir (str): Overwrite temporary dictionary for caching the dict.
         properties (dict[str, PropertyDefinition]): Maps property IDs to
             PropertyDefinition instances.
@@ -85,10 +78,16 @@ class ECLASS(Dictionary):
         supported_releases (list[str]): A list of supported release versions.
         license (str): A link or note to the license or copyright of the
             dictionary.
-        language_idx (dict[str, str]): Maps the supported language code to the
-            number used in the content search.
         timeout (float): Time limit in seconds for downloads from ECLASS website.
             Defaults to 120s.
+        class_search_pattern (str): URL pattern for class search on ECLASS
+            website content search.
+        property_search_pattern (str): URL pattern for property search on ECLASS
+            website content search.
+        language_idx (dict[str, str]): Maps the supported language code to the
+            number used in the content search.
+        properties_download_failed (dict[str, set[str]]): Maps release versions
+            to a set of property ids, that could not be downloaded
 
     """
 
@@ -117,7 +116,6 @@ class ECLASS(Dictionary):
     ]
     license = "https://eclass.eu/en/eclass-standard/licenses"
     language_idx: ClassVar[dict[str, str]] = {"de": "0", "en": "1", "fr": "2", "cn": "3"}
-    timeout: float = 120
 
     def __init__(self, release: str = "14.0", temp_dir: str | None = None) -> None:
         """Initialize ECLASS dictionary with a specified eCl@ss release version.
@@ -499,15 +497,6 @@ class ECLASS(Dictionary):
                         continue
                     return True
         return super().load_from_file(filepath)
-
-    def _download_html(self, url: str) -> str | None:
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.RequestException:
-            logger.exception("HTML download failed.")
-            return None
-        return response.text
 
     def _parse_html_eclass_valuelist(self, property_: PropertyDefinition, span: dict) -> None:
         valuelist_url = (

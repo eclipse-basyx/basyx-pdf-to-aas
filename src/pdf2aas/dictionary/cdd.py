@@ -62,11 +62,11 @@ class CDD(Dictionary):
         supported_releases (list[str]): A list of supported release versions.
         license (str): A link or note to the license or copyright of the
             dictionary.
+        timeout (float): Time limit in seconds for downloads from CDD website.
+            Defaults to 120s.
         domains (dict): Lists IEC standards called "domains" in context of CDD
             with their representation in the URL, the standard name and the
             root class.
-        timeout (float): Time limit in seconds for downloads from CDD website.
-            Defaults to 120s.
 
     """
 
@@ -76,7 +76,6 @@ class CDD(Dictionary):
         "V2.0018.0002",
     ]
     license = "https://cdd.iec.ch/cdd/iec62683/iec62683.nsf/License?openPage"
-    timeout: ClassVar[str] = 120
 
     # keys are the part of the IRDIs
     domains: ClassVar[dict[str, dict[str, str]]] = {

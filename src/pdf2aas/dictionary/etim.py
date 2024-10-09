@@ -62,7 +62,6 @@ class ETIM(Dictionary):
         "DYNAMIC",
     ]
     license = "https://opendatacommons.org/licenses/by/1-0/"
-    timeout: ClassVar[str] = 120
 
     def __init__(
         self,
@@ -344,11 +343,3 @@ class ETIM(Dictionary):
                     return True
         return super().load_from_file(filepath)
 
-    def _download_html(self, url: str) -> str | None:
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.RequestException:
-            logger.exception("HTML download failed.")
-            return None
-        return response.text
