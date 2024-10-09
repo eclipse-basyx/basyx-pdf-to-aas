@@ -17,7 +17,7 @@ dependencies = [
 ]
 name = "pdf2aas"
 requires-python = ">=3.10"
-version = "0.1.0"
+dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
@@ -34,7 +34,7 @@ demo = [
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 
 [tool.ruff]
 include = ["pyproject.toml", "src/**/*.py"]
