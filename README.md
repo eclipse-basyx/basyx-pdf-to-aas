@@ -150,9 +150,13 @@ Moreover, the Settings tab allows to configure different extractor and client pa
 ## Tests
 
 [![Teststatus](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/test.yml/badge.svg)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/test.yml)
+[![Linting](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/ruff.yml/badge.svg)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/ruff.yml)
 
 * If not already done, install the dev dependencies via `python -m pip install -r dev-requirements.txt`
 * Run tests with `pytest`
+* To check for codecoverage use `pytest --cov=pdf2aas`
+* To check for codestyle use ruff, e.g. `ruff check`
+  * You can use `ruff format` etc. to format accordingly.
 
 ## Evaluation
 
