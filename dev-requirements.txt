@@ -38,6 +38,8 @@ colorama==0.4.6
     #   click
     #   pytest
     #   tqdm
+coverage[toml]==7.6.2
+    # via pytest-cov
 cryptography==43.0.1
     # via pdfminer-six
 distro==1.9.0
@@ -109,6 +111,10 @@ pypdf2==3.0.1
 pypdfium2==4.30.0
     # via pdf2aas (pyproject.toml)
 pytest==8.3.3
+    # via
+    #   pdf2aas (pyproject.toml)
+    #   pytest-cov
+pytest-cov==5.0.0
     # via pdf2aas (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
@@ -123,6 +129,8 @@ pytz==2024.2
 pywin32-ctypes==0.2.3
     # via pyinstaller
 requests==2.32.3
+    # via pdf2aas (pyproject.toml)
+ruff==0.6.9
     # via pdf2aas (pyproject.toml)
 six==1.16.0
     # via python-dateutil

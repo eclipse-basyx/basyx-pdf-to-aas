@@ -32,4 +32,4 @@ jobs:
         sudo apt install ./pdf2htmlEX.deb
     - name: Install pdf2aas
       run: pip install -e .
-    - run: pytest
+    - run: pytest --cov=pdf2aas

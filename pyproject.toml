@@ -22,7 +22,9 @@ dynamic = ["version"]
 [project.optional-dependencies]
 dev = [
   "pytest",
+  "pytest-cov",
   "pyinstaller",
+  "ruff",
 ]
 demo = [
   "gradio==4.41.0",
