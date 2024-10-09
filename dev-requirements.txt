@@ -12,23 +12,38 @@ anyio==4.4.0
     # via
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/JGrothoff/basyx-python-sdk@pdf-to-aas
+basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@47f5e613fb725f7cf627de1ebb1f4d8f9cd5cda9
     # via pdf2aas (pyproject.toml)
 beautifulsoup4==4.12.3
+    # via pdf2aas (pyproject.toml)
+camelot-py[cv]==0.9.0
     # via pdf2aas (pyproject.toml)
 certifi==2024.8.30
     # via
     #   httpcore
     #   httpx
     #   requests
+cffi==1.17.1
+    # via cryptography
+chardet==5.2.0
+    # via camelot-py
 charset-normalizer==3.3.2
-    # via requests
+    # via
+    #   pdfminer-six
+    #   requests
+click==8.1.7
+    # via camelot-py
 colorama==0.4.6
     # via
+    #   click
     #   pytest
     #   tqdm
+cryptography==43.0.1
+    # via pdfminer-six
 distro==1.9.0
     # via openai
+et-xmlfile==1.1.0
+    # via openpyxl
 h11==0.14.0
     # via httpcore
 httpcore==1.0.5
@@ -48,17 +63,32 @@ lxml==4.9.4
     # via
     #   basyx-python-sdk
     #   pyecma376-2
+numpy==2.1.2
+    # via
+    #   camelot-py
+    #   opencv-python
+    #   pandas
 openai==1.45.1
     # via pdf2aas (pyproject.toml)
+opencv-python==4.10.0.84
+    # via camelot-py
+openpyxl==3.1.5
+    # via camelot-py
 packaging==24.1
     # via
     #   pyinstaller
     #   pyinstaller-hooks-contrib
     #   pytest
+pandas==2.2.3
+    # via camelot-py
+pdfminer-six==20240706
+    # via camelot-py
 pefile==2024.8.26
     # via pyinstaller
 pluggy==1.5.0
     # via pytest
+pycparser==2.22
+    # via cffi
 pydantic==2.9.1
     # via
     #   openai
@@ -74,16 +104,22 @@ pyinstaller==6.10.0
     # via pdf2aas (pyproject.toml)
 pyinstaller-hooks-contrib==2024.8
     # via pyinstaller
+pypdf2==3.0.1
+    # via camelot-py
 pypdfium2==4.30.0
     # via pdf2aas (pyproject.toml)
 pytest==8.3.3
     # via pdf2aas (pyproject.toml)
 python-dateutil==2.9.0.post0
-    # via basyx-python-sdk
+    # via
+    #   basyx-python-sdk
+    #   pandas
 python-dotenv==1.0.1
     # via
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
+pytz==2024.2
+    # via pandas
 pywin32-ctypes==0.2.3
     # via pyinstaller
 requests==2.32.3
@@ -104,6 +140,8 @@ typing-extensions==4.12.2
     #   openai
     #   pydantic
     #   pydantic-core
+tzdata==2024.2
+    # via pandas
 urllib3==2.2.3
     # via
     #   basyx-python-sdk

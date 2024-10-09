@@ -10,7 +10,7 @@ anyio==4.4.0
     # via
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/JGrothoff/basyx-python-sdk@pdf-to-aas
+basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@47f5e613fb725f7cf627de1ebb1f4d8f9cd5cda9
     # via pdf2aas (pyproject.toml)
 beautifulsoup4==4.12.3
     # via pdf2aas (pyproject.toml)
