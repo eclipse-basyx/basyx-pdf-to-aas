@@ -131,7 +131,7 @@ Use `-h` or `--help` argument for more information on command line arguments.
 
 A gradio based web UI is available by starting [examples/demo_gradio.py]().
 To use it, additional dependencies need to be installed listed in demo-requirements: `pip install -r demo-requirements.txt`
-The webserver is also build as an windows executable, which can be download from the job artifacts: [![Package gradio example with PyInstaller - Windows](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml/badge.svg?branch=main)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml)
+The webserver is also build as an windows executable, which can be download from the job artifacts: [![Package gradio example with PyInstaller - Windows](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml/badge.svg?branch=main)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml)
 
 The web UI features the selection of an asset class from ECLASS, ETIM or CDD dictionary in different releases.
 If no dictionary is selected, the extractor searches for all technical propertiers without using definitions.
@@ -149,8 +149,8 @@ Moreover, the Settings tab allows to configure different extractor and client pa
 
 ## Tests
 
-[![Teststatus](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/test.yml/badge.svg)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/test.yml)
-[![Linting](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/ruff.yml/badge.svg)](https://github.com/JGrothoff/pdf-to-aas/actions/workflows/ruff.yml)
+[![Teststatus](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/test.yml/badge.svg)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/test.yml)
+[![Linting](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/ruff.yml/badge.svg)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/ruff.yml)
 
 * If not already done, install the dev dependencies via `python -m pip install -r dev-requirements.txt`
 * Run tests with `pytest`
@@ -160,4 +160,4 @@ Moreover, the Settings tab allows to configure different extractor and client pa
 
 ## Evaluation
 
-An evaluation of the extraction process utilizing existing manufacturer catalogs, e.g. from WAGO can be found in the [pdf-to-aas-evaluation](https://github.com/JGrothoff/pdf-to-aas-evaluation) repository.
+An evaluation of the extraction process utilizing existing manufacturer catalogs, e.g. from WAGO can be found in the [pdf-to-aas-evaluation](https://github.com/eclipse-basyx/basyx-pdf-to-aas-evaluation) repository.
