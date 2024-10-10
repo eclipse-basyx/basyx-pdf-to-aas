@@ -8,7 +8,7 @@ from datetime import datetime
 import gradio as gr
 from gradio_pdf import PDF
 from dotenv import load_dotenv
-from openai import OpenAI, AzureOpenAI
+from openai import OpenAI, OpenAIError, AzureOpenAI
 import pandas as pd
 
 from pdf2aas.model import PropertyDefinition, Property
@@ -248,17 +248,27 @@ def change_client(
     if len(endpoint.strip()) == 0:
         endpoint = None
     if endpoint_type == "openai":
-        return OpenAI(
-            api_key=get_from_var_or_env(api_key, ['OPENAI_API_KEY']),
-            base_url=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL'])
-        )
+        try:
+            client = OpenAI(
+                api_key=get_from_var_or_env(api_key, ['OPENAI_API_KEY']),
+                base_url=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL'])
+            )
+        except OpenAIError as error:
+            gr.Error(f"Couldn't create OpenAI client: {error}")
+            return None
+        return client
     elif endpoint_type == "azure":
-        return AzureOpenAI(
-            api_key=get_from_var_or_env(api_key, ['AZURE_OPENAI_API_KEY','OPENAI_API_KEY']),
-            azure_endpoint=get_from_var_or_env(endpoint, ['AZURE_ENDPOINT']),
-            azure_deployment=get_from_var_or_env(azure_deployment, ['AZURE_DEPLOYMENT']),
-            api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
-        )
+        try:
+            client = AzureOpenAI(
+                api_key=get_from_var_or_env(api_key, ['AZURE_OPENAI_API_KEY','OPENAI_API_KEY']),
+                azure_endpoint=get_from_var_or_env(endpoint, ['AZURE_ENDPOINT']),
+                azure_deployment=get_from_var_or_env(azure_deployment, ['AZURE_DEPLOYMENT']),
+                api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
+            )
+        except (OpenAIError, ValueError) as error:
+            gr.Error(f"Couldn't create AzureOpenAI client: {error}")
+            return None
+        return client
     elif endpoint_type == "custom":
         headers_json = None
         try:
@@ -344,7 +354,7 @@ def extract(
         class_id: str | None,
         dictionary: Dictionary | None,
         aas_template: AASTemplate | None,
-        client: OpenAI | AzureOpenAI | CustomLLMClientHTTP,
+        client: OpenAI | AzureOpenAI | CustomLLMClientHTTP | None,
         prompt_hint: str,
         model: str,
         batch_size: int,
@@ -358,7 +368,10 @@ def extract(
 
     if datasheet is None or len (datasheet) == 0:
         gr.Warning("Preprocessed datasheet is none or empty.")
-        return None, None, None, None, gr.update(interactive=False)
+        return None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+    if client is None:
+        gr.Warning("No or wrong client configured. Please update settings.")
+        return None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
 
     if dictionary is not None:
         definitions = dictionary.get_class_properties(class_id)
@@ -415,7 +428,7 @@ def extract(
         )
     else:
         properties = []
-        yield None, None, None, None, gr.update(interactive=True)
+        yield None, properties_to_dataframe([]), None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
             property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
