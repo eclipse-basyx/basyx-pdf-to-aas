@@ -441,6 +441,8 @@ def create_chat_history(raw_prompts, raw_results, client):
                 if content is None:
                     continue
                 answer = {'role': 'assistant', 'content': content}
+            elif isinstance(raw_results[idx], str):
+                answer = {'role': 'assistant', 'content': raw_results[idx]}
             else:
                 try:
                     answer = raw_results[idx]['choices'][0]['message']

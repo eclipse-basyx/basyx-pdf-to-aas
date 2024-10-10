@@ -138,7 +138,7 @@ class Dictionary(ABC):
         else:
             path = Path(filepath)
         logger.info("Save dictionary to file: %s", path)
-        path.parent.mkdir(parents=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as file:
             json.dump(
                 {
