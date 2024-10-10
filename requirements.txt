@@ -6,7 +6,7 @@
 #
 annotated-types==0.7.0
     # via pydantic
-anyio==4.4.0
+anyio==4.6.0
     # via
     #   httpx
     #   openai
@@ -25,7 +25,7 @@ cffi==1.17.1
     # via cryptography
 chardet==5.2.0
     # via camelot-py
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via
     #   pdfminer-six
     #   requests
@@ -43,7 +43,7 @@ et-xmlfile==1.1.0
     # via openpyxl
 h11==0.14.0
     # via httpcore
-httpcore==1.0.5
+httpcore==1.0.6
     # via httpx
 httpx==0.27.2
     # via openai
@@ -52,18 +52,18 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
-jiter==0.5.0
+jiter==0.6.1
     # via openai
 lxml==4.9.4
     # via
     #   basyx-python-sdk
     #   pyecma376-2
-numpy==2.1.1
+numpy==2.1.2
     # via
     #   camelot-py
     #   opencv-python
     #   pandas
-openai==1.45.1
+openai==1.51.2
     # via pdf2aas (pyproject.toml)
 opencv-python==4.10.0.84
     # via camelot-py
@@ -75,12 +75,12 @@ pdfminer-six==20240706
     # via camelot-py
 pycparser==2.22
     # via cffi
-pydantic==2.9.1
+pydantic==2.9.2
     # via
     #   openai
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-pydantic-core==2.23.3
+pydantic-core==2.23.4
     # via pydantic
 pydantic-settings==2.5.2
     # via pdf2aas (pyproject.toml)

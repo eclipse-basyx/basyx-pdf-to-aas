@@ -10,7 +10,7 @@ annotated-types==0.7.0
     # via
     #   -c demo-requirements.txt
     #   pydantic
-anyio==4.4.0
+anyio==4.6.0
     # via
     #   -c demo-requirements.txt
     #   httpx
@@ -41,7 +41,7 @@ chardet==5.2.0
     # via
     #   -c demo-requirements.txt
     #   camelot-py
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via
     #   -c demo-requirements.txt
     #   pdfminer-six
@@ -74,7 +74,7 @@ h11==0.14.0
     # via
     #   -c demo-requirements.txt
     #   httpcore
-httpcore==1.0.5
+httpcore==1.0.6
     # via
     #   -c demo-requirements.txt
     #   httpx
@@ -90,7 +90,7 @@ idna==3.10
     #   requests
 iniconfig==2.0.0
     # via pytest
-jiter==0.5.0
+jiter==0.6.1
     # via
     #   -c demo-requirements.txt
     #   openai
@@ -99,13 +99,13 @@ lxml==4.9.4
     #   -c demo-requirements.txt
     #   basyx-python-sdk
     #   pyecma376-2
-numpy==2.1.1
+numpy==2.1.2
     # via
     #   -c demo-requirements.txt
     #   camelot-py
     #   opencv-python
     #   pandas
-openai==1.45.1
+openai==1.51.2
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -123,7 +123,7 @@ packaging==24.1
     #   pyinstaller
     #   pyinstaller-hooks-contrib
     #   pytest
-pandas==2.2.2
+pandas==2.2.3
     # via
     #   -c demo-requirements.txt
     #   camelot-py
@@ -139,13 +139,13 @@ pycparser==2.22
     # via
     #   -c demo-requirements.txt
     #   cffi
-pydantic==2.9.1
+pydantic==2.9.2
     # via
     #   -c demo-requirements.txt
     #   openai
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-pydantic-core==2.23.3
+pydantic-core==2.23.4
     # via
     #   -c demo-requirements.txt
     #   pydantic
@@ -195,7 +195,7 @@ requests==2.32.3
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-ruff==0.6.5
+ruff==0.6.9
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -223,7 +223,7 @@ typing-extensions==4.12.2
     #   openai
     #   pydantic
     #   pydantic-core
-tzdata==2024.1
+tzdata==2024.2
     # via
     #   -c demo-requirements.txt
     #   pandas
