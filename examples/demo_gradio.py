@@ -36,7 +36,7 @@ def get_class_choices(dictionary: Dictionary):
     if isinstance(dictionary, ECLASS):
         return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
     elif isinstance(dictionary, ETIM):
-        return [(f"{etim.id.split('/')[0]} {etim.name}", etim.id) for etim in dictionary.classes.values()]
+        return [(f"{etim.id.split('/')[-1]} {etim.name}", etim.id) for etim in dictionary.classes.values()]
     return [(f"{class_.id} {class_.name}", class_.id) for class_ in dictionary.classes.values()]
 
 def change_dictionary_type(dictionary_type):

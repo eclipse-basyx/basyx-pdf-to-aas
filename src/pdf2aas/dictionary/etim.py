@@ -122,7 +122,7 @@ class ETIM(Dictionary):
 
     def get_property_url(self, property_id: str) -> str:
         """Get the URL to the feature in the class management tool (CMT)."""
-        return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[0]}"
+        return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[-1]}"
 
     def _download_etim_class(self, etim_class_code:str) -> dict:
         logger.debug(
