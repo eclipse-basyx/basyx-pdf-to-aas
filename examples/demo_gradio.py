@@ -172,13 +172,8 @@ def select_property_info(dictionary_type: str, dictionary: Dictionary | None, aa
     if dictionary is None and aas_template is None:
         return None
 
-    #FIXME Currently this will get the wrong row, when the user has sorted the dataframe: https://github.com/gradio-app/gradio/pull/9128
-    #Therefore, we only accept selection of the first row
-    if evt.index[1] != 0:
-        return property_details_default_str
-
     if dictionary_type == "AAS":
-        property_ = aas_template.get_property(evt.value)
+        property_ = aas_template.get_property(evt.row_value[0])
         if property_ is None:
             return property_details_default_str
         property_info = \
@@ -207,7 +202,7 @@ f"""
         for v in property_.definition.values])}
 """
     else:
-        definition = dictionary.get_property(evt.value)
+        definition = dictionary.get_property(evt.row_value[0])
         if definition is None:
             return property_details_default_str
     return \
@@ -368,10 +363,12 @@ def extract(
 
     if datasheet is None or len (datasheet) == 0:
         gr.Warning("Preprocessed datasheet is none or empty.")
-        return None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+        yield None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+        return
     if client is None:
         gr.Warning("No or wrong client configured. Please update settings.")
-        return None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+        yield None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+        return
 
     if dictionary is not None:
         definitions = dictionary.get_class_properties(class_id)
@@ -441,6 +438,10 @@ def extract(
             yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update()
     gr.Info('Extraction completed.', duration=3)
     yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update(interactive=False)
+
+def cancel_extract():
+    gr.Info("Canceled extraction.")
+    return gr.update(interactive=False)
 
 def create_chat_history(raw_prompts, raw_results, client):
     if raw_prompts is None or len(raw_prompts) == 0:
@@ -591,14 +592,14 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     )
 
         with gr.Tab("Extract"):
-            with gr.Column():
-                with gr.Row():
-                    datasheet_upload = gr.File(
-                        label="Upload Datasheet",
-                        scale=2,
-                        file_count='single',
-                        file_types=['.pdf', 'text'],
-                    )
+            with gr.Row():
+                datasheet_upload = gr.File(
+                    label="Upload Datasheet",
+                    scale=2,
+                    file_count='single',
+                    file_types=['.pdf', 'text'],
+                )
+                with gr.Column():
                     extract_button = gr.Button(
                         "Extract Technical Data",
                         interactive=False,
@@ -609,27 +610,27 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         variant="stop",
                         interactive=False,
                     )
-                    results = gr.File(
-                        label="Download Results",
-                        scale=2,
-                    )
-                extracted_properties_df = gr.DataFrame(
-                    label="Extracted Values",
-                    headers=['ID', 'Name', 'Value', 'Unit', 'Reference'],
-                    value=properties_to_dataframe([]),
-                    interactive=False,
-                    wrap=True,
+                results = gr.File(
+                    label="Download Results",
+                    scale=2,
                 )
-                with gr.Accordion("Preprocessed Datasheet with References", open=False):
-                    with gr.Row():
-                        datasheet_text_highlighted = gr.HighlightedText(
-                            show_label=False,
-                            combine_adjacent=True,
-                        )
-                        datasheet_preview = PDF(
-                            label="Datasheet Preview",
-                            interactive=False,
-                        )
+            extracted_properties_df = gr.DataFrame(
+                label="Extracted Values",
+                headers=['ID', 'Name', 'Value', 'Unit', 'Reference'],
+                value=properties_to_dataframe([]),
+                interactive=False,
+                wrap=True,
+            )
+            with gr.Accordion("Preprocessed Datasheet with References", open=False):
+                with gr.Row():
+                    datasheet_text_highlighted = gr.HighlightedText(
+                        show_label=False,
+                        combine_adjacent=True,
+                    )
+                    datasheet_preview = PDF(
+                        label="Datasheet Preview",
+                        interactive=False,
+                    )
 
         with gr.Tab("Raw Results"):
             chat_history = gr.Chatbot(
@@ -808,7 +809,11 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             inputs=[datasheet_text, dictionary_class, dictionary, aas_template, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
             outputs=[extracted_properties, extracted_properties_df, raw_prompts, raw_results, cancel_extract_button],
         )
-        cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
+        cancel_extract_button.click(
+            fn=cancel_extract,
+            outputs=cancel_extract_button,
+            cancels=[extraction_started]
+        )
         extraction_started.then(
             fn=create_download_results,
             inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class, aas_template],
@@ -876,7 +881,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             )
         except FileNotFoundError:
             logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
-        except gr.exceptions.Error as error:
+        except gr.Error as error:
             logger.warning(f"Initial settings file not loaded: {error}")
         gr.on(
             triggers=[demo.load, settings_save.click, settings_load.upload],
