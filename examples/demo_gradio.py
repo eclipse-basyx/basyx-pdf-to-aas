@@ -681,7 +681,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Endpoint Type",
                         choices=["openai", "azure", "custom"],
                         value="openai",
-                        allow_custom_value=True
+                        allow_custom_value=False
                     )
                     model = gr.Dropdown(
                         label="Model",
@@ -888,6 +888,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             fn=save_settings,
             inputs={tempdir} | set(settings_list),
             outputs=settings_file
+        ).then(
+            fn=change_client,
+            inputs=[endpoint_type, endpoint, api_key, azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers],
+            outputs=client
         )
     
     demo.queue(max_size=10)
