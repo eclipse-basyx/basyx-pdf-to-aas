@@ -427,7 +427,10 @@ def extract(
         properties = []
         yield None, properties_to_dataframe([]), None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
-            property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
+            if batch_size == 1:
+                property_definition_batch = definitions[chunk_pos]
+            else:
+                property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
                     datasheet,
                     property_definition_batch,
