@@ -10,7 +10,7 @@ annotated-types==0.7.0
     # via
     #   -c demo-requirements.txt
     #   pydantic
-anyio==4.6.0
+anyio==4.6.2.post1
     # via
     #   -c demo-requirements.txt
     #   httpx
@@ -56,9 +56,9 @@ colorama==0.4.6
     #   click
     #   pytest
     #   tqdm
-coverage==7.6.2
+coverage==7.6.4
     # via pytest-cov
-cryptography==43.0.1
+cryptography==43.0.3
     # via
     #   -c demo-requirements.txt
     #   pdfminer-six
@@ -105,7 +105,7 @@ numpy==2.1.2
     #   camelot-py
     #   opencv-python
     #   pandas
-openai==1.51.2
+openai==1.52.0
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -131,7 +131,7 @@ pdfminer-six==20240706
     # via
     #   -c demo-requirements.txt
     #   camelot-py
-pefile==2024.8.26
+pefile==2023.2.7
     # via pyinstaller
 pluggy==1.5.0
     # via pytest
@@ -149,7 +149,7 @@ pydantic-core==2.23.4
     # via
     #   -c demo-requirements.txt
     #   pydantic
-pydantic-settings==2.5.2
+pydantic-settings==2.6.0
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -157,9 +157,9 @@ pyecma376-2==1.0.0
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
-pyinstaller==6.10.0
+pyinstaller==6.11.0
     # via pdf2aas (pyproject.toml)
-pyinstaller-hooks-contrib==2024.8
+pyinstaller-hooks-contrib==2024.9
     # via pyinstaller
 pypdf2==3.0.1
     # via
@@ -195,7 +195,7 @@ requests==2.32.3
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-ruff==0.6.9
+ruff==0.7.0
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
