@@ -18,6 +18,9 @@ dependencies = [
 name = "pdf2aas"
 requires-python = ">=3.10"
 dynamic = ["version"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+]
 
 [project.optional-dependencies]
 dev = [
