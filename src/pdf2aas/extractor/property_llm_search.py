@@ -29,6 +29,11 @@ class PropertyLLMSearch(PropertyLLM):
             `use_property_definition`.
         max_values_length (int): Limit the number values from the value list.
             0 means no limit. Only active with `use_property_values`.
+        prompt_order (list[Literal["datasheet", "properties", "hint"]]):
+            Determines order of parts of the search prompt. Used to optimize
+            prompt caching, e.g. when the same properties are searches on
+            multiple datasheets vs. when same datasheet is searched for
+            different properties.
 
     """
 
@@ -54,7 +59,8 @@ Represent ranges as json list of two values.
         max_tokens: int | None = None,
         response_format: dict | None = None,
         property_keys_in_prompt: list[Literal["definition", "unit", "values", "datatype"]]
-        | None = None,
+            | None = None,
+        prompt_order: list[Literal["datasheet", "properties", "hint"]] | None = None,
     ) -> None:
         """Initialize the property LLM search with default values."""
         super().__init__(
@@ -73,6 +79,9 @@ Represent ranges as json list of two values.
         self.use_property_datatype = "datatype" in property_keys_in_prompt
         self.max_definition_chars = 0
         self.max_values_length = 0
+        if prompt_order is None:
+            prompt_order =  ["datasheet", "properties", "hint"]
+        self.prompt_order = prompt_order
 
     def create_prompt(
         self,
@@ -83,28 +92,29 @@ Represent ranges as json list of two values.
     ) -> str:
         """Create the prompt from the given datasheet and property definiions.
 
-        Can be used to check the prompt upfront, overwrite it or display it
-        afterwards.
+        Usefull to check the prompt upfront, customize or display it.
 
-        First the properties are added to the prompt. A PropertyDefinition is
-        formated different (more descriptiv, c.f. :meth: create_property_prompt)
-        than a list of PropertyDefinitions (c.f. :meth: create_property_list_prompt),
-        even if only one definition is part of the list.
+        The prompt is created based on the `prompt_order`:
+        - The datasheet text is added with a small instruction.
+        - Then the properties are added to the prompt. A PropertyDefinition is
+          formated different (more descriptiv, c.f. :meth: create_property_prompt)
+          than a list of PropertyDefinitions (c.f. :meth: create_property_list_prompt),
+          even if only one definition is part of the list.
+        - The `hint` (c.f. "prompt_hint" in :meth: extract) is optionally added to
+          provide context or additional instructions.
 
-        A `hint` (c.f. "prompt_hint" in :meth: extract) is added after the
-        property definitions.
-
-        At the end the datasheet text is added.
         """
-        if isinstance(properties, list):
-            prompt = self.create_property_list_prompt(properties, language)
-        else:
-            prompt = self.create_property_prompt(properties, language)
-
-        if hint:
-            prompt += "\n" + hint
-
-        prompt += f"\nThe following text enclosed in triple backticks (```) is the datasheet of the technical device. It was converted from pdf.\n```\n{datasheet}\n```"  # noqa: E501
+        prompt = ""
+        for part in self.prompt_order:
+            if part == "datasheet":
+                prompt += f"The following text enclosed in triple backticks is the datasheet of the technical device. It was converted from pdf.\n```\n{datasheet}\n```\n"  # noqa: E501
+            elif part == "properties":
+                if isinstance(properties, list):
+                    prompt += self.create_property_list_prompt(properties, language)
+                else:
+                    prompt += self.create_property_prompt(properties, language)
+            elif part == "hint" and hint:
+                prompt += hint + "\n"
         return prompt
 
     def create_property_prompt(
