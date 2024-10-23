@@ -165,6 +165,8 @@ class ECLASS(Dictionary):
             if html_content is None:
                 return []
             eclass_class = self._parse_html_eclass_class(html_content)
+            if eclass_class is None:
+                return []
         return eclass_class.properties
 
     def get_property(self, property_id: str) -> PropertyDefinition:
@@ -222,12 +224,13 @@ class ECLASS(Dictionary):
             self.properties[property_id] = property_
         return property_
 
-    def _parse_html_eclass_class(self, html_content: str) -> ClassDefinition:
+    def _parse_html_eclass_class(self, html_content: str) -> ClassDefinition | None:
         soup = BeautifulSoup(html_content, "html.parser")
         # TODO: get IRDI instead of id, e.g.: 0173-1#01-AGZ376#020,
         # which is = data-cc in span of value lists
         class_hierarchy = soup.find("ul", attrs={"class": "tree-simple-list"})
         li_elements = class_hierarchy.find_all("li", attrs={"id": True})
+        eclass_class = None
         for li in li_elements:
             identifier = li["id"].replace("node_", "")
             eclass_class = self.classes.get(identifier)
@@ -245,6 +248,8 @@ class ECLASS(Dictionary):
                 self.classes[identifier] = eclass_class
             else:
                 logger.debug("Found class %s: %s", identifier, eclass_class.name)
+        if eclass_class is None:
+            return None
         eclass_class.properties = self._parse_html_eclass_properties(soup)
         return eclass_class
 
@@ -392,7 +397,7 @@ class ECLASS(Dictionary):
                 self.properties[irdi] = property_
 
         values = {}
-        with open(zip_dir / zip_dir, csv_filename.format("VA"), encoding="utf-8") as file:
+        with open(zip_dir / csv_filename.format("VA"), encoding="utf-8") as file:
             # Supplier;IdVA;Identifier;VersionNumber;RevisionNumber;VersionDate;
             # PreferredName;ShortName;Definition;Reference;ISOLanguageCode;
             # ISOCountryCode;IrdiVA;DataType
