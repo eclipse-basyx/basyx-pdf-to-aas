@@ -1,0 +1,167 @@
+{
+  "idShort": "TechnicalData",
+  "modelType": "Submodel",
+  "id": "id1",
+  "semanticId": {
+    "type": "ModelReference",
+    "keys": [
+      {
+        "type": "ConceptDescription",
+        "value": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "idShort": "GeneralInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ModelReference",
+        "keys": [
+          {
+            "type": "ConceptDescription",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1"
+          }
+        ]
+      },
+      "value": [
+        {
+          "idShort": "ManufacturerName",
+          "category": "PARAMETER",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ModelReference",
+            "keys": [
+              {
+                "type": "ConceptDescription",
+                "value": "0173-1#02-AAO677#002"
+              }
+            ]
+          },
+          "valueType": "xs:string"
+        },
+        {
+          "idShort": "ManufacturerProductDesignation",
+          "category": "PARAMETER",
+          "modelType": "MultiLanguageProperty",
+          "semanticId": {
+            "type": "ModelReference",
+            "keys": [
+              {
+                "type": "ConceptDescription",
+                "value": "0173-1#02-AAW338#001"
+              }
+            ]
+          }
+        },
+        {
+          "idShort": "ManufacturerArticleNumber",
+          "category": "PARAMETER",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ModelReference",
+            "keys": [
+              {
+                "type": "ConceptDescription",
+                "value": "0173-1#02-AAO676#003"
+              }
+            ]
+          },
+          "valueType": "xs:string"
+        },
+        {
+          "idShort": "ManufacturerOrderCode",
+          "category": "PARAMETER",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ModelReference",
+            "keys": [
+              {
+                "type": "ConceptDescription",
+                "value": "0173-1#02-AAO227#002"
+              }
+            ]
+          },
+          "valueType": "xs:string"
+        }
+      ]
+    },
+    {
+      "idShort": "ProductClassifications",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ModelReference",
+        "keys": [
+          {
+            "type": "ConceptDescription",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1"
+          }
+        ]
+      }
+    },
+    {
+      "idShort": "TechnicalProperties",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ModelReference",
+        "keys": [
+          {
+            "type": "ConceptDescription",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1"
+          }
+        ]
+      }
+    },
+    {
+      "idShort": "FurtherInformation",
+      "modelType": "SubmodelElementCollection",
+      "semanticId": {
+        "type": "ModelReference",
+        "keys": [
+          {
+            "type": "ConceptDescription",
+            "value": "https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1"
+          }
+        ]
+      },
+      "value": [
+        {
+          "idShort": "TextStatement01",
+          "category": "PARAMETER",
+          "modelType": "MultiLanguageProperty",
+          "semanticId": {
+            "type": "ModelReference",
+            "keys": [
+              {
+                "type": "ConceptDescription",
+                "value": "https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1"
+              }
+            ]
+          },
+          "value": [
+            {
+              "language": "en",
+              "text": "Created with basyx pdf-to-aas. No liability of any kind is assumed for the contained information."
+            }
+          ]
+        },
+        {
+          "idShort": "ValidDate",
+          "category": "PARAMETER",
+          "modelType": "Property",
+          "semanticId": {
+            "type": "ModelReference",
+            "keys": [
+              {
+                "type": "ConceptDescription",
+                "value": "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1"
+              }
+            ]
+          },
+          "value": "2024-08-26",
+          "valueType": "xs:date"
+        }
+      ]
+    }
+  ]
+}

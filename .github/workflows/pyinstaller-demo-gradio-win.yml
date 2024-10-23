@@ -1,0 +1,29 @@
+name: Package gradio example with PyInstaller - Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: main
+    paths: 
+      - 'src/**'
+      - 'examples/demo_gradio.py'
+      - '*requirements.txt'
+      - '.github/workflows/pyinstaller-demo-gradio-win.yml'
+jobs:
+  build-win-exe:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+    - name: Install dependencies
+      run: pip install -r demo-requirements.txt -r dev-requirements.txt
+    - name: Install pdf2aas
+      run: pip install -e .
+    - name: Build executable
+      run: pyinstaller .\examples\demo_gradio.spec
+    - uses: actions/upload-artifact@v4
+      with:
+        name: pdf-to-aas-gradio-demo
+        path: dist/*.exe
