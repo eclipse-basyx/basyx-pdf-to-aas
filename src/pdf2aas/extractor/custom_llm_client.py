@@ -87,14 +87,10 @@ class CustomLLMClientHTTP(CustomLLMClient):
         self.endpoint = endpoint
         self.api_key = api_key
         if request_template is None:
-            request_template = """{{
-"model": "{model}",
-"messages": {messages},
-"max_tokens": {max_tokens},
-"temperature": {temperature},
-"response_format": {response_format}
-}}"""
+            request_template = """{{"model": "{model}", "messages": {messages}, "max_tokens": {max_tokens}, "temperature": {temperature}, "response_format": {response_format} }}"""  # noqa: E501
         self.request_template = request_template
+        if result_path is None:
+            result_path = "choices[0].message.content"
         self.result_path = result_path
         if headers is None:
             headers = {
