@@ -63,7 +63,7 @@ numpy==2.1.2
     #   camelot-py
     #   opencv-python
     #   pandas
-openai==1.52.0
+openai==1.52.1
     # via pdf2aas (pyproject.toml)
 opencv-python==4.10.0.84
     # via camelot-py
