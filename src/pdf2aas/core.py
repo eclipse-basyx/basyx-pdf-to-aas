@@ -4,7 +4,8 @@ import logging
 
 from .dictionary import ECLASS, Dictionary
 from .extractor import Extractor, PropertyLLMSearch
-from .generator import AASSubmodelTechnicalData, Generator
+from .generator import AASSubmodelTechnicalData, AASTemplate, Generator
+from .model import Property
 from .preprocessor import PDFium, Preprocessor
 
 logger = logging.getLogger(__name__)
@@ -16,8 +17,9 @@ class PDF2AAS:
     Attributes:
         preprocessor (Preprocessor): A preprocessing object to handle PDF files.
             Defaults to PDFium.
-        dictionary (Dictionary): A dictionary object for term mapping.
-            Defaults to ECLASS in current release.
+        dictionary (Dictionary): A dictionary object defining properties to
+            search for.Defaults to ECLASS. Alternatively this can be an AAS
+            (Template).
         extractor (Extractor): An extractor object to pull relevant information
             from the preprocessed PDF. Defaults to PropertyLLMSearch with
             current openai model.
@@ -32,7 +34,7 @@ class PDF2AAS:
     def __init__(
         self,
         preprocessor: Preprocessor = None,
-        dictionary: Dictionary = None,
+        dictionary: Dictionary | AASTemplate = None,
         extractor: Extractor = None,
         generator: Generator = None,
         batch_size: int = 0,
@@ -42,8 +44,9 @@ class PDF2AAS:
         Args:
             preprocessor (Preprocessor, optional): A preprocessing object to
                 handle PDF files. Defaults to PDFium.
-            dictionary (Dictionary, optional): A dictionary object for term
-                mapping. Defaults to ECLASS.
+            dictionary (Dictionary, AASTemplate, optional): A dictionary object
+                defining properties to search for. Defaults to ECLASS.
+                Alternatively this can be an AAS (Template).
             extractor (Extractor, optional): An extractor object to pull
                 relevant information from the preprocessed PDF. Defaults to
                 PropertyLLMSearch with the current openai model.
@@ -63,9 +66,9 @@ class PDF2AAS:
     def convert(
         self,
         pdf_filepath: str,
-        classification: str,
+        classification: str | None = None,
         output_filepath: str | None = None,
-    ) -> None:
+    ) -> list[Property]:
         """Convert a PDF document into an AAS submodel.
 
         Uses the configured preprocessor, dictionary, extractor to
@@ -75,15 +78,25 @@ class PDF2AAS:
 
         Args:
             pdf_filepath (str): The file path to the input PDF document.
-            classification (str): The classification term for mapping
+            classification (str, optional): The classification id for mapping
                 properties, e.g. "27274001" when using ECLASS.
             output_filepath (str, optional): The file path to save the generated
                 AAS submodel or configured generator output.
 
+        Returns:
+            properties (list[Property]): the extracted properties. The generator
+                result can be obtained from the generator object, e.g. via
+                `generator.dump` or by specifying `output_filepath`.
+
         """
         preprocessed_datasheet = self.preprocessor.convert(pdf_filepath)
 
-        property_definitions = self.dictionary.get_class_properties(classification)
+        if isinstance(self.dictionary, AASTemplate):
+            property_definitions = self.dictionary.get_property_definitions()
+        elif self.dictionary is not None and classification is not None:
+            property_definitions = self.dictionary.get_class_properties(classification)
+        else:
+            property_definitions = []
 
         if self.batch_size <= 0:
             properties = self.extractor.extract(preprocessed_datasheet, property_definitions)
@@ -99,6 +112,8 @@ class PDF2AAS:
                         preprocessed_datasheet, property_definitions[i : i + self.batch_size],
                     ),
                 )
+        if self.generator is None:
+            return properties
 
         self.generator.reset()
         if isinstance(self.generator, AASSubmodelTechnicalData):
@@ -107,3 +122,4 @@ class PDF2AAS:
         if output_filepath is not None:
             self.generator.dump(filepath=output_filepath)
             logger.info("Generated result in: %s", output_filepath)
+        return properties
