@@ -5,7 +5,7 @@ import logging
 from .dictionary import ECLASS, Dictionary
 from .extractor import Extractor, PropertyLLMSearch
 from .generator import AASSubmodelTechnicalData, AASTemplate, Generator
-from .model import Property
+from .model import Property, PropertyDefinition
 from .preprocessor import PDFium, Preprocessor, Text
 
 logger = logging.getLogger(__name__)
@@ -92,48 +92,79 @@ class PDF2AAS:
                 AAS submodel or configured generator output.
 
         Returns:
-            properties (list[Property]): the extracted properties. The generator
-                result can be obtained from the generator object, e.g. via
+            properties (list[Property]): the extracted properties. The formated
+                results can be obtained from the generator object, e.g. via
                 `generator.dump` or by specifying `output_filepath`.
 
         """
+        text = self.preprocess(pdf_filepath)
+        definitions = self.definitions(classification)
+        properties = self.extract(text, definitions)
+        self.generate(classification, properties, output_filepath)
+        return properties
+
+    def preprocess(self, filepath: str) -> list[str] | str:
+        """Preprocess the document at the filepath using the configured preprocessors.
+
+        Opens .pdf / .PDF documents with PDFium and other files with Text preprocessor,
+        if preprocessor is None.
+        """
         if self.preprocessor is None:
-            preprocessors = [PDFium()] if pdf_filepath.lower().endswith(".pdf") else [Text()]
+            preprocessors = [PDFium()] if filepath.lower().endswith(".pdf") else [Text()]
         elif isinstance(self.preprocessor, Preprocessor):
             preprocessors = [self.preprocessor]
-        preprocessed_datasheet = pdf_filepath
+        preprocessed_datasheet = filepath
         for preprocessor in preprocessors:
             preprocessed_datasheet = preprocessor.convert(preprocessed_datasheet)
+        return preprocessed_datasheet
 
+    def definitions(self, classification: str | None = None) -> list[PropertyDefinition]:
+        """Get the definitions from the configured dictionary or aas template."""
         if isinstance(self.dictionary, AASTemplate):
-            property_definitions = self.dictionary.get_property_definitions()
-        elif self.dictionary is not None and classification is not None:
-            property_definitions = self.dictionary.get_class_properties(classification)
-        else:
-            property_definitions = []
+            return self.dictionary.get_property_definitions()
+        if self.dictionary is not None and classification is not None:
+            return self.dictionary.get_class_properties(classification)
+        return []
 
+    def extract(
+        self, text: list[str] | str, definitions: list[PropertyDefinition],
+        raw_prompts: list | None = None,
+        raw_results: list | None = None,
+    ) -> list[Property]:
+        """Extract the defined properties from the text using the configured extractor."""
         if self.batch_size <= 0:
-            properties = self.extractor.extract(preprocessed_datasheet, property_definitions)
+            properties = self.extractor.extract(text, definitions, raw_prompts, raw_results)
         elif self.batch_size == 1:
             properties = [
-                self.extractor.extract(preprocessed_datasheet, d) for d in property_definitions
+                self.extractor.extract(text, d, raw_prompts, raw_results) for d in definitions
             ]
         else:
             properties = []
-            for i in range(0, len(property_definitions), self.batch_size):
+            for i in range(0, len(definitions), self.batch_size):
                 properties.extend(
                     self.extractor.extract(
-                        preprocessed_datasheet, property_definitions[i : i + self.batch_size],
+                        text,
+                        definitions[i : i + self.batch_size],
+                        raw_prompts,
+                        raw_results,
                     ),
                 )
+        return properties
+
+    def generate(
+        self,
+        classification: str | None,
+        properties: list[Property],
+        filepath: str | None,
+    ) -> None:
+        """Export properties using the given generator."""
         if self.generator is None:
-            return properties
+            return
 
         self.generator.reset()
-        if isinstance(self.generator, AASSubmodelTechnicalData):
+        if classification and isinstance(self.generator, AASSubmodelTechnicalData):
             self.generator.add_classification(self.dictionary, classification)
         self.generator.add_properties(properties)
-        if output_filepath is not None:
-            self.generator.dump(filepath=output_filepath)
-            logger.info("Generated result in: %s", output_filepath)
-        return properties
+        if filepath is not None:
+            self.generator.dump(filepath)
+            logger.info("Generated result in: %s", filepath)
