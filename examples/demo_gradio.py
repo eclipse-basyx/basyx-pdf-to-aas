@@ -120,7 +120,7 @@ def get_class_property_definitions(
         {
             'ID': definition.id,
             'Type': definition.type,
-            'Name': definition.name.get('en'),
+            'Name': definition.get_name('en'),
         }
         for definition in definitions
     ])

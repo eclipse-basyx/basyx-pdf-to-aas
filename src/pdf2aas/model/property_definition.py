@@ -62,3 +62,14 @@ class PropertyDefinition:
                 return value_definition.get("id", idx)
             continue
         return None
+
+    def get_name(self, preferred_language:str) -> str | None:
+        """Try to get the property in the preferred language.
+
+        Returns the first name if selected language is not available.
+        Returns None if no name is available.
+        """
+        name = self.name.get(preferred_language)
+        if name is None and len(self.name) > 0:
+            name = next(iter(self.name.values()))
+        return name

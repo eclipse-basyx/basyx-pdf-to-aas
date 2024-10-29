@@ -305,9 +305,7 @@ class AASSubmodelTechnicalData(Generator):
             category="PROPERTY" if value is None else "VALUE",
         )
         if property_defintion:
-            name = property_defintion.name.get("en")
-            if name is None:
-                name = next(iter(property_defintion.name.values()), None)
+            name = property_defintion.get_name("en")
             if name is not None:
                 cd.id_short = re.sub(anti_alphanumeric_regex, "_", name)
                 cd.display_name = model.MultiLanguageNameType(

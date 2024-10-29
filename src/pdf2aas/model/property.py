@@ -61,10 +61,7 @@ class Property:
         """
         if self.definition is None:
             return None
-        name = self.definition.name.get(self.language)
-        if name is None:
-            name = next(iter(self.definition.name.values()), "")
-        return name
+        return self.definition.get_name(self.language)
 
     def parse_numeric_range(self) -> tuple[float | int | None, float | int | None]:
         """Try to parse the value as a numerical range.
