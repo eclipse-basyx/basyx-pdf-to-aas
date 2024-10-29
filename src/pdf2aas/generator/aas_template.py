@@ -4,6 +4,7 @@ import collections.abc
 import copy
 import json
 import logging
+from collections.abc import Callable
 
 from basyx.aas import model
 from basyx.aas.adapter.aasx import (
@@ -35,19 +36,27 @@ class AASTemplate(Generator):
         object_store (DictObjectStore): Objects read from the AASX package.
         file_store (DictSupplementaryFileContainer): Files read from the AASX package.
         submodels (list[Submodel]): list of submodels read from the AASX package.
+        submodel_filter (Callable[[model.Submodel], bool]): filter submodels used to
+            select properties and their definitions.
+        submodel_filter (Callable[[model.Submodel], bool]): filter submodel elements to
+            select properties and their definitions.
 
     """
 
     def __init__(
         self,
-        aasx_path: str,
+        aasx_path: str | None = None,
+        submodel_filter: Callable[[model.Submodel], bool] | None = None,
+        submodel_element_filter: Callable[[model.SubmodelElement], bool] | None = None,
     ) -> None:
-        """Initialize the AASTemplate with a specified AASX package path."""
+        """Initialize the AASTemplate with a specified AASX package path and filters."""
         self._properties: dict[
             str,
             tuple[Property, model.Property | model.Range | model.MultiLanguageProperty],
         ] = {}
         self._aasx_path = aasx_path
+        self.submodel_filter = submodel_filter
+        self.submodel_element_filter = submodel_element_filter
         self.reset()
 
     @property
@@ -68,6 +77,10 @@ class AASTemplate(Generator):
         """Reset the AAS template by loading the AASX package and searching the properties."""
         self.object_store = model.DictObjectStore()
         self.file_store = DictSupplementaryFileContainer()
+        if self.aasx_path is None:
+            self.submodels = []
+            self._properties = {}
+            return
         try:
             with AASXReader(self.aasx_path) as reader:
                 reader.read_into(self.object_store, self.file_store)
@@ -143,8 +156,17 @@ class AASTemplate(Generator):
         None,
         None,
     ]:
-        for submodel in self.submodels:
-            for element in walk_submodel(submodel):
+        submodels = (
+            filter(self.submodel_filter, self.submodels) if self.submodel_filter else self.submodels
+        )
+        for submodel in submodels:
+            elements = filter(
+                self.submodel_element_filter,
+                walk_submodel(submodel)
+                if self.submodel_element_filter
+                else walk_submodel(submodel),
+            )
+            for element in elements:
                 if isinstance(element, model.Property | model.Range | model.MultiLanguageProperty):
                     yield element
 
