@@ -175,7 +175,8 @@ class AASTemplate(Generator):
         if string_dict is not None and len(string_dict) > 0:
             if language in string_dict:
                 return string_dict[language], language
-            next(iter(string_dict.items()))
+            lang_string = next(iter(string_dict.items()))
+            return lang_string[1], lang_string[0]
         return None, language
 
     @staticmethod
@@ -279,7 +280,8 @@ class AASTemplate(Generator):
                 property_.label = aas_property.id_short
 
             property_.reference, _ = self._get_multilang_string(
-                aas_property.description, property_.language,
+                aas_property.description,
+                property_.language,
             )
 
             if isinstance(aas_property, model.Range):
@@ -287,7 +289,8 @@ class AASTemplate(Generator):
                 type_ = "range"
             elif isinstance(aas_property, model.MultiLanguageProperty):
                 property_.value, _ = self._get_multilang_string(
-                    aas_property.value, property_.language,
+                    aas_property.value,
+                    property_.language,
                 )
                 type_ = "string"
             else:
@@ -299,7 +302,8 @@ class AASTemplate(Generator):
                 type=type_,
             )
             self._fill_definition_from_data_spec(
-                definition, aas_property.embedded_data_specifications,
+                definition,
+                aas_property.embedded_data_specifications,
             )
 
             semantic_id = aas_property.semantic_id
@@ -312,7 +316,8 @@ class AASTemplate(Generator):
                     cd = self.object_store.get(semantic_id.key[0].value)
                 if cd is not None:
                     self._fill_definition_from_data_spec(
-                        definition, cd.embedded_data_specifications,
+                        definition,
+                        cd.embedded_data_specifications,
                     )
                     if len(definition.name) == 0:
                         if cd.display_name:
