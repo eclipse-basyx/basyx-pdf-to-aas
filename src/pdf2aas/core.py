@@ -6,7 +6,7 @@ from .dictionary import ECLASS, Dictionary
 from .extractor import Extractor, PropertyLLMSearch
 from .generator import AASSubmodelTechnicalData, AASTemplate, Generator
 from .model import Property
-from .preprocessor import PDFium, Preprocessor
+from .preprocessor import PDFium, Preprocessor, Text
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +15,11 @@ class PDF2AAS:
     """Convert PDF documents into Asset Administration Shell (AAS) submodels.
 
     Attributes:
-        preprocessor (Preprocessor): A preprocessing object to handle PDF files.
-            Defaults to PDFium.
+        preprocessor (Preprocessor, list[Preprocessor], optional):
+            A preprocessing object to handle input files. Defaults to PDFium
+            for files with pdf extension and Text for other files.
+            If a list is given, the preprocessed datasheet is
+            passed through each preprocessor in the list.
         dictionary (Dictionary): A dictionary object defining properties to
             search for.Defaults to ECLASS. Alternatively this can be an AAS
             (Template).
@@ -33,7 +36,7 @@ class PDF2AAS:
 
     def __init__(
         self,
-        preprocessor: Preprocessor = None,
+        preprocessor: Preprocessor | list[Preprocessor] = None,
         dictionary: Dictionary | AASTemplate = None,
         extractor: Extractor = None,
         generator: Generator = None,
@@ -42,8 +45,11 @@ class PDF2AAS:
         """Initialize the PDF2AAS toolchain with optional custom components.
 
         Args:
-            preprocessor (Preprocessor, optional): A preprocessing object to
-                handle PDF files. Defaults to PDFium.
+            preprocessor (Preprocessor, list[Preprocessor], optional):
+                A preprocessing object to handle input files. Defaults to PDFium
+                for files with pdf extension and Text for other files.
+                If a list is given, the preprocessed datasheet is
+                passed through each preprocessor in the list.
             dictionary (Dictionary, AASTemplate, optional): A dictionary object
                 defining properties to search for. Defaults to ECLASS.
                 Alternatively this can be an AAS (Template).
@@ -57,7 +63,7 @@ class PDF2AAS:
                 in one. 1 extracts each property on its own.
 
         """
-        self.preprocessor = PDFium() if preprocessor is None else preprocessor
+        self.preprocessor = preprocessor
         self.dictionary = ECLASS() if dictionary is None else dictionary
         self.extractor = PropertyLLMSearch("gpt-4o-mini") if extractor is None else extractor
         self.generator = AASSubmodelTechnicalData() if generator is None else generator
@@ -71,13 +77,15 @@ class PDF2AAS:
     ) -> list[Property]:
         """Convert a PDF document into an AAS submodel.
 
-        Uses the configured preprocessor, dictionary, extractor to
+        Uses the configured preprocessor, dictionary and extractor to
         extract or search for the given properties of the `classification`.
         Dumps the result using the configured generator to the given
         'output_filepath' if provided.
 
         Args:
-            pdf_filepath (str): The file path to the input PDF document.
+            pdf_filepath (str): The file path to the input document. Can also
+                be another format, if the corresponding preprocessor (chain) is
+                configured.
             classification (str, optional): The classification id for mapping
                 properties, e.g. "27274001" when using ECLASS.
             output_filepath (str, optional): The file path to save the generated
@@ -89,7 +97,13 @@ class PDF2AAS:
                 `generator.dump` or by specifying `output_filepath`.
 
         """
-        preprocessed_datasheet = self.preprocessor.convert(pdf_filepath)
+        if self.preprocessor is None:
+            preprocessors = [PDFium()] if pdf_filepath.lower().endswith(".pdf") else [Text()]
+        elif isinstance(self.preprocessor, Preprocessor):
+            preprocessors = [self.preprocessor]
+        preprocessed_datasheet = pdf_filepath
+        for preprocessor in preprocessors:
+            preprocessed_datasheet = preprocessor.convert(preprocessed_datasheet)
 
         if isinstance(self.dictionary, AASTemplate):
             property_definitions = self.dictionary.get_property_definitions()
