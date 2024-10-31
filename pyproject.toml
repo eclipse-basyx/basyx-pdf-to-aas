@@ -32,6 +32,10 @@ demo = [
   "pandas",
   "openpyxl",
 ]
+eval = [
+  "matplotlib",
+  "levenshtein",
+]
 
 [build-system]
 build-backend = "setuptools.build_meta"
