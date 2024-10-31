@@ -349,3 +349,65 @@ class AASTemplate(Generator):
                 file_store=self.file_store,
                 write_json=True,
             )
+
+    def search_datasheet(
+        self,
+        submodel_id_short: str | None = "HandoverDocumentation",
+        classification: str | None = "Technical specification",
+        language: str = "en",
+    ) -> str | None:
+        """Search submodels for a datsheet file.
+
+        Args:
+        submodel_id_short (str | None): Check only submodels with this id short.
+            Defaults to "HandoverDocumentation". Searches all submodels if None.
+        classification (str | None): The classification name of the datasheet in
+            the given language or the first language provided, e.g. according to
+            VDI 2770 part 1. Defaults to "Technical specification". Allows all
+            class names, if set to None.
+        language (str): The language code for the datasheet and classification
+            name. Defaults to "en".
+
+        Returns:
+            str | None: The path or identifier of the found datasheet file, or None if not found.
+
+        """
+        for submodel in self.submodels:
+            if submodel_id_short and submodel.id_short == submodel_id_short:
+                for document in submodel.submodel_element:
+                    class_name, languages, file = self._search_document_spec(document)
+
+                    if classification is not None:
+                        if class_name is None:
+                            continue
+                        if isinstance(class_name, model.MultiLanguageTextType):
+                            class_name_str, _ = self._get_multilang_string(class_name, language)
+                        else:
+                            class_name_str = str(class_name)
+                        if class_name_str != classification:
+                            continue
+
+                    if language in languages and file is not None:
+                        return file
+        return None
+
+    @staticmethod
+    def _search_document_spec(
+        document: model.SubmodelElementCollection,
+    ) -> tuple[dict[str, str], list[str], str]:
+        class_name = None
+        languages = []
+        file = None
+        for element in document.value:
+            if element.id_short == "DocumentClassification":
+                for subelement in element:
+                    if subelement.id_short == "ClassName":
+                        class_name = subelement.value
+                        break
+            elif element.id_short == "DocumentVersion":
+                for subelement in element:
+                    if subelement.id_short.startswith("Language"):
+                        languages.append(subelement.value.lower())
+                    elif subelement.id_short == "DigitalFile":
+                        file = subelement.value
+        return class_name, languages, file
