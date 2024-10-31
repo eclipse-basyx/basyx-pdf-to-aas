@@ -361,10 +361,9 @@ class AASTemplate(Generator):
         Args:
         submodel_id_short (str | None): Check only submodels with this id short.
             Defaults to "HandoverDocumentation". Searches all submodels if None.
-        classification (str | None): The classification name of the datasheet in
-            the given language or the first language provided, e.g. according to
-            VDI 2770 part 1. Defaults to "Technical specification". Allows all
-            class names, if set to None.
+        classification (str | None): The classification name of the datasheet,
+            e.g. according to VDI 2770 part 1. Defaults to "Technical specification".
+            Allows all class names, if set to None.
         language (str): The language code for the datasheet and classification
             name. Defaults to "en".
 
@@ -375,18 +374,9 @@ class AASTemplate(Generator):
         for submodel in self.submodels:
             if submodel_id_short and submodel.id_short == submodel_id_short:
                 for document in submodel.submodel_element:
-                    class_name, languages, file = self._search_document_spec(document)
-
-                    if classification is not None:
-                        if class_name is None:
-                            continue
-                        if isinstance(class_name, model.MultiLanguageTextType):
-                            class_name_str, _ = self._get_multilang_string(class_name, language)
-                        else:
-                            class_name_str = str(class_name)
-                        if class_name_str != classification:
-                            continue
-
+                    class_names, languages, file = self._search_document_spec(document)
+                    if classification is not None and classification not in class_names:
+                        continue
                     if language in languages and file is not None:
                         return file
         return None
@@ -395,19 +385,21 @@ class AASTemplate(Generator):
     def _search_document_spec(
         document: model.SubmodelElementCollection,
     ) -> tuple[dict[str, str], list[str], str]:
-        class_name = None
+        class_names = []
         languages = []
         file = None
         for element in document.value:
-            if element.id_short == "DocumentClassification":
+            if element.id_short.startswith("DocumentClassification"):
                 for subelement in element:
                     if subelement.id_short == "ClassName":
-                        class_name = subelement.value
-                        break
+                        if isinstance(subelement.value, model.MultiLanguageTextType):
+                            class_names.extend(subelement.value.values())
+                        else:
+                            class_names.append(str(subelement.value))
             elif element.id_short == "DocumentVersion":
                 for subelement in element:
                     if subelement.id_short.startswith("Language"):
                         languages.append(subelement.value.lower())
                     elif subelement.id_short == "DigitalFile":
                         file = subelement.value
-        return class_name, languages, file
+        return class_names, languages, file
