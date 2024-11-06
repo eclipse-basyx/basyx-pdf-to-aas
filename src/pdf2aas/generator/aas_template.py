@@ -38,8 +38,8 @@ class AASTemplate(Generator):
         submodels (list[Submodel]): list of submodels read from the AASX package.
         submodel_filter (Callable[[model.Submodel], bool]): filter submodels used to
             select properties and their definitions.
-        submodel_filter (Callable[[model.Submodel], bool]): filter submodel elements to
-            select properties and their definitions.
+        submodel_element_filter (Callable[[model.SubmodelElement], bool]): filter submodel elements
+            to select properties and their definitions.
 
     """
 
@@ -353,7 +353,7 @@ class AASTemplate(Generator):
     def search_datasheet(
         self,
         submodel_id_short: str | None = "HandoverDocumentation",
-        classification: str | None = "Technical specification",
+        classification: str | None = None,
         language: str = "en",
     ) -> str | None:
         """Search submodels for a datsheet file.
@@ -362,8 +362,8 @@ class AASTemplate(Generator):
         submodel_id_short (str | None): Check only submodels with this id short.
             Defaults to "HandoverDocumentation". Searches all submodels if None.
         classification (str | None): The classification name of the datasheet,
-            e.g. according to VDI 2770 part 1. Defaults to "Technical specification".
-            Allows all class names, if set to None.
+            e.g. according to VDI 2770 part 1. Defaults to None, which allows
+            all class names.
         language (str): The language code for the datasheet and classification
             name. Defaults to "en".
 
@@ -391,7 +391,7 @@ class AASTemplate(Generator):
         for element in document.value:
             if element.id_short.startswith("DocumentClassification"):
                 for subelement in element:
-                    if subelement.id_short == "ClassName":
+                    if subelement.id_short.lower() == "classname":
                         if isinstance(subelement.value, model.MultiLanguageTextType):
                             class_names.extend(subelement.value.values())
                         else:
