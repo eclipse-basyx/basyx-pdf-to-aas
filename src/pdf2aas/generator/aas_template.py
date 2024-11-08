@@ -130,18 +130,18 @@ class AASTemplate(Generator):
         property_, _ = self._properties.get(id_, (None, None))
         return property_
 
-    def get_property_definitions(self) -> list[PropertyDefinition]:
+    def get_property_definitions(self, overwrite_dataspec: bool = False) -> list[PropertyDefinition]:
         """Derive the property definition from the properties found in the template."""
         definitions = []
         for property_, _ in self._properties.values():
             definition = copy.copy(property_.definition)
             definition.id = property_.id
-            if property_.definition_name is None:
+            if property_.definition_name is None or overwrite_dataspec:
                 if property_.label is None or len(property_.label) == 0:
                     definition.name = {}
                 else:
                     definition.name = {property_.language: property_.label}
-            if definition.definition is None or len(definition.definition) == 0:
+            if definition.definition is None or len(definition.definition) == 0 or overwrite_dataspec:
                 if property_.reference is None or len(property_.reference) == 0:
                     definition.definition = {}
                 else:
