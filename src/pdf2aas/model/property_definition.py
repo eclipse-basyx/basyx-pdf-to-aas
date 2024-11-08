@@ -64,7 +64,7 @@ class PropertyDefinition:
         return None
 
     def get_name(self, preferred_language:str) -> str | None:
-        """Try to get the property in the preferred language.
+        """Try to get the property name in the preferred language.
 
         Returns the first name if selected language is not available.
         Returns None if no name is available.
@@ -73,3 +73,14 @@ class PropertyDefinition:
         if name is None and len(self.name) > 0:
             name = next(iter(self.name.values()))
         return name
+
+    def get_definition(self, preferred_language:str) -> str | None:
+        """Try to get the property definition in the preferred language.
+
+        Returns the first definition if selected language is not available.
+        Returns None if no definition is available.
+        """
+        definition = self.definition.get(preferred_language)
+        if definition is None and len(self.definition) > 0:
+            definition = next(iter(self.definition.values()))
+        return definition
