@@ -1,8 +1,8 @@
 """Classes for the evaluation of pdf2aas conversion using Asset Administration Shells as input."""
 
+import datetime
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -73,8 +73,8 @@ class EvaluationAAS(Evaluation):
             property_parent (str | None, optional): Alternative to `property_selection`.
                 Define the id_short of the submodel element collection under which the evaluation
                 properties fall. If None, no parent is filtered. Defaults to None.
-            eval_path (str | None, optional): Path to the evaluation output.
-                If None, defaults to a "temp/eval".
+            eval_path (str | None, optional): Path to save the evaluation output.
+                No output is dumped to file, if set to None.
 
         """
         super().__init__()
@@ -99,7 +99,7 @@ class EvaluationAAS(Evaluation):
 
         self.converter.dictionary.submodel_element_filter = _submodel_element_has_parent
 
-        self.eval_path = Path(eval_path if eval_path else "temp/eval")
+        self.eval_path = Path(eval_path) if eval_path else None
 
     def add_articles(
         self,
@@ -172,11 +172,18 @@ class EvaluationAAS(Evaluation):
         self.articles.append(article)
 
     def run_extraction(self) -> Path | None:
-        """Extract defined properties for all added articles and evaluate."""
-        run_path = self.eval_path / datetime.now(tz=datetime.timezone.utc).strftime(
-            "%Y-%m-%d_%H-%M-%S",
-        )
-        run_path.mkdir(parents=True, exist_ok=True)
+        """Extract defined properties for all added articles and evaluate.
+        
+        Returns:
+            run_path(Path | None): the output path, where results and some
+                intermediate files were stored, if `eval_path` is configured."""
+        if self.eval_path:
+            run_path = self.eval_path / datetime.datetime.now(tz=datetime.UTC).strftime(
+                "%Y-%m-%d_%H-%M-%S",
+            )
+            run_path.mkdir(parents=True, exist_ok=True)
+        else:
+            run_path = None
 
         for idx, article in enumerate(self.articles):
             logger.info("[%i] Processing %s", idx, article.name)
@@ -193,20 +200,22 @@ class EvaluationAAS(Evaluation):
             self.extracted_properties[article.name] = properties
             self.datasheet_texts[article.name] = str(datasheet_text)
             self.prompts.extend(EvaluationPrompt.from_raw_results(raw_results))
-            Path(run_path / article.name).with_name("raw_prompts.json").write_text(
-                json.dumps(raw_prompts),
-            )
-            Path(run_path / article.name).with_name("raw_results.json").write_text(
-                json.dumps(raw_results),
-            )
+            if run_path:
+                Path(run_path / article.name).with_name("raw_prompts.json").write_text(
+                    json.dumps(raw_prompts),
+                )
+                Path(run_path / article.name).with_name("raw_results.json").write_text(
+                    json.dumps(raw_results),
+                )
 
         self.evaluate()
         logger.info(self.summary())
-        self.export_excel(
-            run_path / "results.xlsx",
-            sheets=["extracted", "definitions"],
-        )
         self.plot_extraction_property_frequency()
-        plt.tight_layout()
-        plt.savefig(run_path / "extraction_property_frequency.pdf")
+        if run_path:
+            self.export_excel(
+                run_path / "results.xlsx",
+                sheets=["extracted", "definitions"],
+            )
+            plt.tight_layout()
+            plt.savefig(run_path / "extraction_property_frequency.pdf")
         return run_path
