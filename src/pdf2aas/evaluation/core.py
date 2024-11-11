@@ -220,7 +220,6 @@ class Evaluation:
         property_: Property,
         definition: PropertyDefinition,
         article: EvaluationArticle,
-        datasheet: str | None,
     ) -> tuple[bool, Any]:
         ignored = False
         expected = None
@@ -257,11 +256,11 @@ class Evaluation:
                 article.name,
             )
 
-        if datasheet and id_ in self.value_datasheet_regex:
+        if article.datasheet_text and id_ in self.value_datasheet_regex:
             label = self.value_datasheet_regex.get(id_)
             expected_in_datasheet = re.search(
                 r"^" + label + r"\s([0-9,.]+)\s(mm|g)",
-                datasheet,
+                article.datasheet_text,
                 re.IGNORECASE | re.MULTILINE,
             )
             if expected_in_datasheet:
@@ -281,7 +280,6 @@ class Evaluation:
         self,
         article: EvaluationArticle,
         property_: Property,
-        datasheet: str | None,
     ) -> None:
         id_ = property_.definition_id
         if id_ is None:
@@ -317,7 +315,6 @@ class Evaluation:
             property_,
             definition,
             article,
-            datasheet,
         )
         value = property_.value
         difference, similar = self._compare(value, expected, definition.type)
@@ -373,9 +370,8 @@ class Evaluation:
             if extracted_properties is None:
                 logger.warning("No extracted properties for article: %s", article.name)
                 continue
-            datasheet = self.datasheet_texts.get(article.name)
             for property_ in extracted_properties:
-                self._calc_property_counts(article, property_, datasheet)
+                self._calc_property_counts(article, property_)
 
         for counts in self.counts.values():
             self.counts_sum.extracted += counts.extracted

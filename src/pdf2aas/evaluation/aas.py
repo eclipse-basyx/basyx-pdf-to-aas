@@ -3,6 +3,8 @@
 import datetime
 import json
 import logging
+import re
+import shutil
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -34,6 +36,8 @@ class EvaluationAAS(Evaluation):
             should be overwriten by the property display name and description. Default is False.
             Usefull, when the embedded_data_specification of the property or it's concept
             description is less descriptive than the property display name and description.
+        datasheet_cutoff_pattern(str | re.Pattern, optional): regex pattern that is used to
+            cut off the datasheet text, if given.
 
     Inherits all attributes from the Evaluation class, including:
         - ignored_properties
@@ -53,6 +57,7 @@ class EvaluationAAS(Evaluation):
     datasheet_submodel: str | None = "HandoverDocumentation"
     datasheet_classification: str | None = None
     overwrite_dataspec: bool = False
+    datasheet_cutoff_pattern: str | re.Pattern | None = None
 
     def __init__(
         self,
@@ -127,8 +132,10 @@ class EvaluationAAS(Evaluation):
     def add_article(self, article: EvaluationArticle) -> None:
         """Add an article to the evlaluation.
 
-        Will try get the datasheet and property definitions from the aasx file,
+        Try get the datasheet and property definitions from the aasx file,
         if none is set.
+        Preprocess the datasheet using configured preprocessor and
+        `datasheet_cutoff_heading` setting.
         """
         aas_template: AASTemplate = self.converter.dictionary
         aas_template.aasx_path = article.aasx_path
@@ -153,6 +160,17 @@ class EvaluationAAS(Evaluation):
                 logger.error("No datasheet found for article %s.", article.name)
                 return
 
+        if article.datasheet_text is None:
+            datasheet = self.converter.preprocess(article.datasheet_path)
+            article.datasheet_text = self._cut_datasheet(datasheet)
+        if article.datasheet_text is None or len(article.datasheet_text) == 0:
+            logger.error(
+                "Preprocessed datasheet text is empty for article %s. Datasheet path %s:",
+                article.name,
+                article.datasheet_path,
+            )
+            return
+
         # Get the property definitions from the aasx using specified filters
         for definition in aas_template.get_property_definitions(
             overwrite_dataspec=self.overwrite_dataspec,
@@ -173,10 +191,12 @@ class EvaluationAAS(Evaluation):
 
     def run_extraction(self) -> Path | None:
         """Extract defined properties for all added articles and evaluate.
-        
+
         Returns:
             run_path(Path | None): the output path, where results and some
-                intermediate files were stored, if `eval_path` is configured."""
+                intermediate files were stored, if `eval_path` is configured.
+
+        """
         if self.eval_path:
             run_path = self.eval_path / datetime.datetime.now(tz=datetime.UTC).strftime(
                 "%Y-%m-%d_%H-%M-%S",
@@ -187,26 +207,38 @@ class EvaluationAAS(Evaluation):
 
         for idx, article in enumerate(self.articles):
             logger.info("[%i] Processing %s", idx, article.name)
-            datasheet_text = self.converter.preprocess(article.datasheet_path)
             raw_results = []
             raw_prompts = []
             properties = self.converter.extract(
-                datasheet_text,
+                article.datasheet_text,
                 article.definitions,
                 raw_prompts=raw_prompts,
                 raw_results=raw_results,
             )
 
             self.extracted_properties[article.name] = properties
-            self.datasheet_texts[article.name] = str(datasheet_text)
             self.prompts.extend(EvaluationPrompt.from_raw_results(raw_results))
             if run_path:
-                Path(run_path / article.name).with_name("raw_prompts.json").write_text(
-                    json.dumps(raw_prompts),
-                )
-                Path(run_path / article.name).with_name("raw_results.json").write_text(
-                    json.dumps(raw_results),
-                )
+                try:
+                    article_path = run_path / article.name
+                    article_path.mkdir(exist_ok=True)
+                    shutil.copy(article.datasheet_path, article_path)
+                    shutil.copy(article.aasx_path, article_path)
+                    (article_path / "datasheet.txt").write_text(
+                        article.datasheet_text,
+                        encoding="utf-8",
+                    )
+                    (article_path / "raw_prompts.json").write_text(json.dumps(raw_prompts))
+                    (article_path / "raw_results.json").write_text(json.dumps(raw_results))
+                except (
+                    FileNotFoundError,
+                    PermissionError,
+                    IsADirectoryError,
+                    OSError,
+                    TypeError,
+                    UnicodeEncodeError,
+                ):
+                    logger.exception("Couldn't save raw results for article %s.", article.name)
 
         self.evaluate()
         logger.info(self.summary())
@@ -219,3 +251,19 @@ class EvaluationAAS(Evaluation):
             plt.tight_layout()
             plt.savefig(run_path / "extraction_property_frequency.pdf")
         return run_path
+
+    def _cut_datasheet(self, datasheet: list[str] | str) -> str:
+        if isinstance(datasheet, list):
+            datasheet = "\n".join(datasheet)
+        if self.datasheet_cutoff_pattern is None:
+            return datasheet
+
+        split_match = re.search(self.datasheet_cutoff_pattern, datasheet)
+        if split_match is None:
+            return datasheet
+        logger.debug(
+            "Cliping datasheet after '%s' (char %i)",
+            split_match.group(),
+            split_match.start(),
+        )
+        return datasheet[: split_match.start()]

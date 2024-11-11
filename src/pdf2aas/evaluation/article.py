@@ -16,6 +16,8 @@ class EvaluationArticle:
         definitions (list[PropertyDefinition]): Property definitions to be evaluated.
         values (dict[str, Any]): Mapping of definition ids to values to be checked against
           extracted values.
+        datasheet_text (str, optional): The preprocessed datasheet text used for
+          extraction.
 
     """
 
@@ -26,5 +28,5 @@ class EvaluationArticle:
     # TODO: replace with list[Property]?
     values: dict[str, Any] = field(default_factory=dict)
     # TODO: add class definition / name?, e.g. class_definition: ClassDefinition | None = None
-
+    datasheet_text: str | None = None
     # TODO: add method to load from aasx file / AASTemplate
