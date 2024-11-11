@@ -129,49 +129,28 @@ class EvaluationAAS(Evaluation):
             )
             self.add_article(article)
 
-    def add_article(self, article: EvaluationArticle) -> None:
-        """Add an article to the evlaluation.
+    def _fill_datasheet_path(
+        self,
+        article: EvaluationArticle,
+        aas_template: AASTemplate,
+    ) -> str | None:
+        aasx_datasheet_name = aas_template.search_datasheet(
+            language=self.language,
+            submodel_id_short=self.datasheet_submodel,
+            classification=self.datasheet_classification,
+        )
+        if aasx_datasheet_name is None:
+            return None
+        datasheet_path = Path(article.aasx_path).parent / Path(aasx_datasheet_name).name
+        aas_template.file_store.write_file(aasx_datasheet_name, datasheet_path.open("wb"))
+        logger.info(
+            "Export datasheet for article '%s' from aasx to: %s",
+            article.name,
+            datasheet_path,
+        )
+        return str(datasheet_path)
 
-        Try get the datasheet and property definitions from the aasx file,
-        if none is set.
-        Preprocess the datasheet using configured preprocessor and
-        `datasheet_cutoff_heading` setting.
-        """
-        aas_template: AASTemplate = self.converter.dictionary
-        aas_template.aasx_path = article.aasx_path
-
-        # Get datasheet from aasx, if not provided
-        if article.datasheet_path is None:
-            aasx_datasheet_name = aas_template.search_datasheet(
-                language=self.language,
-                submodel_id_short=self.datasheet_submodel,
-                classification=self.datasheet_classification,
-            )
-            if aasx_datasheet_name is not None:
-                datasheet_path = Path(article.aasx_path).parent / Path(aasx_datasheet_name).name
-                aas_template.file_store.write_file(aasx_datasheet_name, datasheet_path.open("wb"))
-                logger.info(
-                    "Export datasheet for article '%s' from aasx to: %s",
-                    article.name,
-                    datasheet_path,
-                )
-                article.datasheet_path = str(datasheet_path)
-            else:
-                logger.error("No datasheet found for article %s.", article.name)
-                return
-
-        if article.datasheet_text is None:
-            datasheet = self.converter.preprocess(article.datasheet_path)
-            article.datasheet_text = self._cut_datasheet(datasheet)
-        if article.datasheet_text is None or len(article.datasheet_text) == 0:
-            logger.error(
-                "Preprocessed datasheet text is empty for article %s. Datasheet path %s:",
-                article.name,
-                article.datasheet_path,
-            )
-            return
-
-        # Get the property definitions from the aasx using specified filters
+    def _fill_definitions(self, article: EvaluationArticle, aas_template: AASTemplate) -> None:
         for definition in aas_template.get_property_definitions(
             overwrite_dataspec=self.overwrite_dataspec,
         ):
@@ -187,6 +166,31 @@ class EvaluationAAS(Evaluation):
             article.values[definition.id] = property_.value
             article.definitions.append(definition)
 
+    def add_article(self, article: EvaluationArticle) -> None:
+        """Add an article to the evlaluation.
+
+        Try get the datasheet and property definitions from the aasx file,
+        if none is set.
+        Preprocess the datasheet using configured preprocessor and
+        `datasheet_cutoff_heading` setting.
+        """
+        aas_template: AASTemplate = self.converter.dictionary
+        aas_template.aasx_path = article.aasx_path
+
+        if article.datasheet_path is None:
+            article.datasheet_path = self._fill_datasheet_path(article, aas_template)
+        if article.datasheet_path is None:
+            logger.error("No datasheet found for article %s.", article.name)
+            return
+
+        if article.datasheet_text is None:
+            datasheet = self.converter.preprocess(article.datasheet_path)
+            article.datasheet_text = self._cut_datasheet(datasheet)
+        if article.datasheet_text is None or len(article.datasheet_text) == 0:
+            logger.error("Preprocessed datasheet is empty. Source: %s", article.datasheet_path)
+            return
+
+        self._fill_definitions(article, aas_template)
         self.articles.append(article)
 
     def run_extraction(self) -> Path | None:
