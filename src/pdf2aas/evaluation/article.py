@@ -1,6 +1,7 @@
 """Classes to represent articles that can be evaluated."""
+
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from pdf2aas.model import PropertyDefinition
 
@@ -16,17 +17,21 @@ class EvaluationArticle:
         definitions (list[PropertyDefinition]): Property definitions to be evaluated.
         values (dict[str, Any]): Mapping of definition ids to values to be checked against
           extracted values.
+        class_ids(dict[dict[Literal["ECLASS", "ETIM", "CDD"]], dict[str,str]]): class ids
+          in different dictionarys, in form: dictionary -> release -> id.
         datasheet_text (str, optional): The preprocessed datasheet text used for
           extraction.
 
     """
 
-    name:str
+    name: str
     datasheet_path: str | None = None
     aasx_path: str | None = None
     definitions: list[PropertyDefinition] = field(default_factory=list)
     # TODO: replace with list[Property]?
     values: dict[str, Any] = field(default_factory=dict)
-    # TODO: add class definition / name?, e.g. class_definition: ClassDefinition | None = None
+    class_ids: dict[dict[Literal["ECLASS", "ETIM", "CDD"]], dict[str, str]] = field(
+        default_factory=dict,
+    )
     datasheet_text: str | None = None
     # TODO: add method to load from aasx file / AASTemplate
