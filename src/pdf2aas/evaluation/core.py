@@ -512,7 +512,9 @@ class Evaluation:
         for property_id, values in self.values.items():
             if property_filter and property_filter(property_id) is False:
                 continue
-            print_string += f"\t{property_id} ({self.definitions[property_id].name}):\n"
+            print_string += (
+                f"\t{property_id} ({self.definitions[property_id].get_name(self.language)}):\n"
+            )
             for i in range(len(values.extracted)):
                 if value_filter and value_filter(values, i) is False:
                     continue
@@ -522,7 +524,7 @@ class Evaluation:
     def log_values(self) -> None:
         """Log list of expected and extracted values."""
         logger.info(
-            "Property values %s:\n%s",
+            "Property values %s (extracted, expected, difference):\n%s",
             self.counts_sum.extracted,
             self._print_values_filtered(),
         )
