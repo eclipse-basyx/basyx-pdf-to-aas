@@ -371,20 +371,26 @@ class AASTemplate(Generator):
             e.g. according to VDI 2770 part 1. Defaults to None, which allows
             all class names.
         language (str): The language code for the datasheet and classification
-            name. Defaults to "en".
+            name. Defaults to "en". Allows all languages if None.
 
         Returns:
             str | None: The path or identifier of the found datasheet file, or None if not found.
 
         """
         for submodel in self.submodels:
-            if submodel_id_short and submodel.id_short == submodel_id_short:
-                for document in submodel.submodel_element:
-                    class_names, languages, file = self._search_document_spec(document)
-                    if classification is not None and classification not in class_names:
-                        continue
-                    if language in languages and file is not None:
-                        return file
+            if submodel_id_short is not None and submodel.id_short != submodel_id_short:
+                continue
+            for document in submodel.submodel_element:
+                if not isinstance(document, model.SubmodelElementCollection):
+                    continue
+                class_names, languages, file = self._search_document_spec(document)
+                if file is None:
+                    continue
+                if classification is not None and classification not in class_names:
+                    continue
+                if language is not None and language not in languages:
+                    continue
+                return file
         return None
 
     @staticmethod
@@ -402,10 +408,10 @@ class AASTemplate(Generator):
                             class_names.extend(subelement.value.values())
                         else:
                             class_names.append(str(subelement.value))
-            elif element.id_short == "DocumentVersion":
+            elif element.id_short.startswith("DocumentVersion"):
                 for subelement in element:
                     if subelement.id_short.startswith("Language"):
                         languages.append(subelement.value.lower())
-                    elif subelement.id_short == "DigitalFile":
+                    elif subelement.id_short.startswith("DigitalFile"):
                         file = subelement.value
         return class_names, languages, file

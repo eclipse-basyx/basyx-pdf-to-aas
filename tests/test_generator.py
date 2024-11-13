@@ -261,3 +261,32 @@ class TestAASTemplate:
         assert property_result.definition.definition == property_.definition.definition
         #The definition.values might differ
         assert sorted(property_result.definition.values_list) == sorted(property_.definition.values_list)
+
+    @pytest.mark.parametrize("submodel_id_short,classification,language", [
+        (None, None, None),
+        ("HandoverDocumentation", None, None),
+        (None, "Datasheet", None),
+        (None,None, "en"),
+    ])
+    def test_search_datasheet_succed(self, submodel_id_short, classification, language):
+        aas_template = AASTemplate("tests/assets/dummy-IDTA 02004-1-2_Template_Handover Documentation.aasx")
+        datasheet_path = aas_template.search_datasheet(
+            submodel_id_short=submodel_id_short,
+            classification=classification,
+            language=language,
+        )
+        assert datasheet_path == "/aasx/dummy-test-datasheet-handover-documentation.pdf"
+    
+    @pytest.mark.parametrize("submodel_id_short,classification,language", [
+        ("WrongSubmodel", None, None),
+        (None, "WrongClassification", None),
+        (None,None, "WrongLanguage"),
+    ])
+    def test_search_datasheet_failed(self, submodel_id_short, classification, language):
+        aas_template = AASTemplate("tests/assets/dummy-IDTA 02004-1-2_Template_Handover Documentation.aasx")
+        datasheet_path = aas_template.search_datasheet(
+            submodel_id_short=submodel_id_short,
+            classification=classification,
+            language=language,
+        )
+        assert datasheet_path == None
