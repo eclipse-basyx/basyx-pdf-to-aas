@@ -103,16 +103,13 @@ class EvaluationAAS(Evaluation):
         if property_selection is not None and len(property_selection) > 0:
             self.aas_template.submodel_element_filter = lambda e: e.id_short in property_selection
         elif property_parent is not None:
-
             def _submodel_element_has_parent(element) -> bool:  # noqa: ANN001
                 while element.parent is not None:
                     element = element.parent
                     if element.id_short == property_parent:
                         return True
                 return False
-
-        self.aas_template.submodel_element_filter = _submodel_element_has_parent
-
+            self.aas_template.submodel_element_filter = _submodel_element_has_parent
         self.eval_path = Path(eval_path) if eval_path else None
 
     def add_articles(
