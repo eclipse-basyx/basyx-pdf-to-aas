@@ -130,7 +130,6 @@ class Evaluation:
     def __init__(self) -> None:
         """Initialize the Evaluation with empty and default values."""
         self.articles: list[EvaluationArticle] = []
-        self.datasheet_texts: dict[str, str] = {}
         self.definitions: dict[str, PropertyDefinition] = {}
         self.extracted_properties: dict[str, Property] = {}
         self.counts: dict[str, EvaluationCounts] = {}
