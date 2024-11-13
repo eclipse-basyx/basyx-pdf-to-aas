@@ -99,7 +99,7 @@ Moreover, the Settings tab allows to configure different extractor and client pa
   * `PDFium`: Uses [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) based on PDFium to extract text from pdf without layout information
   * `PDF2HTML`: Uses [pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX) to convert the PDF data sheets to HTML.
     The converted html is preprocessed further to reduce token usage for the llms.
-  * `Camelot` Uses [camelot](https://github.com/camelot-dev/camelot) to extract *tables* from the pdf. Needs to have ghostscript installed additionally.
+  * `PDFPlumberTable` Uses [pdfplumber](https://github.com/jsvine/pdfplumber) to extract *tables* from the pdf.
   * `Text`: Opens the file as text file, allowing to use text file formats like txt, html, csv, json, etc.
 * `dictionary`: defines classes and properties semantically.
   * `ECLASS`: loads property definitions from [ECLASS website](https://eclass.eu/en/eclass-standard/search-content) for a given ECLASS class.
@@ -143,7 +143,6 @@ Moreover, the Settings tab allows to configure different extractor and client pa
 ### Specific Toolchains
 
 * For [pdf2htmlEX (HTML) preprocessor](src/pdf2aas/preprocessor/pdf_pdf2htmlEX.py) the binary needs to be [downloaded](https://github.com/pdf2htmlEX/pdf2htmlEX/wiki/Download) and installed. Currently it is only available for Linux distributions, but it can be used via WSL or Docker on Windows.
-* For [camelot (Table) preprocessor](src/pdf2aas/preprocessor/pdf_camelot.py) the [ghostscript](https://camelot-py.readthedocs.io/en/master/user/install-deps.html) binary needs to be installed.
 * To run a local model, the extractor needs to be initialised or configured with an openai API conform `api_endpoint` or using a `CustomLLMClientHTTP`.
 * For some toolchains specific **environment variables** need to be set, e.g. via `.env` file and the `python-dotenv` package.
   * `OPENAI_API_KEY`: to use the extractor via the OpenAI public endpoint.
