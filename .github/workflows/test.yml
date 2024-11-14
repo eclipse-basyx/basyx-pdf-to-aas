@@ -24,12 +24,12 @@ jobs:
         python-version: '3.12'
         cache: 'pip'
     - name: Install dependencies
-      run: pip install -r dev-requirements.txt
+      run: pip install -r dev-requirements.txt -r eval-requirements.txt
     - name: Install pdf2htmlEx
       run: |
         wget -O pdf2htmlEX.deb https://github.com/pdf2htmlEX/pdf2htmlEX/releases/download/v0.18.8.rc1/pdf2htmlEX-0.18.8.rc1-master-20200630-Ubuntu-bionic-x86_64.deb
         sudo apt install -y libfontconfig1 libcairo2 libjpeg-turbo8
         sudo apt install ./pdf2htmlEX.deb
     - name: Install pdf2aas
-      run: pip install -e .
+      run: pip install .
     - run: pytest --cov=pdf2aas
