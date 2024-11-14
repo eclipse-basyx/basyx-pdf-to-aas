@@ -1,10 +1,9 @@
 """Preprocessor using pdfplumber library."""
 
 import logging
-from typing import Literal
 
-import pandas as pd
 import pdfplumber
+from tabulate import tabulate
 
 from pdf2aas.preprocessor import Preprocessor
 
@@ -15,30 +14,32 @@ class PDFPlumberTable(Preprocessor):
     """Extract tables from PDF files using pdfplumber library.
 
     Args:
-        output_format (Literal['html', 'markdown', 'json', 'csv']): The format
-            in which the extracted tables should be output. Default is 'html'.
+        output_format (str, optional): The format in which the extracted tables should be output.
+            Default is 'html'. Other possibilities are defined by tabulate, c.f.
+            `tabulate.tabulate_formats". Examples are: 'github', 'html', 'simple', 'tsv'.
+            None retuns a list (table) of list (row) of list (cell) of string.
 
     Note:
         - Not so good extraction quality based on camelot benchmark:
         https://github.com/camelot-dev/camelot/wiki/Comparison-with-other-PDF-Table-Extraction-libraries-and-tools
         - Does not require Ghostscript (camelot) or Java (tabula). It relies on PyPDF2 for
-          PDF parsing and pandas for handling extracted data.
+          PDF parsing.
 
     """
 
     def __init__(
         self,
-        output_format: Literal["html", "markdown", "json", "csv"] = "html",
+        output_format: str | None = "html",
     ) -> None:
         """Initialize preprocessor with html format."""
         self.output_format = output_format
 
-    def convert(self, filepath: str) -> list[str] | str | None:
+    def convert(self, filepath: str) -> list[str] | None:
         """Convert the content of a PDF file into a list of tables as strings.
 
         Each string represents a table from the pdf in the desired `output_format`
-        (default html). If an error occurs during the reading of the PDF file,
-        it logs the error and returns None.
+        (default html, c.f. `tabulate.tabulate_formats` for more). If an error
+        occurs during the reading of the PDF file, it logs the error and returns None.
         """
         logger.debug("Extracting tables from PDF: %s", filepath)
         try:
@@ -47,19 +48,9 @@ class PDFPlumberTable(Preprocessor):
             logger.exception("File not found: %s", filepath)
             return None
 
-        result = []
         with pdf:
-            for page in pdf.pages:
-                tables = page.extract_tables()
-                for table in tables:
-                    dataframe = pd.DataFrame(table[1:], columns=table[0])
-                    match self.output_format:
-                        case "html":
-                            result.append(dataframe.to_html(index=False))
-                        case "json":
-                            result.append(dataframe.to_json(orient="records"))
-                        case "csv":
-                            result.append(dataframe.to_csv(index=False))
-                        case "markdown":
-                            result.append(dataframe.to_markdown(index=False))
-        return result
+            return [
+                tabulate(table, tablefmt=self.output_format) if self.output_format else table
+                for page in pdf.pages
+                for table in page.extract_tables()
+            ]

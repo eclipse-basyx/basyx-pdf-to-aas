@@ -172,6 +172,10 @@ soupsieve==2.6
     # via
     #   -c demo-requirements.txt
     #   beautifulsoup4
+tabulate==0.9.0
+    # via
+    #   -c demo-requirements.txt
+    #   pdf2aas (pyproject.toml)
 tqdm==4.67.0
     # via
     #   -c demo-requirements.txt

@@ -13,7 +13,7 @@ class PropertyDefinition:
         id (str): The unique identifier for the property, typically an IRDI
         name (dict[str, str]): A dictionary containing language-specific names
             or labels for the property.
-        type (str): The data type of the property. Defaults to 'string'. Well
+        type (SimplePropertyDataType): The data type of the property. Defaults to 'string'. Well
             known types are: bool, numeric, string, range
         definition (dict[str, str]): A dictionary containing language-specific
             definitions for the property.
@@ -40,11 +40,10 @@ class PropertyDefinition:
         """Get possible values as flat list of strings."""
         values = []
         for value in self.values:
-            if isinstance(value, str):
-                values.append(value)
-                continue
-            if "value" in value:
+            if isinstance(value, dict) and "value" in value:
                 values.append(value["value"])
+            else:
+                values.append(str(value))
         return values
 
     def get_value_id(self, value: str) -> str | int | None:

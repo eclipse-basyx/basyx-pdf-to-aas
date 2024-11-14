@@ -4,6 +4,7 @@ import logging
 from typing import Literal
 
 from openai import AzureOpenAI, OpenAI
+from tabulate import tabulate
 
 from pdf2aas.model import Property, PropertyDefinition
 
@@ -34,6 +35,9 @@ class PropertyLLMSearch(PropertyLLM):
             prompt caching, e.g. when the same properties are searches on
             multiple datasheets vs. when same datasheet is searched for
             different properties.
+        property_table_format (str): output format for the property defintions.
+            Defaults to "github" (markdown). See `tabulate.tabulate_formats` for
+            available options. Examples are: 'github', 'html', 'simple', 'tsv'.
 
     """
 
@@ -49,6 +53,7 @@ When multiple values apply use a json list to represent them.
 Represent ranges as json list of two values.
 """
     )
+    property_table_format: str = "github"
 
     def __init__(
         self,
@@ -59,7 +64,7 @@ Represent ranges as json list of two values.
         max_tokens: int | None = None,
         response_format: dict | None = None,
         property_keys_in_prompt: list[Literal["definition", "unit", "values", "datatype"]]
-            | None = None,
+        | None = None,
         prompt_order: list[Literal["datasheet", "properties", "hint"]] | None = None,
     ) -> None:
         """Initialize the property LLM search with default values."""
@@ -80,7 +85,7 @@ Represent ranges as json list of two values.
         self.max_definition_chars = 0
         self.max_values_length = 0
         if prompt_order is None:
-            prompt_order =  ["datasheet", "properties", "hint"]
+            prompt_order = ["datasheet", "properties", "hint"]
         self.prompt_order = prompt_order
 
     def create_prompt(
@@ -174,62 +179,53 @@ Represent ranges as json list of two values.
 
         Limits the definition and values according to the configured values.
         """
-        prompt = "Extract the following properties from the provided datasheet:\n"
-        prompt += "| Property |"
-        separator = "| - |"
+        headers = ["Property"]
         if self.use_property_datatype:
-            prompt += " Datatype |"
-            separator += " - |"
+            headers.append("Datatype")
         if self.use_property_unit:
-            prompt += " Unit |"
-            separator += " - |"
+            headers.append("Unit")
         if self.use_property_definition:
-            prompt += " Definition |"
-            separator += " - |"
+            headers.append("Definition")
         if self.use_property_values:
-            prompt += " Values |"
-            separator += " - |"
-        prompt += "\n" + separator + "\n"
+            headers.append("Values")
 
+        table_data = []
         for property_ in property_list:
             if len(property_.name) == 0:
                 logger.warning("Property %s has no name.", property_.id)
                 continue
-            prompt += self._create_property_list_prompt_row(property_, language)
-        return prompt
+            table_data.append(self._create_property_list_prompt_row(property_, language))
 
-    def _create_property_list_prompt_row(self, property_: PropertyDefinition, language: str) -> str:
-        property_name = property_.name.get(language)
-        if property_name is None:
-            property_name = next(iter(property_.name.values()))
-            logger.warning(
-                "Property %s name not defined for language %s. Using %s.",
-                property_.id,
-                language,
-                property_name,
-            )
+        return "Extract the following properties from the provided datasheet:\n" + tabulate(
+            table_data, headers=headers, tablefmt=self.property_table_format,
+        )
 
-        property_row = f"| {property_name} |"
+    def _create_property_list_prompt_row(
+        self,
+        property_: PropertyDefinition,
+        language: str,
+    ) -> list:
+        property_name = property_.get_name(language)
+        row = [property_name]
         if self.use_property_datatype:
-            property_row += f" {property_.type} |"
+            row.append(property_.type)
         if self.use_property_unit:
-            property_row += f" {property_.unit} |"
+            row.append(property_.unit)
         if self.use_property_definition:
-            property_definition = property_.definition.get(language, "")
+            property_definition = property_.get_definition(language)
             if (
                 property_definition
                 and self.max_definition_chars > 0
                 and len(property_definition) > self.max_definition_chars
             ):
                 property_definition = property_definition[: self.max_definition_chars] + " ..."
-            property_row += f" {property_definition} |"
+            row.append(property_definition)
         if self.use_property_values:
             property_values = property_.values_list if len(property_.values) > 0 else ""
             if self.max_values_length > 0 and len(property_values) > self.max_values_length:
-                property_values = property_.values_list[: self.max_values_length] + ["..."]
-            property_row += f" {property_values} |"
-        # TODO: escape | sign in name, type, unit, definition, values, etc.
-        return property_row.replace("\n", " ") + "\n"
+                property_values = property_values[: self.max_values_length] + ["..."]
+            row.append(property_values)
+        return row
 
     def _add_definitions(
         self,
