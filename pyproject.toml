@@ -36,6 +36,7 @@ demo = [
 eval = [
   "matplotlib",
   "levenshtein",
+  "openpyxl",
 ]
 
 [build-system]
