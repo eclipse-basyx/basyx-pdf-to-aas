@@ -20,7 +20,20 @@ from .core import Generator
 
 logger = logging.getLogger(__name__)
 
-AAS_NAME_TYPE_LENGTH = 128
+AAS_NAME_LENGTH = 128
+AAS_MULTILANG_TEXT_LENGTH = 1023
+AAS_MULTILANG_NAME_LENGTH = 64
+AAS_IEC61360_NAME_LENGTH = 255
+AAS_IEC61360_DEFINITION_LENGTH = 1023
+AAS_IEC61360_VALUE_LENGTH = 2000
+AAS_IEC61360_DATA_SPEC_REFERENCE = model.ExternalReference(
+    (
+        model.Key(
+            model.KeyTypes.GLOBAL_REFERENCE,
+            "http://admin-shell.io/DataSpecificationTemplates/DataSpecificationIEC61360/3/0",
+        )
+    ),
+)
 
 
 class AASSubmodelTechnicalData(Generator):
@@ -222,7 +235,9 @@ class AASSubmodelTechnicalData(Generator):
         if len(definition.name) == 0:
             return
         data_spec = model.DataSpecificationIEC61360(
-            model.PreferredNameTypeIEC61360({ln: v[:255] for ln, v in definition.name.items()}),
+            model.PreferredNameTypeIEC61360(
+                {ln: v[:AAS_IEC61360_NAME_LENGTH] for ln, v in definition.name.items()},
+            ),
         )
         match definition.type:
             case "bool":
@@ -231,12 +246,12 @@ class AASSubmodelTechnicalData(Generator):
                 data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
             case "range":
                 data_spec.data_type = model.DataTypeIEC61360.REAL_COUNT
-                # data_spec.level_types = model.IEC61360LevelType.MAX  # noqa: ERA001
+                data_spec.level_types = {model.IEC61360LevelType.MIN, model.IEC61360LevelType.MAX}
             case "string":
                 data_spec.data_type = model.DataTypeIEC61360.STRING
         if len(definition.definition) > 0:
             data_spec.definition = model.DefinitionTypeIEC61360(
-                {ln: v[:1023] for ln, v in definition.definition.items()},
+                {ln: v[:AAS_IEC61360_DEFINITION_LENGTH] for ln, v in definition.definition.items()},
             )
         if definition.unit is not None and len(definition.unit) > 0:
             data_spec.unit = definition.unit
@@ -246,7 +261,7 @@ class AASSubmodelTechnicalData(Generator):
             )
         cd.embedded_data_specifications.append(
             model.EmbeddedDataSpecification(
-                data_specification=next(iter(cd.is_case_of)),
+                data_specification=AAS_IEC61360_DATA_SPEC_REFERENCE,
                 data_specification_content=data_spec,
             ),
         )
@@ -269,12 +284,12 @@ class AASSubmodelTechnicalData(Generator):
                 value_id = f"{definition.id}/{value}"
             value_list.add(
                 model.ValueReferencePair(
-                    value[:2000],
+                    value[:AAS_IEC61360_VALUE_LENGTH],
                     model.ExternalReference(
                         (
                             model.Key(
                                 type_=model.KeyTypes.GLOBAL_REFERENCE,
-                                value=value_id[:2000],
+                                value=value_id[:AAS_IEC61360_VALUE_LENGTH],
                             ),
                         ),
                     ),
@@ -302,23 +317,29 @@ class AASSubmodelTechnicalData(Generator):
                     ),
                 ),
             },
-            category="PROPERTY" if value is None else "VALUE",
+            category="PROPERTY" if value is None else "VALUE",  # deprecated since V3.0
         )
         if property_defintion:
             name = property_defintion.get_name("en")
             if name is not None:
                 cd.id_short = re.sub(anti_alphanumeric_regex, "_", name)
                 cd.display_name = model.MultiLanguageNameType(
-                    {ln: n[:64] for ln, n in property_defintion.name.items()},
+                    {
+                        ln: n[:AAS_MULTILANG_NAME_LENGTH]
+                        for ln, n in property_defintion.name.items()
+                    },
                 )
             if property_defintion.definition is not None and len(property_defintion.definition) > 0:
                 cd.description = model.MultiLanguageTextType(
-                    {ln: n[:1023] for ln, n in property_defintion.definition.items()},
+                    {
+                        ln: n[:AAS_MULTILANG_TEXT_LENGTH]
+                        for ln, n in property_defintion.definition.items()
+                    },
                 )
             self._add_embedded_data_spec(cd, property_defintion)
         elif value:
             cd.id_short = re.sub(anti_alphanumeric_regex, "_", value)
-            cd.display_name = model.MultiLanguageNameType({"en": value[:64]})
+            cd.display_name = model.MultiLanguageNameType({"en": value[:AAS_MULTILANG_NAME_LENGTH]})
 
         self.concept_descriptions[reference] = cd
 
@@ -348,7 +369,7 @@ class AASSubmodelTechnicalData(Generator):
             id_short = "ID_" + str(uuid.uuid4()).replace("-", "_")
         elif not id_short[0].isalpha():
             id_short = "ID_" + id_short
-        return id_short[:128]
+        return id_short[:AAS_NAME_LENGTH]
 
     def _create_aas_property_smc(
         self,
@@ -406,7 +427,11 @@ class AASSubmodelTechnicalData(Generator):
                 value = value[0]
             else:
                 return self._create_aas_property_smc(
-                    property_, value, id_short, display_name, description,
+                    property_,
+                    value,
+                    id_short,
+                    display_name,
+                    description,
                 )
 
         value_id = None
@@ -466,17 +491,22 @@ class AASSubmodelTechnicalData(Generator):
                 )
             if len(property_.definition.name) > 0:
                 display_name = model.MultiLanguageNameType(
-                    {ln: n[:64] for ln, n in property_.definition.name.items()},
+                    {
+                        ln: n[:AAS_MULTILANG_NAME_LENGTH]
+                        for ln, n in property_.definition.name.items()
+                    },
                 )
 
         if len(display_name) == 0:
-            display_name = model.MultiLanguageNameType({property_.language: id_short[:64]})
+            display_name = model.MultiLanguageNameType(
+                {property_.language: id_short[:AAS_MULTILANG_NAME_LENGTH]},
+            )
 
         if property_.reference is None:
             description = None
         else:
             description = model.MultiLanguageTextType(
-                {property_.language: property_.reference[:1023]},
+                {property_.language: property_.reference[:AAS_MULTILANG_TEXT_LENGTH]},
             )
 
         if property_.definition is not None and property_.definition.type == "range":
@@ -546,11 +576,11 @@ class AASSubmodelTechnicalData(Generator):
                 num = int(id_short[i + 1 :]) + 1
                 next_id_short = prefix + str(num)
 
-            if len(next_id_short) > AAS_NAME_TYPE_LENGTH:
+            if len(next_id_short) > AAS_NAME_LENGTH:
                 if i == len(id_short) - 1:
-                    next_id_short = id_short[:126] + "_1"
+                    next_id_short = id_short[: AAS_NAME_LENGTH - 2] + "_1"
                 else:
-                    prefix = id_short[: AAS_NAME_TYPE_LENGTH - len(str(num))]
+                    prefix = id_short[: AAS_NAME_LENGTH - len(str(num))]
                     next_id_short = prefix + str(num)
             id_short = next_id_short
         return id_short
