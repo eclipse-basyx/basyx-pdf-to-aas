@@ -31,7 +31,7 @@ AAS_IEC61360_DATA_SPEC_REFERENCE = model.ExternalReference(
         model.Key(
             model.KeyTypes.GLOBAL_REFERENCE,
             "http://admin-shell.io/DataSpecificationTemplates/DataSpecificationIEC61360/3/0",
-        )
+        ),
     ),
 )
 
