@@ -13,7 +13,7 @@ import pandas as pd
 
 from pdf2aas.model import PropertyDefinition, Property
 from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM
-from pdf2aas.preprocessor import PDFium, Text
+import pdf2aas.preprocessor as preprocessor
 from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP
 from pdf2aas.generator import AASSubmodelTechnicalData, AASTemplate
 
@@ -328,17 +328,41 @@ def properties_to_dataframe(properties: list[Property], aas_template : AASTempla
         })
     return pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
 
-def change_datasheet(datasheet):
+def preprocess_datasheet(datasheet, preprocessor_type, tempdir):
     pdf_preview = gr.update(visible=False, value=None)
     if datasheet is None:
         return pdf_preview, None
     
     if datasheet.lower().endswith(".pdf"):
-        preprocessor = PDFium()
         pdf_preview = gr.update(visible=True, value=datasheet)
+
+        pre = None
+        if preprocessor_type == "text":
+            gr.Warning("Text preprocessor not suitable for PDFs. Falling back to PDFium.")
+        elif preprocessor_type == "pdfplumber":
+            pre = preprocessor.PDFPlumber()
+        elif preprocessor_type.startswith("pdfplumber_table"):
+            pre = preprocessor.PDFPlumberTable(output_format=preprocessor_type.split("_")[-1])
+        elif preprocessor_type.startswith("pdf2htmlEx"):
+            if preprocessor.PDF2HTMLEX.is_installed():
+                pre = preprocessor.PDF2HTMLEX(
+                    reduction_level=getattr(
+                        preprocessor.ReductionLevel,
+                        preprocessor_type.split("_")[-1].upper(),
+                        preprocessor.ReductionLevel.STRUCTURE
+                    ),
+                    temp_dir = tempdir.name
+                )
+            else:
+                gr.Warning("PDF2HTMLEX not installed in system. Falling back to PDFium.")
+        if pre is None:
+            pre = preprocessor.PDFium()
     else:
-        preprocessor = Text(encoding="utf-8")
-    preprocessed_datasheet = preprocessor.convert(datasheet)
+        if preprocessor_type not in ["auto", "text"]:
+            gr.Warning(f"Preprocessor '{preprocessor_type}' not suitable for '{datasheet.split('.')[-1]}' files. Falling back to Text preprocessor.")
+        pre = preprocessor.Text(encoding="utf-8")
+
+    preprocessed_datasheet = pre.convert(datasheet)
     if preprocessed_datasheet is None:
         gr.Warning("Error while preprocessing datasheet.")
         return pdf_preview, None
@@ -659,6 +683,18 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     maximum=100,
                     step=1
                 )
+                preprocessor_type = gr.Dropdown(
+                    label="Preprocessor type",
+                    choices=[
+                        "auto", "pdfium",
+                        "text",
+                        "pdfplumber",
+                        "pdfplumber_table", "pdfplumber_table_tsv", "pdfplumber_table_github", "pdfplumber_table_html",
+                        "pdf2htmlEx", "pdf2htmlEx_pages", "pdf2htmlEx_divs", "pdf2htmlEx_text"
+                    ],
+                    value="auto",
+                    multiselect=False,
+                )
                 extract_general_information = gr.Checkbox(
                     label="Extract General Information",
                     value=False,
@@ -795,9 +831,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers]
         )
 
-        datasheet_upload.change(
-            fn=change_datasheet,
-            inputs=datasheet_upload,
+        gr.on(
+            triggers=[datasheet_upload.change, preprocessor_type.change],
+            fn=preprocess_datasheet,
+            inputs=[datasheet_upload, preprocessor_type, tempdir],
             outputs=[datasheet_preview, datasheet_text]
         )
 
@@ -837,6 +874,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         settings_list = [
             dictionary_type,
             dictionary_release,
+            preprocessor_type,
             prompt_hint,
             endpoint_type, model,
             endpoint, api_key,

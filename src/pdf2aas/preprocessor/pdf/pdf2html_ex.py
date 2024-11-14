@@ -179,3 +179,8 @@ class PDF2HTMLEX(Preprocessor):
 
         logger.info("Clearing temporary directory: %s", os.path.realpath(self.temp_dir))
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @staticmethod
+    def is_installed() -> bool:
+        """Check if pdf2htmlEX is on path."""
+        return shutil.which("pdf2htmlEX") is not None
