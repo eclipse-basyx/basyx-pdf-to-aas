@@ -99,7 +99,8 @@ Moreover, the Settings tab allows to configure different extractor and client pa
   * `PDFium`: Uses [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) based on PDFium to extract text from pdf without layout information
   * `PDF2HTML`: Uses [pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX) to convert the PDF data sheets to HTML.
     The converted html is preprocessed further to reduce token usage for the llms.
-  * `PDFPlumberTable` Uses [pdfplumber](https://github.com/jsvine/pdfplumber) to extract *tables* from the pdf.
+  * `PDFPlumber`: Uses [pdfplumber](https://github.com/jsvine/pdfplumber) to extract text from the pdf, based on [pdfminer.six](https://github.com/pdfminer/pdfminer.six).
+  * `PDFPlumberTable`: Uses [pdfplumber](https://github.com/jsvine/pdfplumber) to extract *tables* from the pdf. Can output the extractrated tables in various formats using *tabula*, e.g. markdown.
   * `Text`: Opens the file as text file, allowing to use text file formats like txt, html, csv, json, etc.
 * `dictionary`: defines classes and properties semantically.
   * `ECLASS`: loads property definitions from [ECLASS website](https://eclass.eu/en/eclass-standard/search-content) for a given ECLASS class.

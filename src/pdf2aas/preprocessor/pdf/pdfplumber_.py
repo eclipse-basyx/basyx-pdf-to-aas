@@ -1,4 +1,4 @@
-"""Preprocessor using pdfplumber library."""
+"""Preprocessors using pdfplumber library."""
 
 import logging
 
@@ -8,6 +8,32 @@ from tabulate import tabulate
 from pdf2aas.preprocessor import Preprocessor
 
 logger = logging.getLogger(__name__)
+
+
+class PDFPlumber(Preprocessor):
+    """Extract text from PDF files using pdfplumber library.
+
+    This class is a simple preprocessor that uses the pdfplumber library to extract
+    text from PDF documents without layout information.
+    """
+
+    def convert(self, filepath: str) -> list[str] | str | None:
+        """Convert the content of a PDF file into a list of strings.
+
+        Each string in the list represents the text of a page.
+        If an error occurs during the reading of the PDF file, it logs the error
+        and returns None.
+        """
+        logger.debug("Converting to text from pdf: %s", filepath)
+        try:
+            with pdfplumber.open(filepath) as pdf:
+                return [
+                    page.extract_text().replace("\r\n", "\n").replace("\r", "\n")
+                    for page in pdf.pages
+                ]
+        except (pdfplumber.pdfminer.PDFSyntaxError, FileNotFoundError):
+            logger.exception("Error reading filepath: %s.", filepath)
+            return None
 
 
 class PDFPlumberTable(Preprocessor):
