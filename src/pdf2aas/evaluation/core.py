@@ -72,7 +72,7 @@ class Evaluation:
     """Base class for evaluations of the pdf2aas conversion.
 
     Attributes:
-        ignored_properties (ClassVar[set[str]]): Set of property names to be
+        ignore_properties (ClassVar[set[str]]): Set of property names to be
             ignored during evaluation.
         float_tolerance (float): Tolerance level for comparing floating-point numbers,
             default is 0.01.
@@ -84,8 +84,9 @@ class Evaluation:
             considered as true values.
         false_values (ClassVar[list[str]]): List of string representations
             considered as false values.
-        ignored_values (ClassVar[list]): List of values to be ignored during evaluation,
-            including None, empty string, and "MIN".
+        ignore_expected_values (ClassVar[list]): Don't evaluate properties,
+            that have a value in this list. Usefull to exclude empty properties from the evaluation,
+            including None, empty string, and "MIN" on default.
         value_datasheet_regex (dict): Dictionary mapping prpperty definition ids (e.g. eclass) to
             regular expressions used to search the datasheet instead of using the value.
         equal_str_values (dict): Dictionary for storing mappings of equivalent string values.
@@ -94,13 +95,13 @@ class Evaluation:
 
     """
 
-    ignored_properties: ClassVar[set[str]] = set()
+    ignore_properties: ClassVar[set[str]] = set()
     float_tolerance = 1e-2
     char_tolerance = 2
     case_sensitive = False
     true_values: ClassVar[list[str]] = ["y", "yes", "t", "true", "on", "1"]
     false_values: ClassVar[list[str]] = ["n", "no", "f", "false", "off", "0"]
-    ignored_values: ClassVar[list] = [None, "", "MIN"]
+    ignore_expected_values: ClassVar[list] = [None, ""]
     value_datasheet_regex: ClassVar[dict] = {}
     equal_str_values: ClassVar[dict] = {}
 
@@ -222,7 +223,7 @@ class Evaluation:
     ) -> tuple[bool, Any]:
         ignored = False
         expected = None
-        if property_.label in self.ignored_properties:
+        if property_.label in self.ignore_properties:
             ignored = True
             logger.debug(
                 "Property %s (%s) ignored for article: %s",
@@ -245,7 +246,7 @@ class Evaluation:
                     expected,
                     article.name,
                 )
-        if expected in self.ignored_values:
+        if expected in self.ignore_expected_values:
             ignored = True
             logger.debug(
                 "Property %s (%s) ignored because of expected value (%s) for article: %s",
@@ -669,7 +670,7 @@ class Evaluation:
                     property_.get_name("en")
                     for article in result.articles
                     for property_ in article.definitions
-                    if property_.get_name("en") not in Evaluation.ignored_properties
+                    if property_.get_name("en") not in Evaluation.ignore_properties
                 ],
             )
         x_ticks = list(x_ticks)
@@ -685,12 +686,12 @@ class Evaluation:
                     property_.get_name("en")
                     for article in result.articles
                     for property_ in article.definitions
-                    if property_.get_name("en") not in Evaluation.ignored_properties
+                    if property_.get_name("en") not in Evaluation.ignore_properties
                 ],
             )
             for property_id, count in result.counts.items():
                 property_name = result.definitions[property_id].get_name("en")
-                if property_name in Evaluation.ignored_properties:
+                if property_name in Evaluation.ignore_properties:
                     continue
                 y1[x_ticks.index(property_name)] = defined[property_name]
                 y2[x_ticks.index(property_name)] = count.correct + count.similar
