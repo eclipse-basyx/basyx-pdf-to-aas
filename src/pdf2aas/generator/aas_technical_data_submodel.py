@@ -84,7 +84,7 @@ class AASSubmodelTechnicalData(Generator):
         self.concept_descriptions = {}
         self.submodel = self._create_submodel_template()
 
-    def _create_submodel_template(self) -> None:
+    def _create_submodel_template(self) -> model.Submodel:
         submodel = model.Submodel(
             id_=self.identifier,
             id_short="TechnicalData",
