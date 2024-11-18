@@ -2,7 +2,7 @@
 
 import collections.abc
 import copy
-import json
+import io
 import logging
 from collections.abc import Callable
 
@@ -335,11 +335,9 @@ class AASTemplate(Generator):
 
     def dumps(self) -> str:
         """Serialize and return the whole object store to a json string."""
-        return json.dumps(
-            list(self.object_store),
-            cls=json_serialization.AASToJsonEncoder,
-            indent=2,
-        )
+        with io.StringIO() as string_io:
+            json_serialization.write_aas_json_file(string_io, self.object_store)
+            return string_io.getvalue()
 
     def save_as_aasx(self, filepath: str) -> None:
         """Save the aas template with updated values to an AASX package."""
