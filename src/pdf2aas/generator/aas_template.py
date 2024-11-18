@@ -131,7 +131,9 @@ class AASTemplate(Generator):
         return property_
 
     def get_property_definitions(
-        self, *, overwrite_dataspec: bool = False,
+        self,
+        *,
+        overwrite_dataspec: bool = False,
     ) -> list[PropertyDefinition]:
         """Derive the property definition from the properties found in the template."""
         definitions = []
@@ -162,16 +164,13 @@ class AASTemplate(Generator):
         None,
         None,
     ]:
-        submodels = (
-            filter(self.submodel_filter, self.submodels) if self.submodel_filter else self.submodels
-        )
+        submodels = self.submodels
+        if self.submodel_filter:
+            submodels = filter(self.submodel_filter, submodels)
         for submodel in submodels:
-            elements = filter(
-                self.submodel_element_filter,
-                walk_submodel(submodel)
-                if self.submodel_element_filter
-                else walk_submodel(submodel),
-            )
+            elements = walk_submodel(submodel)
+            if self.submodel_element_filter:
+                elements = filter(self.submodel_element_filter, elements)
             for element in elements:
                 if isinstance(element, model.Property | model.Range | model.MultiLanguageProperty):
                     yield element
