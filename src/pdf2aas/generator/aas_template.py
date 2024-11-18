@@ -242,6 +242,7 @@ class AASTemplate(Generator):
                 "ConceptDescription for semantidId %s not found in object store.",
                 str(semantic_id),
             )
+            return None
         if not isinstance(cd, model.concept.ConceptDescription):
             logger.debug(
                 "semantidId %s resolves to %s, which is not a ConceptDescription",
@@ -310,28 +311,38 @@ class AASTemplate(Generator):
                 definition,
                 aas_property.embedded_data_specifications,
             )
+            self._fill_definition_from_semantic_id(
+                definition,
+                aas_property.semantic_id,
+            )
 
-            semantic_id = aas_property.semantic_id
-            if semantic_id:
-                # TODO: handle types and multiple keys etc.
-                definition.id = semantic_id.key[0].value
-                if isinstance(semantic_id, model.ModelReference):
-                    cd = self._resolve_concept_description(semantic_id)
-                else:
-                    cd = self.object_store.get(semantic_id.key[0].value)
-                if cd is not None:
-                    self._fill_definition_from_data_spec(
-                        definition,
-                        cd.embedded_data_specifications,
-                    )
-                    if len(definition.name) == 0:
-                        if cd.display_name:
-                            definition.name = cd.display_name._dict  # noqa: SLF001
-                        else:
-                            definition.name = {"en": cd.id_short}
             property_.definition = definition
             properties[property_.id] = (property_, aas_property)
         return properties
+
+    def _fill_definition_from_semantic_id(
+        self,
+        definition: PropertyDefinition,
+        semantic_id: model.Reference | None,
+    ) -> None:
+        if semantic_id is None or len(semantic_id.key) == 0:
+            return
+        definition.id = "/".join([key.value for key in semantic_id.key])
+        if isinstance(semantic_id, model.ModelReference):
+            cd = self._resolve_concept_description(semantic_id)
+        else:
+            cd = self.object_store.get(semantic_id.key[0].value, None)
+        if cd is None:
+            return
+        self._fill_definition_from_data_spec(
+            definition,
+            cd.embedded_data_specifications,
+        )
+        if len(definition.name) == 0:
+            if cd.display_name:
+                definition.name = cd.display_name._dict  # noqa: SLF001
+            elif cd.id_short:
+                definition.name = {"en": cd.id_short}
 
     def dumps(self) -> str:
         """Serialize and return the whole object store to a json string."""
