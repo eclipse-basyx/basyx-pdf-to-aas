@@ -44,6 +44,7 @@ def change_dictionary_type(dictionary_type):
         yield (gr.update(),
                 gr.update(visible=True),
                 gr.update(visible=True),
+                gr.update(visible=False),
                 gr.update(visible=False)
             )
         if dictionary_type == "ECLASS":
@@ -57,11 +58,13 @@ def change_dictionary_type(dictionary_type):
             gr.update(choices=get_class_choices(dictionary), value=None),
             gr.update(choices=dictionary.supported_releases, value=dictionary.release),
             gr.update(value=None),
+            gr.update(value=None),
         )
     else:
         yield (None,
             gr.update(visible=False, value=None),
             gr.update(visible=False, value=None),
+            gr.update(visible=dictionary_type == "AAS", value=None),
             gr.update(visible=dictionary_type == "AAS", value=None)
         )
 
@@ -131,7 +134,7 @@ def get_class_property_definitions(
             gr.update(visible=True, value=property_details_default_str)
     )
 
-def get_aas_template_properties(aas_template_upload):
+def get_aas_template_properties(aas_template_upload, aas_template_filter):
     if aas_template_upload is None:
         return (
             None,
@@ -139,7 +142,19 @@ def get_aas_template_properties(aas_template_upload):
             gr.update(visible=False)
         )
 
-    aas_template = AASTemplate(aas_template_upload)
+    submodel_element_filter = None
+    if aas_template_filter:
+        def filter_property_path(element):
+            id_ = AASTemplate._create_id_from_path(element)
+            if any(s in id_ for s in aas_template_filter.split(',')):
+                return True
+            return False
+        submodel_element_filter = filter_property_path
+
+    aas_template = AASTemplate(
+        aasx_path=aas_template_upload,
+        submodel_element_filter=submodel_element_filter,
+    )
     properties = aas_template.get_properties()
     if len(properties) == 0:
         gr.Warning("No properties found in aasx template.")
@@ -599,24 +614,29 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         scale=2,
                         height=80
                     )
+                aas_template_filter = gr.Textbox(
+                    label="Filter AAS template properties",
+                    info="Enter part of id short path (ID) to select property definitions for extraction. Multi selection separated by comma.",
+                    visible=False,
+                )
                 class_info = gr.Markdown(
                     value="# Class Info",
                     show_copy_button=True,
                     visible=False,
                 )
-                with gr.Row():
-                    property_defintions = gr.DataFrame(
-                        label="Property Definitions",
-                        show_label=False,
-                        headers=['ID', 'Type', 'Name'],
-                        interactive=False,
-                        scale=3,
-                        visible=False,
-                    )
-                    property_info = gr.Markdown(
-                        show_copy_button=True,
-                        visible=False,
-                    )
+                property_defintions = gr.DataFrame(
+                    label="Property Definitions",
+                    show_label=False,
+                    headers=['ID', 'Type', 'Name'],
+                    interactive=False,
+                    scale=3,
+                    visible=False,
+                    max_height=500
+                )
+                property_info = gr.Markdown(
+                    show_copy_button=True,
+                    visible=False,
+                )
 
         with gr.Tab("Extract"):
             with gr.Row():
@@ -788,7 +808,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         dictionary_type.change(
             fn=change_dictionary_type,
             inputs=dictionary_type,
-            outputs=[dictionary, dictionary_class, dictionary_release, aas_template_upload],
+            outputs=[dictionary, dictionary_class, dictionary_release, aas_template_upload, aas_template_filter],
         )
         dictionary_release.change(
             fn=change_dictionary_release,
@@ -813,9 +833,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[property_info],
             show_progress='hidden'
         )
-        aas_template_upload.change(
+        gr.on(
+            triggers=[aas_template_upload.change, aas_template_filter.submit],
             fn=get_aas_template_properties,
-            inputs=[aas_template_upload],
+            inputs=[aas_template_upload, aas_template_filter],
             outputs=[aas_template, property_defintions, property_info],
         )
 
