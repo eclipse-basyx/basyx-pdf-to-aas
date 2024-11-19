@@ -17,7 +17,7 @@ dependencies = [
   "xlrd",
 ]
 name = "pdf2aas"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dynamic = ["version"]
 
 [project.optional-dependencies]
