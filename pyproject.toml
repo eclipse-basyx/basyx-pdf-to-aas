@@ -13,7 +13,7 @@ dependencies = [
   "pypdfium2",
   "pdfplumber",
   "tabulate",
-  "basyx-python-sdk@git+https://github.com/eclipse-basyx/basyx-python-sdk.git@47f5e613fb725f7cf627de1ebb1f4d8f9cd5cda9",
+  "basyx-python-sdk@git+https://github.com/JGrothoff/basyx-python-sdk.git@pdf-to-aas#subdirectory=sdk",
   "xlrd",
 ]
 name = "pdf2aas"

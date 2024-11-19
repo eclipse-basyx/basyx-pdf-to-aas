@@ -14,7 +14,7 @@ anyio==4.6.2.post1
     #   httpx
     #   openai
     #   starlette
-basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@47f5e613fb725f7cf627de1ebb1f4d8f9cd5cda9
+basyx-python-sdk @ git+https://github.com/JGrothoff/basyx-python-sdk.git@pdf-to-aas#subdirectory=sdk
     # via pdf2aas (pyproject.toml)
 beautifulsoup4==4.12.3
     # via pdf2aas (pyproject.toml)
@@ -53,19 +53,19 @@ fsspec==2024.10.0
     # via
     #   gradio-client
     #   huggingface-hub
-gradio==5.5.0
+gradio==5.6.0
     # via
     #   gradio-pdf
     #   pdf2aas (pyproject.toml)
-gradio-client==1.4.2
+gradio-client==1.4.3
     # via gradio
-gradio-pdf==0.0.17
+gradio-pdf==0.0.19
     # via pdf2aas (pyproject.toml)
 h11==0.14.0
     # via
     #   httpcore
     #   uvicorn
-httpcore==1.0.6
+httpcore==1.0.7
     # via httpx
 httpx==0.27.2
     # via
@@ -96,6 +96,7 @@ markupsafe==2.1.5
     # via
     #   gradio
     #   jinja2
+    #   werkzeug
 mdurl==0.1.2
     # via markdown-it-py
 numpy==2.1.3
@@ -170,7 +171,7 @@ requests==2.32.3
     #   pdf2aas (pyproject.toml)
 rich==13.9.4
     # via typer
-ruff==0.7.3
+ruff==0.7.4
     # via gradio
 safehttpx==0.1.1
     # via gradio
@@ -187,7 +188,7 @@ sniffio==1.3.1
     #   openai
 soupsieve==2.6
     # via beautifulsoup4
-starlette==0.41.2
+starlette==0.41.3
     # via
     #   fastapi
     #   gradio
@@ -199,7 +200,7 @@ tqdm==4.67.0
     # via
     #   huggingface-hub
     #   openai
-typer==0.13.0
+typer==0.13.1
     # via gradio
 typing-extensions==4.12.2
     # via
@@ -221,5 +222,7 @@ uvicorn==0.32.0
     # via gradio
 websockets==12.0
     # via gradio-client
+werkzeug==3.1.3
+    # via basyx-python-sdk
 xlrd==2.0.1
     # via pdf2aas (pyproject.toml)
