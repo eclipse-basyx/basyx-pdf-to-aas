@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime
 from copy import deepcopy
+import tempfile
 
 import pytest
 import basyx.aas.model
@@ -294,21 +295,19 @@ class TestAASTemplate:
         )
         assert datasheet_path == None
 
-    save_load_as_aasx_path = "temp/aas_template_save_load_test.aasx"
     def test_save_load_as_aasx(self):
         Property.__dataclass_fields__['definition'].repr = True
-        if os.path.exists(self.save_load_as_aasx_path):
-            assert os.path.isfile(self.save_load_as_aasx_path)
-            os.unlink(self.save_load_as_aasx_path)
+        fd, aasx_file = tempfile.mkstemp(suffix=".aasx")
+        os.close(fd)
         
         original_properties = self.g.get_properties()
         assert len(original_properties) > 0
 
-        self.g.save_as_aasx(self.save_load_as_aasx_path)
+        self.g.save_as_aasx(aasx_file)
         self.g.aasx_path = None
         assert len(self.g.get_properties()) == 0
         
-        self.g.aasx_path=self.save_load_as_aasx_path
+        self.g.aasx_path=aasx_file
         reloaded_properties = self.g.get_properties()
         assert len(original_properties) == len(reloaded_properties)
         
