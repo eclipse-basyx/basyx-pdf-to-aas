@@ -4,6 +4,7 @@ from logging.handlers import RotatingFileHandler
 import json
 import tempfile
 from datetime import datetime
+from typing import Literal
 
 import gradio as gr
 from gradio_pdf import PDF
@@ -184,10 +185,9 @@ def get_aas_template_properties(aas_template_upload, aas_template_filter):
     )
 
 def select_property_info(dictionary_type: str, dictionary: Dictionary | None, aas_template: AASTemplate | None, evt: gr.SelectData):
-    if dictionary is None and aas_template is None:
-        return None
-
     if dictionary_type == "AAS":
+        if aas_template is None:
+            return None
         property_ = aas_template.get_property(evt.row_value[0])
         if property_ is None:
             return property_details_default_str
@@ -214,9 +214,11 @@ f"""
 * Values:{"".join(["\n  * " +
         f"{v.get('value')} ({v.get('id')})"
         if isinstance(v, dict) else str(v)
-        for v in property_.definition.values])}
+        for v in definition.values])}
 """
     else:
+        if dictionary is None:
+            return None
         definition = dictionary.get_property(evt.row_value[0])
         if definition is None:
             return property_details_default_str
@@ -317,7 +319,7 @@ def mark_extracted_references(datasheet:str | None, properties: list[Property]):
         if property_.definition is None:
             name = property_.label
         else:
-            name = f"{property_.definition_name} ({property_.definition_id.split('/')[-1]})"
+            name = f"{property_.definition_name} ({property_.definition.id.split('/')[-1]})"
         entities.append({
             'entity': f"{name}: {property_.value}{unit}",
             'start': start,
@@ -385,7 +387,7 @@ def preprocess_datasheet(datasheet, preprocessor_type, tempdir):
 
 def extract(
         datasheet: str | None,
-        class_id: str | None,
+        class_id: str,
         dictionary: Dictionary | None,
         aas_template: AASTemplate | None,
         client: OpenAI | AzureOpenAI | CustomLLMClientHTTP | None,
@@ -394,7 +396,7 @@ def extract(
         batch_size: int,
         temperature: float,
         max_tokens: int,
-        use_in_prompt: list[str],
+        use_in_prompt: list[Literal["definition", "unit", "values", "datatype"]],
         extract_general_information: bool,
         max_definition_chars: int,
         max_values_length: int,
@@ -418,6 +420,8 @@ def extract(
 
     if extract_general_information and aas_template is None:
         for property_ in AASSubmodelTechnicalData().general_information.value:
+            if property_.semantic_id is None:
+                continue
             if any(
                 ECLASS.check_property_irdi(d.id)
                 and d.id[10:16] == property_.semantic_id.key[0].value[10:16]
@@ -446,14 +450,14 @@ def extract(
             property_keys_in_prompt=use_in_prompt,
         )
         gr.Info(f"Searching for {len(definitions)} properties.", duration=3)
+        extractor.max_values_length = max_values_length
+        extractor.max_definition_chars = max_definition_chars
         
     extractor.temperature = temperature
     extractor.max_tokens = max_tokens if max_tokens > 0 else None
-    extractor.max_values_length = max_values_length
-    extractor.max_definition_chars = max_definition_chars
 
-    raw_results=[]
-    raw_prompts=[]
+    raw_results: list = []
+    raw_prompts: list = []
     if batch_size <= 0:
         properties = extractor.extract(
             datasheet,
@@ -467,7 +471,7 @@ def extract(
         yield None, properties_to_dataframe([]), None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
             if batch_size == 1:
-                property_definition_batch = definitions[chunk_pos]
+                property_definition_batch: list[PropertyDefinition] | PropertyDefinition = definitions[chunk_pos]
             else:
                 property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
@@ -968,7 +972,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action="store_true", help="Print debug information.")
     args = parser.parse_args()
 
-    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=1e6, backupCount=0, encoding="utf-8")
+    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=int(1e6), backupCount=0, encoding="utf-8")
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
     if args.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

@@ -215,7 +215,7 @@ class TestAASTemplate:
 
     @pytest.mark.parametrize("property_", test_property_list2)
     def test_load_property_values(self, property_:Property):
-        old_property, aas_property = self.g._properties.get('id1/TechnicalProperties/' + property_.label)
+        old_property, aas_property = self.g._property_mapping.get('id1/TechnicalProperties/' + property_.label)
         if property_.definition.type == "range":
             assert aas_property.min == property_.value[0]
             assert aas_property.max == property_.value[1]
@@ -233,7 +233,7 @@ class TestAASTemplate:
         property_copy.value = new_value
         property_copy.id = 'id1/TechnicalProperties/' + property_.label
         self.g.add_properties([property_copy])
-        updated_property, updated_aas_property = self.g._properties.get(property_copy.id)
+        updated_property, updated_aas_property = self.g._property_mapping.get(property_copy.id)
         if property_copy.definition.type == "range":
             assert updated_aas_property.min == new_value[0]
             assert updated_aas_property.max == new_value[1]

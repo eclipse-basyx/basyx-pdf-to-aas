@@ -82,8 +82,10 @@ class TestEvaluationAAS:
     @staticmethod
     def test_fill_eclass_etim_ids():
         evaluation = EvaluationAAS()
-        evaluation.datasheet_eclass_pattern = r"ECLASS *([\d.]+): *(\d{2}-\d{2}-\d{2}-\d{2})"
-        evaluation.datasheet_etim_pattern = r"ETIM *([\d.]+): *(EC\d{6})"
+        evaluation.datasheet_class_id_pattern = {
+            "ECLASS": r"ECLASS *([\d.]+): *(\d{2}-\d{2}-\d{2}-\d{2})",
+            "ETIM": r"ETIM *([\d.]+): *(EC\d{6})",
+        }
         article = EvaluationArticle(
                 name="test_article",
                 aasx_path="test.aasx",

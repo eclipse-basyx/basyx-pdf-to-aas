@@ -60,7 +60,7 @@ Represent ranges as json list of two values.
         model_identifier: str,
         api_endpoint: str | None = None,
         client: OpenAI | AzureOpenAI | CustomLLMClient | None = None,
-        temperature: str = 0,
+        temperature: float = 0,
         max_tokens: int | None = None,
         response_format: dict | None = None,
         property_keys_in_prompt: list[Literal["definition", "unit", "values", "datatype"]]
@@ -135,15 +135,7 @@ Represent ranges as json list of two values.
         if len(property_.name) == 0:
             error = f"Property {property_.id} has no name."
             raise ValueError(error)
-        property_name = property_.name.get(language)
-        if property_name is None:
-            property_name = property_.name
-            logger.warning(
-                "Property %s name not defined for language %s. Using %s.",
-                property_.id,
-                language,
-                property_name,
-            )
+        property_name = property_.get_name(language)
 
         prompt = ""
         property_definition = property_.definition.get(language)
@@ -220,11 +212,11 @@ Represent ranges as json list of two values.
             ):
                 property_definition = property_definition[: self.max_definition_chars] + " ..."
             row.append(property_definition)
-        if self.use_property_values:
-            property_values = property_.values_list if len(property_.values) > 0 else ""
+        if self.use_property_values and len(property_.values) > 0:
+            property_values = property_.values_list
             if self.max_values_length > 0 and len(property_values) > self.max_values_length:
                 property_values = property_values[: self.max_values_length] + ["..."]
-            row.append(property_values)
+            row.append(str(property_values))
         return row
 
     def _add_definitions(

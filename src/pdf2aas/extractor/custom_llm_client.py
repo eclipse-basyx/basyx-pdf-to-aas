@@ -25,7 +25,7 @@ class CustomLLMClient(ABC):
         temperature: float,
         max_tokens: int,
         response_format: dict,
-    ) -> tuple[str, str]:
+    ) -> tuple[str | None, str | None]:
         """Create completions using a language model.
 
         Arguments:
@@ -109,7 +109,7 @@ class CustomLLMClientHTTP(CustomLLMClient):
         temperature: float,
         max_tokens: int,
         response_format: dict,
-    ) -> tuple[str, str]:
+    ) -> tuple[str | None, str | None]:
         """Create completions using the specified HTTP endpoint.
 
         Arguments:
@@ -176,6 +176,8 @@ class CustomLLMClientHTTP(CustomLLMClient):
             for key in keys:
                 if isinstance(raw_result, list):
                     raw_result = raw_result[int(key)]
+                elif raw_result is None:
+                    return None
                 else:
                     raw_result = raw_result[key]
         except (KeyError, ValueError, TypeError):

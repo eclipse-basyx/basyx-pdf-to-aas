@@ -12,11 +12,13 @@ from typing import ClassVar
 
 import requests
 
+from pdf2aas.model import SimplePropertyDataType, ValueDefinitionKeyType
+
 from .core import ClassDefinition, Dictionary, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
-etim_datatype_to_type = {
+etim_datatype_to_type: dict[str, SimplePropertyDataType] = {
     "L": "bool",
     "Logical": "bool",
     "N": "numeric",
@@ -50,7 +52,7 @@ class ETIM(Dictionary):
 
     """
 
-    releases: ClassVar[dict[dict[str, ClassDefinition]]] = {}
+    releases: ClassVar[dict[str, dict[str, ClassDefinition]]] = {}
     properties: ClassVar[dict[str, PropertyDefinition]] = {}
     supported_releases: ClassVar[list[str]] = [
         "9.0",
@@ -104,12 +106,12 @@ class ETIM(Dictionary):
         The class ID should start with EC and a 6 digit number. Tries to
         download the class if it is not in memory.
         """
-        class_id = self.parse_class_id(class_id)
-        if class_id is None:
+        class_id_parsed = self.parse_class_id(class_id)
+        if class_id_parsed is None:
             return []
-        class_ = self.classes.get(class_id)
+        class_ = self.classes.get(class_id_parsed)
         if class_ is None:
-            etim_class = self._download_etim_class(class_id)
+            etim_class = self._download_etim_class(class_id_parsed)
             if etim_class is None:
                 return []
             class_ = self._parse_etim_class(etim_class)
@@ -124,7 +126,7 @@ class ETIM(Dictionary):
         """Get the URL to the feature in the class management tool (CMT)."""
         return f"https://prod.etim-international.com/Feature/Details/{property_id.split('/')[-1]}"
 
-    def _download_etim_class(self, etim_class_code:str) -> dict:
+    def _download_etim_class(self, etim_class_code:str) -> dict | None:
         logger.debug(
             "Download etim class details for %s in %s and release %s",
             etim_class_code,
@@ -177,19 +179,20 @@ class ETIM(Dictionary):
             if "unit" in feature:
                 property_.unit = feature["unit"]["abbreviation"]
             if "values" in feature:
-                property_.values = [
+                values: list[dict[ValueDefinitionKeyType, str]] = [
                     {
                         "value": value["description"],
                         "id": value["code"],
                     }
                     for value in feature["values"]
                 ]
+                property_.values = values
             self.properties[feature_id] = property_
             class_.properties.append(property_)
         self.classes[etim_class["code"]] = class_
         return class_
 
-    def _get_access_token(self) -> str:
+    def _get_access_token(self) -> str | None:
         if (self.__access_token is not None) and (time.time() < self.__expire_time):
             return self.__access_token
 
@@ -229,12 +232,12 @@ class ETIM(Dictionary):
         if class_id is None:
             return None
         class_id = re.sub(r"[-_ ]|\s", "", class_id)
-        class_id = re.search("EC[0-9]{6}", class_id, re.IGNORECASE)
-        if class_id is None:
+        class_id_match = re.search("EC[0-9]{6}", class_id, re.IGNORECASE)
+        if class_id_match is None:
             return None
-        return class_id.group(0)
+        return class_id_match.group(0)
 
-    def _load_from_release_csv_zip(self, filepath_str: str) -> None:  # noqa: C901, PLR0912
+    def _load_from_release_csv_zip(self, filepath_str: str | Path) -> None:  # noqa: C901, PLR0912
         logger.info("Load ETIM dictionary from CSV release zip: %s", filepath_str)
 
         filepath = Path(filepath_str)

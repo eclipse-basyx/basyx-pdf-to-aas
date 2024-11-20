@@ -15,7 +15,12 @@ from basyx.aas.adapter.aasx import (
 from basyx.aas.adapter.json import json_serialization
 from basyx.aas.util.traversal import walk_submodel
 
-from pdf2aas.model import Property, PropertyDefinition
+from pdf2aas.model import (
+    Property,
+    PropertyDefinition,
+    SimplePropertyDataType,
+    ValueDefinitionKeyType,
+)
 
 from .aas import (
     cast_property,
@@ -50,7 +55,7 @@ class AASTemplate(Generator):
         submodel_element_filter: Callable[[model.SubmodelElement], bool] | None = None,
     ) -> None:
         """Initialize the AASTemplate with a specified AASX package path and filters."""
-        self._properties: dict[
+        self._property_mapping: dict[
             str,
             tuple[Property, model.Property | model.Range | model.MultiLanguageProperty],
         ] = {}
@@ -60,7 +65,7 @@ class AASTemplate(Generator):
         self.reset()
 
     @property
-    def aasx_path(self) -> str:
+    def aasx_path(self) -> str | None:
         """Get the file path to the AASX package used as template."""
         return self._aasx_path
 
@@ -75,11 +80,11 @@ class AASTemplate(Generator):
 
     def reset(self) -> None:
         """Reset the AAS template by loading the AASX package and searching the properties."""
-        self.object_store = model.DictObjectStore()
+        self.object_store: model.DictObjectStore = model.DictObjectStore()
         self.file_store = DictSupplementaryFileContainer()
         if self.aasx_path is None:
             self.submodels = []
-            self._properties = {}
+            self._property_mapping = {}
             return
         try:
             with AASXReader(self.aasx_path) as reader:
@@ -89,7 +94,7 @@ class AASTemplate(Generator):
         self.submodels = [
             submodel for submodel in self.object_store if isinstance(submodel, model.Submodel)
         ]
-        self._properties = self._search_properties()
+        self._property_mapping = self._search_properties()
 
     def add_properties(self, properties: list[Property]) -> None:
         """Search the property by its `id` to update the aas property value.
@@ -99,9 +104,17 @@ class AASTemplate(Generator):
         The property id resembles the submodel id plus the id_short hierarchy.
         """
         for property_ in properties:
-            old_property, aas_property = self._properties.get(property_.definition_id, (None, None))
+            if property_.definition is None:
+                continue
+            old_property, aas_property = self._property_mapping.get(
+                property_.definition.id,
+                (None, None),
+            )
             if aas_property is None or old_property is None:
-                old_property, aas_property = self._properties.get(property_.id, (None, None))
+                old_property, aas_property = self._property_mapping.get(
+                    property_.id,
+                    (None, None),
+                )
             if aas_property is None or old_property is None:
                 continue
             old_property.value = property_.value
@@ -123,11 +136,11 @@ class AASTemplate(Generator):
 
     def get_properties(self) -> list[Property]:
         """Get all properties found in the template with updated values."""
-        return [p for (p, _) in self._properties.values()]
+        return [p for (p, _) in self._property_mapping.values()]
 
     def get_property(self, id_: str) -> Property | None:
         """Get a single property by its id."""
-        property_, _ = self._properties.get(id_, (None, None))
+        property_, _ = self._property_mapping.get(id_, (None, None))
         return property_
 
     def get_property_definitions(
@@ -137,7 +150,9 @@ class AASTemplate(Generator):
     ) -> list[PropertyDefinition]:
         """Derive the property definition from the properties found in the template."""
         definitions = []
-        for property_, _ in self._properties.values():
+        for property_, _ in self._property_mapping.values():
+            if property_.definition is None:
+                continue
             definition = copy.copy(property_.definition)
             definition.id = property_.id
             if property_.definition_name is None or overwrite_dataspec:
@@ -164,7 +179,7 @@ class AASTemplate(Generator):
         None,
         None,
     ]:
-        submodels = self.submodels
+        submodels: list[model.Submodel] | filter[model.Submodel] = self.submodels
         if self.submodel_filter:
             submodels = filter(self.submodel_filter, submodels)
         for submodel in submodels:
@@ -176,7 +191,10 @@ class AASTemplate(Generator):
                     yield element
 
     @staticmethod
-    def _get_multilang_string(string_dict: dict[str, str], language: str) -> tuple[str | None, str]:
+    def _get_multilang_string(
+        string_dict: collections.abc.MutableMapping[str, str] | None,
+        language: str,
+    ) -> tuple[str | None, str]:
         if string_dict is not None and len(string_dict) > 0:
             if language in string_dict:
                 return string_dict[language], language
@@ -190,7 +208,7 @@ class AASTemplate(Generator):
         definition: PropertyDefinition,
         embedded_data_specifications: list[model.EmbeddedDataSpecification],
     ) -> None:
-        data_spec: model.DataSpecificationIEC61360 = next(
+        data_spec: model.DataSpecificationIEC61360 | None = next(
             (
                 spec.data_specification_content
                 for spec in embedded_data_specifications
@@ -222,18 +240,19 @@ class AASTemplate(Generator):
             and data_spec.value_list is not None
             and len(data_spec.value_list) > 0
         ):
-            definition.values = [
+            values: list[dict[ValueDefinitionKeyType, str]] = [
                 {
                     "value": value.value,
-                    "id": value.value_id.key[0].value,
-                }  # TODO: get key more robust
+                    "id": AASTemplate._get_last_key(value.value_id) or "",
+                }
                 for value in data_spec.value_list
             ]
+            definition.values = values
         # use data_spec.value as default value?
 
     def _resolve_concept_description(
         self,
-        semantic_id: model.Reference,
+        semantic_id: model.ModelReference,
     ) -> model.concept.ConceptDescription | None:
         try:
             cd = semantic_id.resolve(self.object_store)
@@ -253,37 +272,46 @@ class AASTemplate(Generator):
         return cd
 
     @staticmethod
-    def _create_id_from_path(item: model.Referable) -> str:
+    def _get_last_key(reference: model.Reference) -> str | None:
+        if len(reference.key) > 0:
+            return reference.key[-1].value
+        return None
+
+    @staticmethod
+    def _create_id_from_path(start_item: model.Referable) -> str:
+        if start_item.id_short is None:
+            return ""
         parent_path = []
-        if item.id_short is not None:
-            while item is not None:
-                if isinstance(item, model.Identifiable):
-                    parent_path.append(item.id)
-                    break
-                if isinstance(item, model.Referable):
-                    if isinstance(item.parent, model.SubmodelElementList):
-                        parent_path.append(
-                            f"{item.parent.id_short}[{item.parent.value.index(item)}]",
-                        )
-                        item = item.parent
-                    else:
-                        parent_path.append(item.id_short)
+        item: model.UniqueIdShortNamespace | model.Referable | None = start_item
+        while item is not None:
+            if isinstance(item, model.Identifiable):
+                parent_path.append(item.id)
+                break
+            if isinstance(item, model.Referable):
+                if isinstance(item.parent, model.SubmodelElementList):
+                    parent_path.append(
+                        f"{item.parent.id_short}[{item.parent.value.index(item)}]",
+                    )
                     item = item.parent
+                else:
+                    parent_path.append(item.id_short)
+                item = item.parent
         return "/".join(reversed(parent_path))
 
-    def _search_properties(self) -> dict[str, tuple[Property, model.SubmodelElement]]:
+    def _search_properties(
+        self,
+    ) -> dict[str, tuple[Property, model.Property | model.Range | model.MultiLanguageProperty]]:
         properties = {}
         for aas_property in self._walk_properties():
             property_ = Property(
                 id=self._create_id_from_path(aas_property),
             )
 
-            property_.label, property_.language = self._get_multilang_string(
+            label, property_.language = self._get_multilang_string(
                 aas_property.display_name,
                 property_.language,
             )
-            if property_.label is None:
-                property_.label = aas_property.id_short
+            property_.label = label or aas_property.id_short
 
             property_.reference, _ = self._get_multilang_string(
                 aas_property.description,
@@ -292,7 +320,7 @@ class AASTemplate(Generator):
 
             if isinstance(aas_property, model.Range):
                 property_.value = [aas_property.min, aas_property.max]
-                type_ = "range"
+                type_: SimplePropertyDataType = "range"
             elif isinstance(aas_property, model.MultiLanguageProperty):
                 property_.value, _ = self._get_multilang_string(
                     aas_property.value,
@@ -328,11 +356,11 @@ class AASTemplate(Generator):
         if semantic_id is None or len(semantic_id.key) == 0:
             return
         definition.id = "/".join([key.value for key in semantic_id.key])
-        if isinstance(semantic_id, model.ModelReference):
-            cd = self._resolve_concept_description(semantic_id)
-        else:
-            cd = self.object_store.get(semantic_id.key[0].value, None)
+        if not isinstance(semantic_id, model.ModelReference):
+            return
+        cd = self._resolve_concept_description(semantic_id)
         if cd is None:
+            # TODO: Add search in dictionary for external references?
             return
         self._fill_definition_from_data_spec(
             definition,
@@ -402,24 +430,36 @@ class AASTemplate(Generator):
         return None
 
     @staticmethod
-    def _search_document_spec(
+    def _search_document_spec(  # noqa: C901
         document: model.SubmodelElementCollection,
-    ) -> tuple[dict[str, str], list[str], str]:
-        class_names = []
-        languages = []
+    ) -> tuple[list[str], list[str], str | None]:
+        class_names: list[str] = []
+        languages: list[str] = []
         file = None
         for element in document.value:
+            if not isinstance(element, model.SubmodelElementCollection):
+                continue
             if element.id_short.startswith("DocumentClassification"):
                 for subelement in element:
-                    if subelement.id_short.lower() == "classname":
-                        if isinstance(subelement.value, model.MultiLanguageTextType):
-                            class_names.extend(subelement.value.values())
-                        else:
-                            class_names.append(str(subelement.value))
+                    if subelement.id_short.lower() != "classname":
+                        continue
+                    if isinstance(subelement, model.Property) and subelement.value is not None:
+                        class_names.append(str(subelement.value))
+                    elif (
+                        isinstance(subelement, model.MultiLanguageProperty)
+                        and subelement.value is not None
+                    ):
+                        class_names.extend(subelement.value.values())
             elif element.id_short.startswith("DocumentVersion"):
                 for subelement in element:
-                    if subelement.id_short.startswith("Language"):
+                    if subelement.id_short.startswith("Language") and isinstance(
+                        subelement,
+                        model.Property,
+                    ):
                         languages.append(subelement.value.lower())
-                    elif subelement.id_short.startswith("DigitalFile"):
+                    elif subelement.id_short.startswith("DigitalFile") and isinstance(
+                        subelement,
+                        model.File,
+                    ):
                         file = subelement.value
         return class_names, languages, file

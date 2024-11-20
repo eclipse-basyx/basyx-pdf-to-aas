@@ -345,10 +345,10 @@ class AASSubmodelTechnicalData(Generator):
 
     def _create_semantic_id(
         self,
-        reference: str,
+        reference: str | None,
         property_defintion: PropertyDefinition | None = None,
         value: str | None = None,
-    ) -> model.ModelReference:
+    ) -> model.ModelReference | None:
         if reference is None:
             return None
         self._add_concept_description(reference, property_defintion, value)
@@ -376,8 +376,8 @@ class AASSubmodelTechnicalData(Generator):
         property_: Property,
         value: model.ValueDataType,
         id_short: str,
-        display_name: model.MultiLanguageNameType,
-        description: model.MultiLanguageTextType,
+        display_name: model.MultiLanguageNameType | None,
+        description: model.MultiLanguageTextType | None,
     ) -> model.SubmodelElementCollection:
         # TODO: check wether to use SubmodelElementList for ordered stuff
         smc = model.SubmodelElementCollection(
@@ -387,7 +387,7 @@ class AASSubmodelTechnicalData(Generator):
             description=description,
         )
         if isinstance(value, dict):
-            iterator = value.items()
+            iterator = iter(value.items())
         elif isinstance(value, list | tuple):
             iterator = enumerate(value)
         elif isinstance(value, set):
@@ -403,7 +403,7 @@ class AASSubmodelTechnicalData(Generator):
                         None,
                     ),
                 )
-            except AASConstraintViolation as error:  # noqa: PERF203
+            except AASConstraintViolation as error:
                 logger.warning(
                     "Couldn't add %s item to property %s: %s",
                     type(value),
@@ -417,14 +417,14 @@ class AASSubmodelTechnicalData(Generator):
         property_: Property,
         value: model.ValueDataType,
         id_short: str,
-        display_name: model.MultiLanguageNameType,
-        description: model.MultiLanguageTextType,
+        display_name: model.MultiLanguageNameType | None,
+        description: model.MultiLanguageTextType | None,
     ) -> model.SubmodelElement:
         if isinstance(value, list | set | tuple | dict):
             if len(value) == 0:
                 value = None
             elif len(value) == 1:
-                value = value[0]
+                value = next(iter(value))
             else:
                 return self._create_aas_property_smc(
                     property_,
@@ -434,23 +434,23 @@ class AASSubmodelTechnicalData(Generator):
                     description,
                 )
 
-        value_id = None
+        value_id: model.ModelReference | None = None
         if (
             property_.definition is not None
             and len(property_.definition.values) > 0
             and value is not None
         ):
-            value_id = property_.definition.get_value_id(str(value))
-            if value_id is None:
+            value_id_raw = property_.definition.get_value_id(str(value))
+            if value_id_raw is None:
                 logger.warning(
                     "Value '%s' of '%s' not found in defined values.",
                     value,
                     property_.label,
                 )
             else:
-                if isinstance(value_id, int):
-                    value_id = property_.definition_id + "/" + str(value_id)
-                value_id = self._create_semantic_id(value_id, property_.definition, str(value))
+                if isinstance(value_id_raw, int):
+                    value_id_raw = property_.definition.id + "/" + str(value_id_raw)
+                value_id = self._create_semantic_id(value_id_raw, property_.definition, str(value))
 
         value = cast_property(value, property_.definition)
         return model.Property(
@@ -463,23 +463,21 @@ class AASSubmodelTechnicalData(Generator):
             semantic_id=self._create_semantic_id(property_.definition_id, property_.definition),
         )
 
-    def _create_aas_property(self, property_: Property) -> model.DataElement | None:
+    def _create_aas_property(self, property_: Property) -> model.SubmodelElement | None:
         if property_.label is not None and len(property_.label) > 0:
             id_short = property_.label
         elif property_.definition is not None:
-            id_short = property_.definition_name
-            if id_short is None or len(id_short) == 0:
-                id_short = property_.definition_id
+            id_short = property_.definition_name or property_.definition.id
         else:
             logger.warning("No id_short for: %s", property_)
             return None
 
-        display_name = {}
+        display_name = None
         if property_.definition is not None:
             unit = property_.unit
             if (
-                property_.unit is not None
-                and len(unit.strip()) > 0
+                unit is not None
+                and len(unit.strip()) > 0  # type: ignore[unit-attr]
                 and len(property_.definition.unit) > 0
                 and unit != property_.definition.unit
             ):
@@ -497,7 +495,7 @@ class AASSubmodelTechnicalData(Generator):
                     },
                 )
 
-        if len(display_name) == 0:
+        if display_name is None or len(display_name) == 0:
             display_name = model.MultiLanguageNameType(
                 {property_.language: id_short[:AAS_MULTILANG_NAME_LENGTH]},
             )
@@ -558,8 +556,10 @@ class AASSubmodelTechnicalData(Generator):
             general_info.value = model.MultiLanguageTextType(
                 {property_.language: str(property_.value)},
             )
-        else:
+        elif isinstance(general_info, model.Property):
             general_info.value = str(property_.value)
+        else:
+            return False
         return True
 
     @staticmethod
@@ -620,7 +620,7 @@ class AASSubmodelTechnicalData(Generator):
                 subelement
                 for subelement in element.value
                 if not AASSubmodelTechnicalData._remove_empty_submodel_element(subelement)
-            ]
+            ]  # type: ignore[assignment]
             if len(element.value) == 0:
                 return True
         elif isinstance(element, model.Property):
@@ -651,24 +651,24 @@ class AASSubmodelTechnicalData(Generator):
                 element
                 for element in self.submodel.submodel_element
                 if not self._remove_empty_submodel_element(element)
-            ]
+            ]  # type: ignore[assignment]
         else:
             self.general_information.value = [
                 element
                 for element in self.general_information.value
                 if element.id_short in self.general_information_semantic_ids_short.values()
                 or not self._remove_empty_submodel_element(element)
-            ]
+            ]  # type: ignore[assignment]
             self.technical_properties.value = [
                 element
                 for element in self.technical_properties.value
                 if not self._remove_empty_submodel_element(element)
-            ]
+            ]  # type: ignore[assignment]
             self.further_information.value = [
                 element
                 for element in self.further_information.value
                 if not self._remove_empty_submodel_element(element)
-            ]
+            ]  # type: ignore[assignment]
 
     def dumps(self) -> str:
         """Serialize and return the submodel to a json string."""

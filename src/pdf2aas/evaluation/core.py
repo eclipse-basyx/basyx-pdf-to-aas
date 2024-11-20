@@ -7,7 +7,7 @@ import re
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Self
+from typing import Any, ClassVar, Literal
 
 import matplotlib.pyplot as plt
 import openpyxl
@@ -27,13 +27,13 @@ logger = logging.getLogger(__name__)
 def _plot_discrete_hist(
     data: Any,
     limit: int = 0,
-    **kwargs: dict[str, Any],
-) -> tuple[BarContainer, Counter]:
-    counts = Counter(data)
+    **kwargs: Any,
+) -> tuple[BarContainer, dict[Any, int]]:
+    counts: dict[Any, int] = Counter(data)
     counts = dict(sorted(counts.items(), key=lambda item: item[1], reverse=True))
     if limit > 0:
         counts = dict(list(counts.items())[0:limit])
-    bars = plt.bar(counts.keys(), counts.values(), **kwargs)
+    bars = plt.bar(list(counts.keys()), list(counts.values()), **kwargs)
     plt.xticks(rotation=90)
     plt.yticks()
     plt.bar_label(bars)
@@ -132,7 +132,7 @@ class Evaluation:
         """Initialize the Evaluation with empty and default values."""
         self.articles: list[EvaluationArticle] = []
         self.definitions: dict[str, PropertyDefinition] = {}
-        self.extracted_properties: dict[str, Property] = {}
+        self.extracted_properties: dict[str, list[Property]] = {}
         self.counts: dict[str, EvaluationCounts] = {}
         self.counts_sum: EvaluationCounts = EvaluationCounts()
         self.values: dict[str, EvaluationValues] = {}
@@ -205,7 +205,7 @@ class Evaluation:
                 return 0, False
             return -1, False
 
-        result = -1, False
+        result = -1.0, False
         if type_str == "string":
             result = self._compare_string(str(value), str(expected))
         elif type_str == "numeric":
@@ -257,7 +257,7 @@ class Evaluation:
             )
 
         if article.datasheet_text and id_ in self.value_datasheet_regex:
-            label = self.value_datasheet_regex.get(id_)
+            label = self.value_datasheet_regex.get(id_, "")
             expected_in_datasheet = re.search(
                 r"^" + label + r"\s([0-9,.]+)\s(mm|g)",
                 article.datasheet_text,
@@ -276,29 +276,17 @@ class Evaluation:
                 )
         return ignored, expected
 
-    def _calc_property_counts(  # noqa: C901
+    def _calc_property_counts(
         self,
         article: EvaluationArticle,
         property_: Property,
     ) -> None:
-        id_ = property_.definition_id
-        if id_ is None:
-            logger.warning(
-                "No definition id for property %s of article: %s",
-                property_,
-                article.name,
-            )
-            return
+        id_, definition = self._get_id_definition(property_)
 
         if id_ not in self.counts:
             self.counts[id_] = EvaluationCounts()
         counts = self.counts[id_]
         counts.extracted += 1
-
-        definition = self.definitions.get(id_)
-        if definition is None:
-            definition = property_.definition
-            self.definitions[id_] = property_.definition
 
         if (definition is None) or (id_ not in article.values):
             counts.extra += 1
@@ -351,8 +339,18 @@ class Evaluation:
         values.expected.append(expected)
         values.similar.append(similar)
         values.articles.append(article.name)
-        values.unit.append(property_.unit)
+        values.unit.append(property_.unit if property_.unit else "")
         values.submodel.append(article.values.get(id_))
+
+    def _get_id_definition(self, property_: Property) -> tuple[str, PropertyDefinition | None]:
+        if property_.definition is not None and property_.definition_id is not None:
+            id_ = property_.definition_id
+            definition = self.definitions.get(id_)
+            if definition is None:
+                definition = property_.definition
+                self.definitions[id_] = property_.definition
+            return id_, definition
+        return property_.id, None
 
     def evaluate(self) -> None:
         """Evaluate the defined and extracted values of all articles.
@@ -387,10 +385,10 @@ class Evaluation:
             [
                 article.name,
                 definition.id,
-                definition.get_name(self.language),
+                definition.get_name(self.language, ""),
                 definition.type,
                 definition.unit,
-                definition.get_definition(self.language),
+                definition.get_definition(self.language, ""),
                 str(definition.values),
             ]
             for article in self.articles
@@ -430,10 +428,10 @@ class Evaluation:
     def export_excel(
         self,
         filepath: Path | str,
-        sheets: Literal["extracted", "ignored", "definitions"] = ["extracted"],
+        sheets: list[Literal["extracted", "ignored", "definitions"]] | None = None,
         *,
         overwrite: bool = False,
-    ) -> str:
+    ) -> str | None:
         """Export evaluation data to an Excel file.
 
         Args:
@@ -446,44 +444,37 @@ class Evaluation:
                 Defaults to False.
 
         Returns:
-            str: The file path of the saved or existing Excel file.
+            str: The file path of the saved or existing Excel file. None in case
+                of an error.
 
         """
+        if sheets is None:
+            sheets = ["extracted"]
         path = Path(filepath)
         if (not overwrite and path.exists()) or len(sheets) == 0:
             return str(path)
         workbook = openpyxl.Workbook()
-        workbook.remove(workbook.active)
+        if workbook.active:
+            workbook.remove(workbook.active)
 
         if "extracted" in sheets:
-            sheet = workbook.create_sheet("extracted")
-            rows = self._create_table()
-            sheet.append(self.table_header)
-            for row in rows:
-                try:
-                    sheet.append(row)
-                except ValueError:  # noqa: PERF203
-                    logger.warning("Couldn't append excel row: %s", row)
-            sheet.auto_filter.ref = sheet.dimensions
-            sheet.freeze_panes = sheet["C2"]
-
+            self._add_table_sheet(
+                workbook.create_sheet("extracted"),
+                self.table_header,
+                self._create_table(),
+            )
         if "ignored" in sheets:
-            sheet = workbook.create_sheet("ignored")
-            rows = self._create_table(self.ignored_values)
-            sheet.append(self.table_header)
-            for row in rows:
-                sheet.append(row)
-            sheet.auto_filter.ref = sheet.dimensions
-            sheet.freeze_panes = sheet["C2"]
-
+            self._add_table_sheet(
+                workbook.create_sheet("ignored"),
+                self.table_header,
+                self._create_table(self.ignored_values),
+            )
         if "definitions" in sheets:
-            sheet = workbook.create_sheet("definitions")
-            rows = self._create_definitions_table()
-            sheet.append(self.definitions_table_header)
-            for row in rows:
-                sheet.append(row)
-            sheet.auto_filter.ref = sheet.dimensions
-            sheet.freeze_panes = sheet["C2"]
+            self._add_table_sheet(
+                workbook.create_sheet("definitions"),
+                self.table_header,
+                self._create_definitions_table(),
+            )
 
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -492,6 +483,13 @@ class Evaluation:
             logger.exception("Couldn't save excel file to: %s", path)
             return None
         return str(path)
+
+    def _add_table_sheet(self, sheet: Any, header: list, rows: list) -> None:
+        sheet.append(header)
+        for row in rows:
+            sheet.append(row)
+        sheet.auto_filter.ref = sheet.dimensions
+        sheet.freeze_panes = sheet["C2"]
 
     def summary(self) -> str:
         """Return a summary string, with the evaluation and prompt counts."""
@@ -632,7 +630,7 @@ class Evaluation:
         self.plot_article_property_frequency(max_entries=max_entries)
         plt.title("Distribution of property counts")
 
-        lables = [
+        lables: list = [
             self.definitions[id_].get_name(self.language) if id_ in self.definitions else id_
             for id_ in self.counts
         ]
@@ -660,24 +658,26 @@ class Evaluation:
         plt.legend(["defined", "ignored", "correct", "similar", "different"])
 
     @staticmethod
-    def plot_extraction_property_correct_similar_comparision(results: list[Self]) -> None:
+    def plot_extraction_property_correct_similar_comparision(results: list["Evaluation"]) -> None:
         """Plot a comparision of correct incl. similar property counts for different results."""
-        x_ticks = set()
+        x_tick_set: set[str] = set()
         for result in results:
-            x_ticks.update([result.definitions[id_].get_name("en") for id_ in result.counts])
-            x_ticks.update(
+            x_tick_set.update(
+                [result.definitions[id_].get_name("en", "Undefined") for id_ in result.counts],
+            )
+            x_tick_set.update(
                 [
-                    property_.get_name("en")
+                    property_.get_name("en", "Undefined")
                     for article in result.articles
                     for property_ in article.definitions
                     if property_.get_name("en") not in Evaluation.ignore_properties
                 ],
             )
-        x_ticks = list(x_ticks)
-        x = list(range(len(x_ticks)))
+        x_ticks = list(x_tick_set)
+        x: list[float] = list(range(len(x_ticks)))
 
         bar_width = 1 / (len(results) + 1)
-        for result in results:
+        for idx, result in enumerate(results):
             x = [x_i + bar_width for x_i in x]
             y1 = [0] * len(x)
             y2 = [0] * len(x)
@@ -690,13 +690,13 @@ class Evaluation:
                 ],
             )
             for property_id, count in result.counts.items():
-                property_name = result.definitions[property_id].get_name("en")
+                property_name: str = result.definitions[property_id].get_name("en", "Undefined")
                 if property_name in Evaluation.ignore_properties:
                     continue
                 y1[x_ticks.index(property_name)] = defined[property_name]
                 y2[x_ticks.index(property_name)] = count.correct + count.similar
             plt.bar(x, y1, width=bar_width, color="gray")
-            plt.bar(x, y2, width=bar_width, label=result.name)
+            plt.bar(x, y2, width=bar_width, label="Evaluation " + str(idx))
 
         plt.xlabel("Property")
         plt.xticks([x_i + 0.5 for x_i in list(range(len(x_ticks)))], x_ticks, rotation=90)
@@ -707,7 +707,9 @@ class Evaluation:
         plt.legend()
 
     @staticmethod
-    def plot_extraction_property_correct_similar_comparision_boxplot(results: list[Self]) -> None:
+    def plot_extraction_property_correct_similar_comparision_boxplot(
+        results: list["Evaluation"],
+    ) -> None:
         """Plot a comparision of correct incl. similar property counts for different results.
 
         The results need to have same defined properties.
@@ -715,14 +717,14 @@ class Evaluation:
         plt.boxplot(
             [
                 [
-                    (count.correct + count.similar) / count.compared()
-                    if count.compared() > 0
+                    (count.correct + count.similar) / count.compared
+                    if count.compared > 0
                     else 0
                     for count in result.counts.values()
                 ]
                 for result in results
             ],
-            labels=[result.name for result in results],
+            label=["Evaluation " + str(i) for i in range(len(results))],
         )
         plt.title("Comparision of correct incl. similar property counts")
         plt.xlabel("Evaluation run")
@@ -731,14 +733,14 @@ class Evaluation:
 
     @staticmethod
     def plot_extraction_property_correct_similar_comparision_difference(
-        result1: Self,
-        result2: Self,
+        result1: "Evaluation",
+        result2: "Evaluation",
     ) -> None:
         """Plot a comparision of correct incl. similar property counts for two results.
 
         Creates a tree like bar chart, to compare which properties were extracted better.
         """
-        counts = {}
+        counts: dict[str, int] = {}
         for property_id, count in result1.counts.items():
             name = (
                 result1.definitions[property_id].get_name("en")
@@ -753,10 +755,10 @@ class Evaluation:
                 else property_id
             )
             counts[name] = counts.get(name, 0) + (count.correct + count.similar)
-        plt.barh(counts.keys(), counts.values())
+        plt.barh(list(counts.keys()), list(counts.values()))
 
         plt.title(
-            f"Difference of correct incl. similar counts (-{result1.name} + {result2.name})",
+            "Difference of correct incl. similar counts (- Evaluation 1 + Evaluation 2)",
         )
         plt.ylabel("Property count")
         plt.grid(axis="y")

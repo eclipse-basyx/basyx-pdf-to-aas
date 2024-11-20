@@ -46,7 +46,7 @@ class Dictionary(ABC):
 
     temp_dir = "temp/dict"
     properties: ClassVar[dict[str, PropertyDefinition]] = {}
-    releases: ClassVar[dict[dict[str, ClassDefinition]]] = {}
+    releases: ClassVar[dict[str, dict[str, ClassDefinition]]] = {}
     supported_releases: ClassVar[list[str]] = []
     license: str | None = None
     timeout: float = 120
@@ -94,7 +94,7 @@ class Dictionary(ABC):
             return []
         return class_.properties
 
-    def get_property(self, property_id: str) -> PropertyDefinition:
+    def get_property(self, property_id: str) -> PropertyDefinition | None:
         """Retrieve a single property definition for the given property ID from the dictionary.
 
         Arguments:
@@ -115,7 +115,7 @@ class Dictionary(ABC):
                 the current release, with their class id as key.
 
         """
-        return self.releases.get(self.release)
+        return self.releases.get(self.release, {})
 
     @abstractmethod
     def get_class_url(self, class_id: str) -> str | None:
@@ -185,7 +185,7 @@ class Dictionary(ABC):
                     logger.debug("Load class %s: %s", class_["id"], class_["name"])
                     new_class = ClassDefinition(**class_)
                     new_class.properties = [
-                        self.properties[property_id] for property_id in new_class.properties
+                        self.properties[property_id] for property_id in new_class.properties # type: ignore[index]
                     ]
                     classes[id_] = new_class
         return True

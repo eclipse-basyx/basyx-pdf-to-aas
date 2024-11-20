@@ -1,6 +1,6 @@
 """Classes to represent prompt results for their evaluation."""
 
-from typing import ClassVar, Self
+from typing import ClassVar
 
 
 class EvaluationPrompt:
@@ -27,9 +27,9 @@ class EvaluationPrompt:
         self.model: str | None = model
 
     @staticmethod
-    def from_raw_results(raw_results: list[dict]) -> list[Self]:
+    def from_raw_results(raw_results: list) -> list["EvaluationPrompt"]:
         """Construct an EvaluationPrompt from list of OpenAI API results."""
-        prompts = []
+        prompts: list = []
         if not isinstance(raw_results, list) or len(raw_results) == 0:
             return prompts
         for result in raw_results:
@@ -54,14 +54,14 @@ class EvaluationPrompt:
         ) * 1e-6
 
     @staticmethod
-    def summarize(costs: list[Self]) -> str:
+    def summarize(costs: list["EvaluationPrompt"]) -> str:
         """Return a summary string for the total tokens and costs."""
         if len(costs) == 0:
             return ""
         models = set()
         input_tokens = 0
         output_tokens = 0
-        costs_sum = 0
+        costs_sum: float = 0
         for cost in costs:
             models.add(cost.model)
             input_tokens += cost.input_tokens

@@ -36,10 +36,10 @@ class PDF2AAS:
 
     def __init__(
         self,
-        preprocessor: Preprocessor | list[Preprocessor] = None,
-        dictionary: Dictionary | AASTemplate = None,
-        extractor: Extractor = None,
-        generator: Generator = None,
+        preprocessor: Preprocessor | list[Preprocessor] | None = None,
+        dictionary: Dictionary | AASTemplate | None = None,
+        extractor: Extractor | None = None,
+        generator: Generator | None = None,
         batch_size: int = 0,
     ) -> None:
         """Initialize the PDF2AAS toolchain with optional custom components.
@@ -66,7 +66,9 @@ class PDF2AAS:
         self.preprocessor = preprocessor
         self.dictionary = ECLASS() if dictionary is None else dictionary
         self.extractor = PropertyLLMSearch("gpt-4o-mini") if extractor is None else extractor
-        self.generator = AASSubmodelTechnicalData() if generator is None else generator
+        self.generator: Generator | None = (
+            AASSubmodelTechnicalData() if generator is None else generator
+        )
         self.batch_size = batch_size
 
     def convert(
@@ -103,19 +105,21 @@ class PDF2AAS:
         self.generate(classification, properties, output_filepath)
         return properties
 
-    def preprocess(self, filepath: str) -> list[str] | str:
+    def preprocess(self, filepath: str) -> str:
         """Preprocess the document at the filepath using the configured preprocessors.
 
         Opens .pdf / .PDF documents with PDFium and other files with Text preprocessor,
         if preprocessor is None.
         """
         if self.preprocessor is None:
-            preprocessors = [PDFium()] if filepath.lower().endswith(".pdf") else [Text()]
+            preprocessors: list[Preprocessor] = (
+                [PDFium()] if filepath.lower().endswith(".pdf") else [Text()]
+            )
         elif isinstance(self.preprocessor, Preprocessor):
             preprocessors = [self.preprocessor]
         preprocessed_datasheet = filepath
         for preprocessor in preprocessors:
-            preprocessed_datasheet = preprocessor.convert(preprocessed_datasheet)
+            preprocessed_datasheet = str(preprocessor.convert(preprocessed_datasheet))
         return preprocessed_datasheet
 
     def definitions(self, classification: str | None = None) -> list[PropertyDefinition]:
@@ -127,7 +131,9 @@ class PDF2AAS:
         return []
 
     def extract(
-        self, text: list[str] | str, definitions: list[PropertyDefinition],
+        self,
+        text: str,
+        definitions: list[PropertyDefinition],
         raw_prompts: list | None = None,
         raw_results: list | None = None,
     ) -> list[Property]:
@@ -135,9 +141,9 @@ class PDF2AAS:
         if self.batch_size <= 0:
             properties = self.extractor.extract(text, definitions, raw_prompts, raw_results)
         elif self.batch_size == 1:
-            properties = [
-                self.extractor.extract(text, d, raw_prompts, raw_results) for d in definitions
-            ]
+            properties = []
+            for d in definitions:
+                properties.extend(self.extractor.extract(text, d, raw_prompts, raw_results))
         else:
             properties = []
             for i in range(0, len(definitions), self.batch_size):
@@ -162,7 +168,11 @@ class PDF2AAS:
             return
 
         self.generator.reset()
-        if classification and isinstance(self.generator, AASSubmodelTechnicalData):
+        if (
+            classification
+            and isinstance(self.generator, AASSubmodelTechnicalData)
+            and isinstance(self.dictionary, Dictionary)
+        ):
             self.generator.add_classification(self.dictionary, classification)
         self.generator.add_properties(properties)
         if filepath is not None:

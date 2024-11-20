@@ -6,13 +6,14 @@ import logging
 import re
 import shutil
 from pathlib import Path
+from typing import ClassVar
 
 import matplotlib.pyplot as plt
 
 from pdf2aas import PDF2AAS
 from pdf2aas.generator import AASTemplate
 
-from .article import EvaluationArticle
+from .article import DictionaryNameType, EvaluationArticle
 from .core import Evaluation
 from .prompt import EvaluationPrompt
 
@@ -38,14 +39,11 @@ class EvaluationAAS(Evaluation):
             description is less descriptive than the property display name and description.
         datasheet_cutoff_pattern (str | re.Pattern, optional): regex pattern that is used to
             cut off the datasheet text, if given.
-        datasheet_eclass_pattern (str | re.Pattern, optional): regex pattern with two groups to
-            search the datasheet for an ECLASS class. First group needs to find the release,
-            second group needs to find the class. Example:
-            `re.compile(r"eCl@ss ([\d.]+) (\d{2}-\d{2}-\d{2}-\d{2})")`
-        datasheet_eclass_pattern (str | re.Pattern, optional): regex pattern with two groups to
-            search the datasheet for an ETIM class. First group needs to find the release,
-            second group needs to find the class. Example:
-            `re.compile(r"ETIM ([\d.]+) (EC\d{6})")`
+        datasheet_id_pattern (dict[str, str | re.Pattern]): mapping of dictionary names (ECLASS,...)
+            to regex pattern with two groups to search the datasheet.
+            First group needs to find the release, second group needs to find the class. Example:
+            - `"ECLASS": re.compile(r"eCl@ss ([\d.]+) (\d{2}-\d{2}-\d{2}-\d{2})")`
+            - `"ETIM": re.compile(r"ETIM ([\d.]+) (EC\d{6})")`
 
     Inherits all attributes from the Evaluation class, including:
         - ignored_properties
@@ -66,8 +64,7 @@ class EvaluationAAS(Evaluation):
     datasheet_classification: str | None = None
     overwrite_dataspec: bool = False
     datasheet_cutoff_pattern: str | re.Pattern | None = None
-    datasheet_eclass_pattern: str | re.Pattern | None = None
-    datasheet_etim_pattern: str | re.Pattern | None = None
+    datasheet_class_id_pattern: ClassVar[dict[DictionaryNameType, str | re.Pattern]] = {}
 
     def __init__(
         self,
@@ -103,12 +100,14 @@ class EvaluationAAS(Evaluation):
         if property_selection is not None and len(property_selection) > 0:
             self.aas_template.submodel_element_filter = lambda e: e.id_short in property_selection
         elif property_parent is not None:
+
             def _submodel_element_has_parent(element) -> bool:  # noqa: ANN001
                 while element.parent is not None:
                     element = element.parent
                     if element.id_short == property_parent:
                         return True
                 return False
+
             self.aas_template.submodel_element_filter = _submodel_element_has_parent
         self.eval_path = Path(eval_path) if eval_path else None
 
@@ -141,7 +140,7 @@ class EvaluationAAS(Evaluation):
             submodel_id_short=self.datasheet_submodel,
             classification=self.datasheet_classification,
         )
-        if aasx_datasheet_name is None:
+        if aasx_datasheet_name is None or article.aasx_path is None:
             return None
         datasheet_path = Path(article.aasx_path).parent / Path(aasx_datasheet_name).name
         self.aas_template.file_store.write_file(aasx_datasheet_name, datasheet_path.open("wb"))
@@ -157,6 +156,8 @@ class EvaluationAAS(Evaluation):
             overwrite_dataspec=self.overwrite_dataspec,
         ):
             property_ = self.aas_template.get_property(definition.id)
+            if property_ is None or property_.definition_id is None:
+                continue
             if property_.definition_id in article.values:
                 logger.warning(
                     "Article %s contains multiple properties with same definition id: %s",
@@ -169,19 +170,17 @@ class EvaluationAAS(Evaluation):
             article.definitions.append(definition)
 
     def _fill_class_ids(self, article: EvaluationArticle) -> None:
-        if len(article.class_ids) == 0:
-            eclass_ids = []
-            etim_ids = []
-            if self.datasheet_eclass_pattern:
-                eclass_ids.extend(
-                    re.findall(self.datasheet_eclass_pattern, article.datasheet_text),
-                )
-            if self.datasheet_etim_pattern:
-                etim_ids.extend(re.findall(self.datasheet_etim_pattern, article.datasheet_text))
-            article.class_ids = {
-                "ECLASS": {eclass[0]: eclass[1] for eclass in eclass_ids},
-                "ETIM": {etim[0]: etim[1] for etim in etim_ids},
-            }
+        if article.datasheet_text is None:
+            return
+        for dictionary_name, pattern in self.datasheet_class_id_pattern.items():
+            if pattern is None:
+                continue
+            ids = article.class_ids.get(dictionary_name, {})
+            matches = re.findall(pattern, article.datasheet_text)
+            for match in matches:
+                if len(match) > 1:
+                    ids[match[0]] = match[1]
+            article.class_ids[dictionary_name] = ids
 
     def add_article(self, article: EvaluationArticle) -> None:
         """Add an article to the evlaluation.
@@ -191,6 +190,8 @@ class EvaluationAAS(Evaluation):
         Preprocess the datasheet using configured preprocessor and
         `datasheet_cutoff_heading` setting.
         """
+        if article.aasx_path is None:
+            return
         self.aas_template.aasx_path = article.aasx_path
 
         if article.datasheet_path is None:
@@ -227,9 +228,13 @@ class EvaluationAAS(Evaluation):
             run_path.mkdir(parents=True, exist_ok=True)
 
         for idx, article in enumerate(self.articles):
+            if article.datasheet_text is None:
+                logger.info("[%i] Skipping %s. No datasheet text.", idx, article.name)
+                continue
+            raw_results: list = []
+            raw_prompts: list = []
+
             logger.info("[%i] Processing %s", idx, article.name)
-            raw_results = []
-            raw_prompts = []
             properties = self.converter.extract(
                 article.datasheet_text,
                 article.definitions,
@@ -243,8 +248,10 @@ class EvaluationAAS(Evaluation):
                 try:
                     article_path = run_path / article.name
                     article_path.mkdir(exist_ok=True)
-                    shutil.copy(article.datasheet_path, article_path)
-                    shutil.copy(article.aasx_path, article_path)
+                    if article.datasheet_path:
+                        shutil.copy(article.datasheet_path, article_path)
+                    if article.aasx_path:
+                        shutil.copy(article.aasx_path, article_path)
                     (article_path / "datasheet.txt").write_text(
                         article.datasheet_text,
                         encoding="utf-8",

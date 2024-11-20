@@ -70,11 +70,13 @@ class Property:
         Returns first and last argument if value is a collection (list, tuple, set, dict).
         """
         value = (self.value, self.value)
-        if isinstance(self.value, list | tuple | set| dict):
+        if isinstance(self.value, list | tuple | set | dict):
             if len(self.value) == 0:
                 return None, None
-            value = list(self.value.values()) if isinstance(self.value, dict) else list(self.value)
-            value = (value[0], value[-1])
+            value_list = (
+                list(self.value.values()) if isinstance(self.value, dict) else list(self.value)
+            )
+            value = (value_list[0], value_list[-1])
         elif isinstance(self.value, str):
             result = re.search(_numeric_range_regex, self.value)
             if result is not None:
@@ -85,7 +87,7 @@ class Property:
             return (max_, min_)
         return (min_, max_)
 
-    def to_legacy_dict(self) -> dict[str, str]:
+    def to_legacy_dict(self) -> dict[str, str | None]:
         """Return dictionary format used before a Property class was defined.
 
         Contains the fields extracted from the document:

@@ -16,7 +16,7 @@ anti_alphanumeric_regex = re.compile(r"[^a-zA-Z0-9]")
 
 def cast_property(  # noqa: C901, PLR0911
     value: Any,
-    definition: PropertyDefinition,
+    definition: PropertyDefinition | None = None,
 ) -> model.ValueDataType:
     """Cast a value to an XSD DataType from the AAS module.
 
