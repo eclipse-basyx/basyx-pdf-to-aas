@@ -26,6 +26,11 @@ dev = [
   "pytest-cov",
   "pyinstaller",
   "ruff",
+  "mypy",
+  "types-beautifulsoup4",
+  "types-openpyxl",
+  "types-requests",
+  "types-tabulate",
 ]
 demo = [
   "gradio",
@@ -65,3 +70,8 @@ ignore = [
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 80
+
+[tool.mypy]
+files = [
+  "src/"
+]
