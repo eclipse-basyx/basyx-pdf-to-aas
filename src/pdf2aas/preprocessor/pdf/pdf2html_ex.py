@@ -160,6 +160,8 @@ class PDF2HTMLEX(Preprocessor):
             if reduced_datasheet_match is None:
                 return ""
             reduced_datasheet = reduced_datasheet_match.group(1)
+
+        reduced_datasheet_list = []
         if level >= ReductionLevel.PAGES:
             logger.debug("Reducing datasheet to ReductionLevel.PAGES")
             reduced_datasheet_list = re.findall(r'<div id="pf.*', reduced_datasheet)
@@ -175,9 +177,10 @@ class PDF2HTMLEX(Preprocessor):
             logger.debug("Reducing datasheet to ReductionLevel.TEXT")
             for idx, page in enumerate(reduced_datasheet_list):
                 reduced_datasheet_list[idx] = re.sub(r"<div.*?>|</div>", "", page)
+        result = reduced_datasheet_list if level >= ReductionLevel.PAGES else reduced_datasheet
         logger.info("Reduced datasheet to ReductionLevel %s", level.name)
-        logger.debug("reduced datasheet:\n%s", str(reduced_datasheet_list))
-        return reduced_datasheet_list
+        logger.debug("Reduced datasheet text:\n%s", str(result))
+        return result
 
     def clear_temp_dir(self) -> None:
         """Clear the temporary directory used for storing intermediate HTML files."""
