@@ -154,6 +154,7 @@ Moreover, the Settings tab allows to configure different extractor and client pa
 
 [![Teststatus](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/test.yml/badge.svg)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/test.yml)
 [![Linting](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/ruff.yml/badge.svg)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/ruff.yml)
+[![Typing](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/mypy.yml/badge.svg)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/mypy.yml)
 
 * If not already done, install the dev dependencies via `python -m pip install -r dev-requirements.txt`
 * Run tests with `pytest`

@@ -23,5 +23,4 @@ jobs:
       - name: Install dependencies
         run: pip install -r dev-requirements.txt -r eval-requirements.txt
       - name: Check typing with MyPy
-        run: |
-          mypy src
+        run: mypy src
