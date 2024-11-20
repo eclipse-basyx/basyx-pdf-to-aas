@@ -2,7 +2,7 @@ import sys
 import pytest
 from pdf2aas.preprocessor import PDF2HTMLEX, ReductionLevel, PDFium, Text
 
-@pytest.mark.skipif(sys.platform == "win32", reason="pdf2htmlEx not easily supported for windows")
+@pytest.mark.skipif(not PDF2HTMLEX().is_installed(), reason="pdf2htmlEx not installed.")
 class TestPDF2HTMLEX:
     preprocessor = PDF2HTMLEX()
     datasheet_prefix = "tests/assets/dummy-test-datasheet"
