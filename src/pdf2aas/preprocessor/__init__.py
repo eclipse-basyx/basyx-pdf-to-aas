@@ -7,11 +7,11 @@ from .pdf.pdfplumber_ import PDFPlumber, PDFPlumberTable
 from .text import Text
 
 __all__ = [
-    "Preprocessor",
     "PDF2HTMLEX",
-    "ReductionLevel",
-    "PDFium",
     "PDFPlumber",
     "PDFPlumberTable",
+    "PDFium",
+    "Preprocessor",
+    "ReductionLevel",
     "Text",
 ]

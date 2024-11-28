@@ -8,9 +8,9 @@ from .prompt import EvaluationPrompt
 from .values import EvaluationValues
 
 __all__ = [
-    "EvaluationArticle",
     "Evaluation",
     "EvaluationAAS",
+    "EvaluationArticle",
     "EvaluationCounts",
     "EvaluationPrompt",
     "EvaluationValues",

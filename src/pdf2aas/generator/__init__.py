@@ -6,8 +6,8 @@ from .core import Generator
 from .csv import CSV
 
 __all__ = [
-    "Generator",
     "CSV",
-    "AASTemplate",
     "AASSubmodelTechnicalData",
+    "AASTemplate",
+    "Generator",
 ]

@@ -236,9 +236,9 @@ class AASTemplate(Generator):
 
         if (
             definition.values is None
-            or len(definition.values) == 0
+            or (len(definition.values) == 0
             and data_spec.value_list is not None
-            and len(data_spec.value_list) > 0
+            and len(data_spec.value_list) > 0)
         ):
             values: list[dict[ValueDefinitionKeyType, str]] = [
                 {
