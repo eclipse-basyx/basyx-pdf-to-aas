@@ -34,7 +34,7 @@ class TestCSV:
     def test_reset(self):
         self.g.add_properties(test_property_list)
         self.g.reset()
-        assert self.g.dumps() == f'"{'";"'.join(CSV.header)}"\n'
+        assert self.g.dumps() == ('"' +'";"'.join(CSV.header) + '"\n')
     def test_dumps(self):
         self.g.add_properties(test_property_list)
         with(open('tests/assets/dummy-result.csv') as file):

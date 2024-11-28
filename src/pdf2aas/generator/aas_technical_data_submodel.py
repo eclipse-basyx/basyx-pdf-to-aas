@@ -1,10 +1,10 @@
 """Generator for Technical Data Submodels of Asset Administration Shells."""
 
-import datetime
 import json
 import logging
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import ClassVar
 
 from basyx.aas import model
@@ -174,7 +174,7 @@ class AASSubmodelTechnicalData(Generator):
             model.Property(
                 id_short="ValidDate",
                 value_type=model.datatypes.Date,
-                value=datetime.datetime.now(tz=datetime.UTC).date(),
+                value=datetime.now(tz=timezone.utc).date(),
                 category="PARAMETER",
                 semantic_id=self._create_semantic_id(
                     "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1",
@@ -403,7 +403,7 @@ class AASSubmodelTechnicalData(Generator):
                         None,
                     ),
                 )
-            except AASConstraintViolation as error:
+            except AASConstraintViolation as error:  # noqa: PERF203
                 logger.warning(
                     "Couldn't add %s item to property %s: %s",
                     type(value),

@@ -3,7 +3,7 @@
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Any
 
 from .property_definition import PropertyDefinition
 
@@ -109,8 +109,8 @@ class Property:
             "name": self.definition_name,
         }
 
-    @classmethod
-    def from_dict(cls, property_dict: dict) -> Self:
+    @staticmethod
+    def from_dict(property_dict: dict) -> "Property":
         """Parse a Property from a dictionary."""
         label = property_dict.get("property")
         if label is None:
@@ -118,7 +118,7 @@ class Property:
         if label is None:
             label = ""
 
-        return cls(
+        return Property(
             label,
             property_dict.get("value"),
             property_dict.get("unit"),

@@ -1,10 +1,10 @@
 """Classes for the evaluation of pdf2aas conversion using Asset Administration Shells as input."""
 
-import datetime
 import json
 import logging
 import re
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import ClassVar
 
@@ -222,7 +222,7 @@ class EvaluationAAS(Evaluation):
         """
         run_path = None
         if self.eval_path:
-            run_path = self.eval_path / datetime.datetime.now(tz=datetime.UTC).strftime(
+            run_path = self.eval_path / datetime.now(tz=timezone.utc).strftime(
                 "%Y-%m-%d_%H-%M-%S",
             )
             run_path.mkdir(parents=True, exist_ok=True)
