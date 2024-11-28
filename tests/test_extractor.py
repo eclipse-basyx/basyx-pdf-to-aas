@@ -99,6 +99,7 @@ class TestCustomLLMClientHttp():
 
     def test_create_completions_post(self):
         client=CustomLLMClientHTTP(self.endpoint)
+        client.result_path = None
         with patch('requests.post') as mock_post:
             mock_post.return_value = MagicMock(status_code=200, json=lambda: self.mock_result)
             result_content, result = client.create_completions(

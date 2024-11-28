@@ -5,15 +5,17 @@ import re
 from typing import ClassVar, Literal
 
 import requests
-import xlrd
-from bs4 import BeautifulSoup
+import xlrd  # type: ignore[import-untyped]
+from bs4 import BeautifulSoup, Tag
+
+from pdf2aas.model import SimplePropertyDataType, ValueDefinitionKeyType
 
 from .core import ClassDefinition, Dictionary, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
 
-def cdd_datatype_to_type(data_type: str) -> str:
+def cdd_datatype_to_type(data_type: str) -> SimplePropertyDataType | Literal["class"]:
     """Convert a cdd datatype to "class", "bool", "range", "numeric" or "string"."""
     if data_type.startswith("CLASS_REFERENCE_TYPE"):
         return "class"
@@ -70,7 +72,7 @@ class CDD(Dictionary):
 
     """
 
-    releases: ClassVar[dict[dict[str, ClassDefinition]]] = {}
+    releases: ClassVar[dict[str, dict[str, ClassDefinition]]] = {}
     properties: ClassVar[dict[str, PropertyDefinition]] = {}
     supported_releases: ClassVar[list[str]] = [
         "V2.0018.0002",
@@ -186,7 +188,7 @@ class CDD(Dictionary):
         standard_id_version = class_id.split("/")[-1].split("#")
         # TODO: find specified version
         if standard_id_version[0] not in self.domains:
-            return None
+            return ""
         return "{}/classes/0112-2---{}%23{}?OpenDocument".format(
             self.domains[standard_id_version[0]]["url"],
             standard_id_version[0],
@@ -207,7 +209,7 @@ class CDD(Dictionary):
         standard_id_version = property_id.split("/")[-1].split("#")
         # TODO: find specified version
         if standard_id_version[0] not in self.domains:
-            return None
+            return ""
         return "{}/PropertiesAllVersions/0112-2---{}%23{}?OpenDocument".format(
             self.domains[standard_id_version[0]]["url"],
             standard_id_version[0],
@@ -215,7 +217,7 @@ class CDD(Dictionary):
         )
 
     @staticmethod
-    def _get_table_data(labels: list, label: str) -> str:
+    def _get_table_data(labels: list, label: str) -> str | None:
         for td in labels:
             if td.text == f"\n{label}: ":
                 return td.find_next_sibling("td").text.lstrip("\n")
@@ -229,12 +231,17 @@ class CDD(Dictionary):
         # TODO: resolve language to table (English --> L1, France = L2, ...) from div id="onglet"
         # TODO: translate the labels, e.g. Preferred name --> Nom préféré
         table = soup.find("table", attrs={"id": "contentL1"})
+        if not isinstance(table, Tag):
+            return None
         tds = table.find_all("td", class_="label")
 
         class_id = self._get_table_data(tds, "IRDI")
+        class_name = self._get_table_data(tds, "Preferred name")
+        if class_id is None or class_name is None:
+            return None
         class_ = ClassDefinition(
             id=class_id,
-            name=self._get_table_data(tds, "Preferred name"),
+            name=class_name,
             # Probably non "FREE ATTRIBUTES", c.f. CDD license section 5
             # description=self._get_table_data(tds, 'Definition')  # noqa: ERA001
         )
@@ -252,10 +259,10 @@ class CDD(Dictionary):
         export_html_content: str,
         selection: str,
     ) -> xlrd.sheet.Sheet | None:
-        export_url = re.search(f'href="(.*{selection}.*)"', export_html_content)
-        if export_url is None:
+        export_url_match = re.search(f'href="(.*{selection}.*)"', export_html_content)
+        if export_url_match is None:
             return None
-        export_url = f"https://cdd.iec.ch{export_url.group(1)}"
+        export_url = f"https://cdd.iec.ch{export_url_match.group(1)}"
 
         try:
             response = requests.get(export_url, timeout=self.timeout)
@@ -269,10 +276,16 @@ class CDD(Dictionary):
     def _download_property_definitions(
         self,
         class_url: str,
-        class_html_soup: str,
+        class_html_soup: BeautifulSoup,
     ) -> list[PropertyDefinition]:
         # export6 corresponds menu Export > All > Class and superclasses
-        export_id = class_html_soup.find("input", {"id": "export6"}).get("onclick").split("'")[1]
+        export6 = class_html_soup.find("input", {"id": "export6"})
+        if not isinstance(export6, Tag):
+            return []
+        on_click = export6.get("onclick")
+        if on_click is None or isinstance(on_click, list):
+            return []
+        export_id = on_click.split("'")[1]
         export_url = f"{class_url}&Click={export_id}"
         export_html_content = self._download_html(export_url)
         if export_html_content is None:
@@ -336,7 +349,7 @@ class CDD(Dictionary):
         value_list_id: str,
         value_list: xlrd.sheet.Sheet,
         value_terms: xlrd.sheet.Sheet | None,
-    ) -> list[str | dict[Literal["value", "id", "synonyms", "short_name", "symbol"], str]]:
+    ) -> list[dict[ValueDefinitionKeyType, str]]:
         value_ids = []
         for row in value_list:
             if row[IDX_CODE].value == value_list_id:
@@ -345,11 +358,11 @@ class CDD(Dictionary):
 
         if value_terms is None:
             return value_ids
-        values = []
+        values: list[dict[ValueDefinitionKeyType, str]] = []
         for value_id in value_ids:
             for row in value_terms:
                 if row[IDX_CODE].value == value_id:
-                    value = {
+                    value: dict[ValueDefinitionKeyType, str] = {
                         "value": row[IDX_PREFERRED_NAME].value,
                         "id": f"{row[IDX_CODE].value}#{int(row[IDX_VERSION].value):03d}",
                     }
@@ -386,14 +399,14 @@ class CDD(Dictionary):
         if class_id is None:
             return None
         class_id = re.sub(r"[-]|\s", "", class_id)
-        class_id = re.search(
+        class_id_match = re.search(
             r"0112/2///[A-Z0-9_]+#[A-Z]{3}[0-9]{3}#[0-9]{3}",
             class_id,
             re.IGNORECASE,
         )
-        if class_id is None:
+        if class_id_match is None:
             return None
-        return class_id.group(0)
+        return class_id_match.group(0)
 
     def download_sub_class_instances(self, class_id: str) -> None:
         """Download all instances below the class with the given class id.
@@ -409,13 +422,22 @@ class CDD(Dictionary):
         class_soup = BeautifulSoup(html_content, "html.parser")
 
         # export2 corresponds menu Export > Attributes > Class and subclasses
-        export_id = class_soup.find("input", {"id": "export2"}).get("onclick").split("'")[1]
+        export2 = class_soup.find("input", {"id": "export2"})
+        if not isinstance(export2, Tag):
+            return
+        on_click = export2.get("onclick")
+        if on_click is None or not isinstance(on_click, str):
+            return
+
+        export_id = on_click.split("'")[1]
         export_url = f"{class_url}&Click={export_id}"
         export_html_content = self._download_html(export_url)
         if export_html_content is None:
             return
 
         class_list = self._download_export_xls(export_html_content, "CLASS")
+        if class_list is None:
+            return
         for row in class_list:
             if row[0].value.startswith("#"):
                 continue

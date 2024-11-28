@@ -13,5 +13,7 @@ class Extractor(ABC):
         self,
         datasheet: str,
         property_definition: PropertyDefinition | list[PropertyDefinition],
+        raw_prompts: list | None = None,
+        raw_results: list | None = None,
     ) -> list[Property]:
         """Try to extract the defined properties from the given datasheet text."""

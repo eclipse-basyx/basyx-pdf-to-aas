@@ -14,11 +14,11 @@ def main(datasheet, eclass_class_id, batch_size, output_path):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Example for toolchain pdfium + eclass --> LLM --> csv')
-    parser.add_argument('--datasheet', type=str, help="Path to datasheet", default="tests/assets/dummy-test-datasheet.pdf")
-    parser.add_argument('--eclass', type=str, help="ECLASS class id, e.g. 27274001", default="27274001")
+    parser = argparse.ArgumentParser(description='Example for toolchain pdfium/text + eclass --> LLM --> aas-submodel-technical-data')
+    parser.add_argument('eclass', type=str, help="ECLASS class id in number format, e.g. 27274001.")
+    parser.add_argument('datasheet', type=str, help="File path to PDF datasheet or text file.")
     parser.add_argument('--batch_size', type=int, help="How many properties should be extracted per LLM request. All in one prompt = 0. One request per Property < 0.", default=0)
-    parser.add_argument('--output', type=int, help="Filepath for the technical datasheet json file that is produced.", default='technical-data-submodel.json')
+    parser.add_argument('--output', type=str, help="Filepath for the technical data submodel json file that is produced.", default='technical-data-submodel.json')
     parser.add_argument('--debug', action="store_true", help="Print debug information.")
     args = parser.parse_args()
 

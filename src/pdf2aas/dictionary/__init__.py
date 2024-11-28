@@ -6,9 +6,9 @@ from .eclass import ECLASS
 from .etim import ETIM
 
 __all__ = [
-    "Dictionary",
-    "dictionary_serializer",
     "CDD",
     "ECLASS",
     "ETIM",
+    "Dictionary",
+    "dictionary_serializer",
 ]

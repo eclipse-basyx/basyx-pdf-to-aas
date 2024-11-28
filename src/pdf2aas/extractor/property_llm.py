@@ -67,7 +67,7 @@ Example result:
         model_identifier: str,
         api_endpoint: str | None = None,
         client: OpenAI | AzureOpenAI | CustomLLMClient | None = None,
-        temperature: str = 0,
+        temperature: float = 0,
         max_tokens: int | None = None,
         response_format: dict | None = None,
     ) -> None:
@@ -95,8 +95,8 @@ Example result:
         self,
         datasheet: list[str] | str,
         property_definition: PropertyDefinition | list[PropertyDefinition],
-        raw_prompts: list[str] | None = None,
-        raw_results: list[str] | None = None,
+        raw_prompts: list | None = None,
+        raw_results: list | None = None,
         prompt_hint: str | None = None,
     ) -> list[Property]:
         """Try to extract all properties found in the given datasheet text.
@@ -161,18 +161,22 @@ Example result:
         prompt += self.user_prompt_template.format(datasheet=datasheet)
         return prompt
 
-    def _prompt_llm(self, messages: list[dict[str, str]], raw_results: list) -> str | Any | None:
+    def _prompt_llm(
+        self,
+        messages: list[dict[str, str]],
+        raw_results: list | None,
+    ) -> str | Any | None:
         if self.client is None:
             logger.info("Systemprompt:\n%s", messages[0]["content"])
             logger.info("Prompt:\n%s", messages[1]["content"])
-            result = input("Enter result for LLM prompt via input:\n")
+            result: str | Any | None = input("Enter result for LLM prompt via input:\n")
             raw_result = result
         elif isinstance(self.client, CustomLLMClient):
             result, raw_result = self.client.create_completions(
                 messages,
                 self.model_identifier,
                 self.temperature,
-                self.max_tokens,
+                self.max_tokens if self.max_tokens else 0,
                 self.response_format,
             )
         else:
@@ -187,16 +191,19 @@ Example result:
             raw_results.append(raw_result)
         return result
 
-    def _prompt_llm_openai(self, messages: list[dict[str, str]]) -> tuple[str | Any | None, dict]:
+    def _prompt_llm_openai(
+        self,
+        messages: list[dict[str, str]],
+    ) -> tuple[str | Any | None, dict]:
         if self.response_format is None or isinstance(self.client, AzureOpenAI):
             chat_completion = self.client.chat.completions.create(
                 model=self.model_identifier,
                 temperature=self.temperature,
-                messages=messages,
+                messages=messages, # type: ignore[arg-type]
                 max_tokens=self.max_tokens,
             )
         else:  # response format = None is not equal to NotGiven, e.g. AzureOpenAI won't work
-            chat_completion = self.client.chat.completions.create(
+            chat_completion = self.client.chat.completions.create( # type: ignore[call-overload, union-attr]
                 model=self.model_identifier,
                 temperature=self.temperature,
                 messages=messages,
@@ -212,7 +219,7 @@ Example result:
             )
         return result, chat_completion.to_dict(mode="json")
 
-    def _parse_result(self, result: str) -> Any | dict | None:
+    def _parse_result(self, result: str | None) -> Any | dict | None:
         if result is None:
             return None
         try:
@@ -251,7 +258,8 @@ Example result:
             return []
         if not isinstance(properties, list | dict):
             logger.warning(
-                "Extraction result type is %s instead of list or dict.", type(properties),
+                "Extraction result type is %s instead of list or dict.",
+                type(properties),
             )
             return []
 

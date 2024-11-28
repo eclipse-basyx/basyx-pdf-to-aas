@@ -3,7 +3,7 @@
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Any
 
 from .property_definition import PropertyDefinition
 
@@ -61,10 +61,7 @@ class Property:
         """
         if self.definition is None:
             return None
-        name = self.definition.name.get(self.language)
-        if name is None:
-            name = next(iter(self.definition.name.values()), "")
-        return name
+        return self.definition.get_name(self.language)
 
     def parse_numeric_range(self) -> tuple[float | int | None, float | int | None]:
         """Try to parse the value as a numerical range.
@@ -73,11 +70,13 @@ class Property:
         Returns first and last argument if value is a collection (list, tuple, set, dict).
         """
         value = (self.value, self.value)
-        if isinstance(self.value, list | tuple | set| dict):
+        if isinstance(self.value, list | tuple | set | dict):
             if len(self.value) == 0:
                 return None, None
-            value = list(self.value.values()) if isinstance(self.value, dict) else list(self.value)
-            value = (value[0], value[-1])
+            value_list = (
+                list(self.value.values()) if isinstance(self.value, dict) else list(self.value)
+            )
+            value = (value_list[0], value_list[-1])
         elif isinstance(self.value, str):
             result = re.search(_numeric_range_regex, self.value)
             if result is not None:
@@ -88,7 +87,7 @@ class Property:
             return (max_, min_)
         return (min_, max_)
 
-    def to_legacy_dict(self) -> dict[str, str]:
+    def to_legacy_dict(self) -> dict[str, str | None]:
         """Return dictionary format used before a Property class was defined.
 
         Contains the fields extracted from the document:
@@ -110,8 +109,8 @@ class Property:
             "name": self.definition_name,
         }
 
-    @classmethod
-    def from_dict(cls, property_dict: dict) -> Self:
+    @staticmethod
+    def from_dict(property_dict: dict) -> "Property":
         """Parse a Property from a dictionary."""
         label = property_dict.get("property")
         if label is None:
@@ -119,7 +118,7 @@ class Property:
         if label is None:
             label = ""
 
-        return cls(
+        return Property(
             label,
             property_dict.get("value"),
             property_dict.get("unit"),

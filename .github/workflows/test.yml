@@ -15,21 +15,42 @@ on:
       - '*requirements.txt'
       - '.github/workflows/test.yml'
 jobs:
-  run-tests:
+  test-pinned-version:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: "3.12"
         cache: 'pip'
-    - name: Install dependencies
-      run: pip install -r dev-requirements.txt
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libfontconfig1 libcairo2 libjpeg-turbo8
     - name: Install pdf2htmlEx
       run: |
         wget -O pdf2htmlEX.deb https://github.com/pdf2htmlEX/pdf2htmlEX/releases/download/v0.18.8.rc1/pdf2htmlEX-0.18.8.rc1-master-20200630-Ubuntu-bionic-x86_64.deb
-        sudo apt install -y libfontconfig1 libcairo2 libjpeg-turbo8
         sudo apt install ./pdf2htmlEX.deb
+    - name: Install Python dependencies
+      run: pip install -r dev-requirements.txt -r eval-requirements.txt
     - name: Install pdf2aas
-      run: pip install -e .
-    - run: pytest --cov=pdf2aas
+      run: pip install .
+    - name: Run tests with coverage
+      run: pytest --cov=pdf2aas
+
+  test-current-version:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install Python dependencies
+      run: pip install .[dev,eval]
+    - name: Run tests
+      run: pytest

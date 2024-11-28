@@ -2,7 +2,7 @@
 
 import logging
 
-from pypdfium2 import PdfDocument, PdfiumError
+from pypdfium2 import PdfDocument, PdfiumError  # type: ignore[import-untyped]
 
 from pdf2aas.preprocessor import Preprocessor
 

@@ -1,9 +1,12 @@
 import json
+import os
 from datetime import datetime
 from copy import deepcopy
+import tempfile
 
 import pytest
 import basyx.aas.model
+from basyx.aas.adapter.json import json_serialization, json_deserialization
 
 from pdf2aas.generator import Generator, CSV, AASSubmodelTechnicalData, AASTemplate
 from pdf2aas.model import Property, PropertyDefinition
@@ -31,7 +34,7 @@ class TestCSV:
     def test_reset(self):
         self.g.add_properties(test_property_list)
         self.g.reset()
-        assert self.g.dumps() == f'"{'";"'.join(CSV.header)}"\n'
+        assert self.g.dumps() == ('"' +'";"'.join(CSV.header) + '"\n')
     def test_dumps(self):
         self.g.add_properties(test_property_list)
         with(open('tests/assets/dummy-result.csv') as file):
@@ -194,12 +197,11 @@ class TestAASSubmodelTechnicalData:
             assert class_id is not None
             assert class_id.value == str(idx)
 
-    @pytest.mark.xfail
     def test_basyx_aas_json_serialization_deserialization(self):
         self.g.add_properties(test_property_list)
-        from basyx.aas.adapter.json import json_serialization, json_deserialization
-        submodel : basyx.aas.model.Submodel = json.loads(json.dumps(self.g.submodel, cls=json_serialization.AASToJsonEncoder), cls=json_deserialization.AASFromJsonDecoder)        
-        assert submodel == self.g.submodel
+        submodel_json = json.dumps(self.g.submodel, cls=json_serialization.AASToJsonEncoder)
+        submodel_json_reloaded = json.dumps(json.loads(submodel_json, cls=json_deserialization.AASFromJsonDecoder), cls=json_serialization.AASToJsonEncoder)
+        assert submodel_json == submodel_json_reloaded
 
 class TestAASTemplate:
     def setup_method(self) -> None:
@@ -213,7 +215,7 @@ class TestAASTemplate:
 
     @pytest.mark.parametrize("property_", test_property_list2)
     def test_load_property_values(self, property_:Property):
-        old_property, aas_property = self.g._properties.get('id1/TechnicalProperties/' + property_.label)
+        old_property, aas_property = self.g._property_mapping.get('id1/TechnicalProperties/' + property_.label)
         if property_.definition.type == "range":
             assert aas_property.min == property_.value[0]
             assert aas_property.max == property_.value[1]
@@ -231,7 +233,7 @@ class TestAASTemplate:
         property_copy.value = new_value
         property_copy.id = 'id1/TechnicalProperties/' + property_.label
         self.g.add_properties([property_copy])
-        updated_property, updated_aas_property = self.g._properties.get(property_copy.id)
+        updated_property, updated_aas_property = self.g._property_mapping.get(property_copy.id)
         if property_copy.definition.type == "range":
             assert updated_aas_property.min == new_value[0]
             assert updated_aas_property.max == new_value[1]
@@ -261,3 +263,62 @@ class TestAASTemplate:
         assert property_result.definition.definition == property_.definition.definition
         #The definition.values might differ
         assert sorted(property_result.definition.values_list) == sorted(property_.definition.values_list)
+
+    @staticmethod
+    @pytest.mark.parametrize("submodel_id_short,classification,language", [
+        (None, None, None),
+        ("HandoverDocumentation", None, None),
+        (None, "Datasheet", None),
+        (None,None, "en"),
+    ])
+    def test_search_datasheet_succed(submodel_id_short, classification, language):
+        aas_template = AASTemplate("tests/assets/dummy-IDTA 02004-1-2_Template_Handover Documentation.aasx")
+        datasheet_path = aas_template.search_datasheet(
+            submodel_id_short=submodel_id_short,
+            classification=classification,
+            language=language,
+        )
+        assert datasheet_path == "/aasx/dummy-test-datasheet-handover-documentation.pdf"
+
+    @staticmethod
+    @pytest.mark.parametrize("submodel_id_short,classification,language", [
+        ("WrongSubmodel", None, None),
+        (None, "WrongClassification", None),
+        (None,None, "WrongLanguage"),
+    ])
+    def test_search_datasheet_failed(submodel_id_short, classification, language):
+        aas_template = AASTemplate("tests/assets/dummy-IDTA 02004-1-2_Template_Handover Documentation.aasx")
+        datasheet_path = aas_template.search_datasheet(
+            submodel_id_short=submodel_id_short,
+            classification=classification,
+            language=language,
+        )
+        assert datasheet_path == None
+
+    def test_save_load_as_aasx(self):
+        Property.__dataclass_fields__['definition'].repr = True
+        fd, aasx_file = tempfile.mkstemp(suffix=".aasx")
+        os.close(fd)
+        
+        original_properties = self.g.get_properties()
+        assert len(original_properties) > 0
+
+        self.g.save_as_aasx(aasx_file)
+        self.g.aasx_path = None
+        assert len(self.g.get_properties()) == 0
+        
+        self.g.aasx_path=aasx_file
+        reloaded_properties = self.g.get_properties()
+        assert len(original_properties) == len(reloaded_properties)
+        
+        if reloaded_properties != original_properties:
+            # sort lists and dictionaries to compare correctly
+            for p in reloaded_properties:
+                p.definition.name = dict(sorted(p.definition.name.items()))
+                p.definition.definition = dict(sorted(p.definition.definition.items()))
+                p.definition.values = sorted(p.definition.values, key=lambda x: str(x))
+            for p in original_properties:
+                p.definition.name = dict(sorted(p.definition.name.items()))
+                p.definition.definition = dict(sorted(p.definition.definition.items()))
+                p.definition.values = sorted(p.definition.values, key=lambda x: str(x))
+            assert reloaded_properties == original_properties

@@ -5,6 +5,7 @@
         "ext",
         "gen",
         "demo",
+        "eval",
     ],
     "python.testing.pytestArgs": [
         "tests"

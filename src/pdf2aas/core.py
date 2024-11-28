@@ -4,8 +4,9 @@ import logging
 
 from .dictionary import ECLASS, Dictionary
 from .extractor import Extractor, PropertyLLMSearch
-from .generator import AASSubmodelTechnicalData, Generator
-from .preprocessor import PDFium, Preprocessor
+from .generator import AASSubmodelTechnicalData, AASTemplate, Generator
+from .model import Property, PropertyDefinition
+from .preprocessor import PDFium, Preprocessor, Text
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +15,14 @@ class PDF2AAS:
     """Convert PDF documents into Asset Administration Shell (AAS) submodels.
 
     Attributes:
-        preprocessor (Preprocessor): A preprocessing object to handle PDF files.
-            Defaults to PDFium.
-        dictionary (Dictionary): A dictionary object for term mapping.
-            Defaults to ECLASS in current release.
+        preprocessor (Preprocessor, list[Preprocessor], optional):
+            A preprocessing object to handle input files. Defaults to PDFium
+            for files with pdf extension and Text for other files.
+            If a list is given, the preprocessed datasheet is
+            passed through each preprocessor in the list.
+        dictionary (Dictionary): A dictionary object defining properties to
+            search for.Defaults to ECLASS. Alternatively this can be an AAS
+            (Template).
         extractor (Extractor): An extractor object to pull relevant information
             from the preprocessed PDF. Defaults to PropertyLLMSearch with
             current openai model.
@@ -31,19 +36,23 @@ class PDF2AAS:
 
     def __init__(
         self,
-        preprocessor: Preprocessor = None,
-        dictionary: Dictionary = None,
-        extractor: Extractor = None,
-        generator: Generator = None,
+        preprocessor: Preprocessor | list[Preprocessor] | None = None,
+        dictionary: Dictionary | AASTemplate | None = None,
+        extractor: Extractor | None = None,
+        generator: Generator | None = None,
         batch_size: int = 0,
     ) -> None:
         """Initialize the PDF2AAS toolchain with optional custom components.
 
         Args:
-            preprocessor (Preprocessor, optional): A preprocessing object to
-                handle PDF files. Defaults to PDFium.
-            dictionary (Dictionary, optional): A dictionary object for term
-                mapping. Defaults to ECLASS.
+            preprocessor (Preprocessor, list[Preprocessor], optional):
+                A preprocessing object to handle input files. Defaults to PDFium
+                for files with pdf extension and Text for other files.
+                If a list is given, the preprocessed datasheet is
+                passed through each preprocessor in the list.
+            dictionary (Dictionary, AASTemplate, optional): A dictionary object
+                defining properties to search for. Defaults to ECLASS.
+                Alternatively this can be an AAS (Template).
             extractor (Extractor, optional): An extractor object to pull
                 relevant information from the preprocessed PDF. Defaults to
                 PropertyLLMSearch with the current openai model.
@@ -54,56 +63,118 @@ class PDF2AAS:
                 in one. 1 extracts each property on its own.
 
         """
-        self.preprocessor = PDFium() if preprocessor is None else preprocessor
+        self.preprocessor = preprocessor
         self.dictionary = ECLASS() if dictionary is None else dictionary
         self.extractor = PropertyLLMSearch("gpt-4o-mini") if extractor is None else extractor
-        self.generator = AASSubmodelTechnicalData() if generator is None else generator
+        self.generator: Generator | None = (
+            AASSubmodelTechnicalData() if generator is None else generator
+        )
         self.batch_size = batch_size
 
     def convert(
         self,
         pdf_filepath: str,
-        classification: str,
+        classification: str | None = None,
         output_filepath: str | None = None,
-    ) -> None:
+    ) -> list[Property]:
         """Convert a PDF document into an AAS submodel.
 
-        Uses the configured preprocessor, dictionary, extractor to
+        Uses the configured preprocessor, dictionary and extractor to
         extract or search for the given properties of the `classification`.
         Dumps the result using the configured generator to the given
         'output_filepath' if provided.
 
         Args:
-            pdf_filepath (str): The file path to the input PDF document.
-            classification (str): The classification term for mapping
+            pdf_filepath (str): The file path to the input document. Can also
+                be another format, if the corresponding preprocessor (chain) is
+                configured.
+            classification (str, optional): The classification id for mapping
                 properties, e.g. "27274001" when using ECLASS.
             output_filepath (str, optional): The file path to save the generated
                 AAS submodel or configured generator output.
 
+        Returns:
+            properties (list[Property]): the extracted properties. The formated
+                results can be obtained from the generator object, e.g. via
+                `generator.dump` or by specifying `output_filepath`.
+
         """
-        preprocessed_datasheet = self.preprocessor.convert(pdf_filepath)
+        text = self.preprocess(pdf_filepath)
+        definitions = self.definitions(classification)
+        properties = self.extract(text, definitions)
+        self.generate(classification, properties, output_filepath)
+        return properties
 
-        property_definitions = self.dictionary.get_class_properties(classification)
+    def preprocess(self, filepath: str) -> str:
+        """Preprocess the document at the filepath using the configured preprocessors.
 
+        Opens .pdf / .PDF documents with PDFium and other files with Text preprocessor,
+        if preprocessor is None.
+        """
+        if self.preprocessor is None:
+            preprocessors: list[Preprocessor] = (
+                [PDFium()] if filepath.lower().endswith(".pdf") else [Text()]
+            )
+        elif isinstance(self.preprocessor, Preprocessor):
+            preprocessors = [self.preprocessor]
+        preprocessed_datasheet = filepath
+        for preprocessor in preprocessors:
+            preprocessed_datasheet = str(preprocessor.convert(preprocessed_datasheet))
+        return preprocessed_datasheet
+
+    def definitions(self, classification: str | None = None) -> list[PropertyDefinition]:
+        """Get the definitions from the configured dictionary or aas template."""
+        if isinstance(self.dictionary, AASTemplate):
+            return self.dictionary.get_property_definitions()
+        if self.dictionary is not None and classification is not None:
+            return self.dictionary.get_class_properties(classification)
+        return []
+
+    def extract(
+        self,
+        text: str,
+        definitions: list[PropertyDefinition],
+        raw_prompts: list | None = None,
+        raw_results: list | None = None,
+    ) -> list[Property]:
+        """Extract the defined properties from the text using the configured extractor."""
         if self.batch_size <= 0:
-            properties = self.extractor.extract(preprocessed_datasheet, property_definitions)
+            properties = self.extractor.extract(text, definitions, raw_prompts, raw_results)
         elif self.batch_size == 1:
-            properties = [
-                self.extractor.extract(preprocessed_datasheet, d) for d in property_definitions
-            ]
+            properties = []
+            for d in definitions:
+                properties.extend(self.extractor.extract(text, d, raw_prompts, raw_results))
         else:
             properties = []
-            for i in range(0, len(property_definitions), self.batch_size):
+            for i in range(0, len(definitions), self.batch_size):
                 properties.extend(
                     self.extractor.extract(
-                        preprocessed_datasheet, property_definitions[i : i + self.batch_size],
+                        text,
+                        definitions[i : i + self.batch_size],
+                        raw_prompts,
+                        raw_results,
                     ),
                 )
+        return properties
+
+    def generate(
+        self,
+        classification: str | None,
+        properties: list[Property],
+        filepath: str | None,
+    ) -> None:
+        """Export properties using the given generator."""
+        if self.generator is None:
+            return
 
         self.generator.reset()
-        if isinstance(self.generator, AASSubmodelTechnicalData):
+        if (
+            classification
+            and isinstance(self.generator, AASSubmodelTechnicalData)
+            and isinstance(self.dictionary, Dictionary)
+        ):
             self.generator.add_classification(self.dictionary, classification)
         self.generator.add_properties(properties)
-        if output_filepath is not None:
-            self.generator.dump(filepath=output_filepath)
-            logger.info("Generated result in: %s", output_filepath)
+        if filepath is not None:
+            self.generator.dump(filepath)
+            logger.info("Generated result in: %s", filepath)
