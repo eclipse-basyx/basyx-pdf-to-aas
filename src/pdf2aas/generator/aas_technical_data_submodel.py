@@ -322,7 +322,7 @@ class AASSubmodelTechnicalData(Generator):
         if property_defintion:
             name = property_defintion.get_name("en")
             if name is not None:
-                cd.id_short = re.sub(anti_alphanumeric_regex, "_", name)
+                cd.id_short = self._create_id_short(name)
                 cd.display_name = model.MultiLanguageNameType(
                     {
                         ln: n[:AAS_MULTILANG_NAME_LENGTH]
@@ -338,7 +338,7 @@ class AASSubmodelTechnicalData(Generator):
                 )
             self._add_embedded_data_spec(cd, property_defintion)
         elif value:
-            cd.id_short = re.sub(anti_alphanumeric_regex, "_", value)
+            cd.id_short = self._create_id_short(value)
             cd.display_name = model.MultiLanguageNameType({"en": value[:AAS_MULTILANG_NAME_LENGTH]})
 
         self.concept_descriptions[reference] = cd
@@ -465,9 +465,12 @@ class AASSubmodelTechnicalData(Generator):
 
     def _create_aas_property(self, property_: Property) -> model.SubmodelElement | None:
         if property_.label is not None and len(property_.label) > 0:
-            id_short = property_.label
+            id_short = self._create_id_short(property_.label)
         elif property_.definition is not None:
-            id_short = property_.definition_name or property_.definition.id
+            if property_.definition_name:
+                id_short = self._create_id_short(property_.definition_name)
+            else:
+                id_short = self._create_id_short(property_.definition.id)
         else:
             logger.warning("No id_short for: %s", property_)
             return None
