@@ -580,7 +580,7 @@ def init_tempdir():
     logger.info(f"Created tempdir: {tempdir.name}")
     return tempdir
 
-def main(debug=False, init_settings_path=None, share=False, server_port=None):
+def main(debug=False, init_settings_path=None, server_name=None, server_port=None):
 
     with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:
         dictionary = gr.State(value=None)
@@ -961,14 +961,14 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         )
     
     demo.queue(max_size=10)
-    demo.launch(quiet=not debug, share=share, server_port=server_port)
+    demo.launch(quiet=not debug, server_name=server_name, server_port=server_port)
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass / etim / cdd --> LLM --> xlsx / json / aasx')
     parser.add_argument('--settings', type=str, help="Load settings from file. Defaults to settings.json", default='settings.json')
     parser.add_argument('--port', type=str, help="Change server port (default 7860 if free)", default=None)
-    parser.add_argument('--share', action="store_true", help="Allow to use webserver outside localhost, aka. public.")
+    parser.add_argument('--host', type=str, help="Change server name/ip to listen to, e.g. 0.0.0.0 for all interfaces.", default=None)
     parser.add_argument('--debug', action="store_true", help="Print debug information.")
     args = parser.parse_args()
 
@@ -982,4 +982,4 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.addHandler(file_handler)
 
-    main(args.debug, args.settings, args.share, args.port)
+    main(args.debug, args.settings, args.host, args.port)
