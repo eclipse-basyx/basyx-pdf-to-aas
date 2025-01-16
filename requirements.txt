@@ -6,106 +6,224 @@
 #
 annotated-types==0.7.0
     # via pydantic
-anyio==4.6.2.post1
+anyio==4.8.0
     # via
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/JGrothoff/basyx-python-sdk.git@pdf-to-aas#subdirectory=sdk
+    #   starlette
+arrow==1.3.0
+    # via isoduration
+attrs==24.3.0
+    # via
+    #   hypothesis
+    #   jsonschema
+    #   pytest-subtests
+    #   referencing
+backoff==2.2.1
+    # via schemathesis
+basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@933b9fa74a89a1312f43b85fed4bba00db1dc4c0#subdirectory=sdk
     # via pdf2aas (pyproject.toml)
 beautifulsoup4==4.12.3
     # via pdf2aas (pyproject.toml)
-certifi==2024.8.30
+certifi==2024.12.14
     # via
     #   httpcore
     #   httpx
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
     # via
     #   pdfminer-six
     #   requests
+click==8.1.8
+    # via schemathesis
 colorama==0.4.6
-    # via tqdm
-cryptography==43.0.3
+    # via
+    #   click
+    #   pytest
+    #   schemathesis
+    #   tqdm
+cryptography==44.0.0
     # via pdfminer-six
 distro==1.9.0
     # via openai
+fqdn==1.5.1
+    # via jsonschema
+graphql-core==3.2.5
+    # via hypothesis-graphql
 h11==0.14.0
     # via httpcore
+harfile==0.3.0
+    # via schemathesis
 httpcore==1.0.7
     # via httpx
-httpx==0.27.2
-    # via openai
+httpx==0.28.1
+    # via
+    #   openai
+    #   schemathesis
+hypothesis==6.124.0
+    # via
+    #   basyx-python-sdk
+    #   hypothesis-graphql
+    #   hypothesis-jsonschema
+    #   schemathesis
+hypothesis-graphql==0.11.1
+    # via schemathesis
+hypothesis-jsonschema==0.23.1
+    # via schemathesis
 idna==3.10
     # via
     #   anyio
     #   httpx
+    #   jsonschema
     #   requests
-jiter==0.7.1
+    #   yarl
+iniconfig==2.0.0
+    # via pytest
+isoduration==20.11.0
+    # via jsonschema
+jiter==0.8.2
     # via openai
+jsonpointer==3.0.0
+    # via jsonschema
+jsonschema==4.23.0
+    # via
+    #   basyx-python-sdk
+    #   hypothesis-jsonschema
+    #   schemathesis
+jsonschema-specifications==2024.10.1
+    # via jsonschema
+junit-xml==1.9
+    # via schemathesis
 lxml==4.9.4
     # via
     #   basyx-python-sdk
     #   pyecma376-2
+lxml-stubs==0.5.1
+    # via basyx-python-sdk
 markupsafe==3.0.2
     # via werkzeug
-openai==1.54.4
+multidict==6.1.0
+    # via yarl
+openai==1.59.7
     # via pdf2aas (pyproject.toml)
+packaging==24.2
+    # via pytest
 pdfminer-six==20231228
     # via pdfplumber
-pdfplumber==0.11.4
+pdfplumber==0.11.5
     # via pdf2aas (pyproject.toml)
-pillow==11.0.0
+pillow==11.1.0
     # via pdfplumber
+pluggy==1.5.0
+    # via pytest
+propcache==0.2.1
+    # via yarl
 pycparser==2.22
     # via cffi
-pydantic==2.9.2
+pydantic==2.10.5
     # via
     #   openai
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-pydantic-core==2.23.4
+pydantic-core==2.27.2
     # via pydantic
-pydantic-settings==2.6.1
+pydantic-settings==2.7.1
     # via pdf2aas (pyproject.toml)
 pyecma376-2==1.0.0
     # via basyx-python-sdk
-pypdfium2==4.30.0
+pypdfium2==4.30.1
     # via
     #   pdf2aas (pyproject.toml)
     #   pdfplumber
+pyrate-limiter==3.7.0
+    # via schemathesis
+pytest==8.3.4
+    # via
+    #   pytest-subtests
+    #   schemathesis
+pytest-subtests==0.14.1
+    # via schemathesis
 python-dateutil==2.9.0.post0
-    # via basyx-python-sdk
+    # via
+    #   arrow
+    #   basyx-python-sdk
 python-dotenv==1.0.1
     # via
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
+pyyaml==6.0.2
+    # via schemathesis
+referencing==0.35.1
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 requests==2.32.3
-    # via pdf2aas (pyproject.toml)
-six==1.16.0
-    # via python-dateutil
+    # via
+    #   pdf2aas (pyproject.toml)
+    #   schemathesis
+    #   starlette-testclient
+rfc3339-validator==0.1.4
+    # via jsonschema
+rfc3987==1.3.8
+    # via jsonschema
+rpds-py==0.22.3
+    # via
+    #   jsonschema
+    #   referencing
+schemathesis==3.39.6
+    # via basyx-python-sdk
+six==1.17.0
+    # via
+    #   junit-xml
+    #   python-dateutil
+    #   rfc3339-validator
 sniffio==1.3.1
     # via
     #   anyio
-    #   httpx
     #   openai
+sortedcontainers==2.4.0
+    # via hypothesis
 soupsieve==2.6
     # via beautifulsoup4
+starlette==0.45.2
+    # via
+    #   schemathesis
+    #   starlette-testclient
+starlette-testclient==0.4.1
+    # via schemathesis
 tabulate==0.9.0
     # via pdf2aas (pyproject.toml)
-tqdm==4.67.0
+tomli==2.2.1
+    # via schemathesis
+tomli-w==1.2.0
+    # via schemathesis
+tqdm==4.67.1
     # via openai
+types-python-dateutil==2.9.0.20241206
+    # via
+    #   arrow
+    #   basyx-python-sdk
 typing-extensions==4.12.2
     # via
+    #   anyio
     #   openai
     #   pydantic
     #   pydantic-core
-urllib3==2.2.3
+uri-template==1.3.0
+    # via jsonschema
+urllib3==2.3.0
     # via
     #   basyx-python-sdk
     #   requests
+webcolors==24.11.1
+    # via jsonschema
 werkzeug==3.1.3
-    # via basyx-python-sdk
+    # via
+    #   basyx-python-sdk
+    #   schemathesis
 xlrd==2.0.1
     # via pdf2aas (pyproject.toml)
+yarl==1.18.3
+    # via schemathesis

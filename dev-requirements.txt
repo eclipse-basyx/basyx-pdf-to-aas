@@ -10,12 +10,28 @@ annotated-types==0.7.0
     # via
     #   -c eval-requirements.txt
     #   pydantic
-anyio==4.6.2.post1
+anyio==4.8.0
     # via
     #   -c eval-requirements.txt
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/JGrothoff/basyx-python-sdk.git@pdf-to-aas#subdirectory=sdk
+    #   starlette
+arrow==1.3.0
+    # via
+    #   -c eval-requirements.txt
+    #   isoduration
+attrs==24.3.0
+    # via
+    #   -c eval-requirements.txt
+    #   hypothesis
+    #   jsonschema
+    #   pytest-subtests
+    #   referencing
+backoff==2.2.1
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@933b9fa74a89a1312f43b85fed4bba00db1dc4c0#subdirectory=sdk
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -23,7 +39,7 @@ beautifulsoup4==4.12.3
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
-certifi==2024.8.30
+certifi==2024.12.14
     # via
     #   -c eval-requirements.txt
     #   httpcore
@@ -33,19 +49,25 @@ cffi==1.17.1
     # via
     #   -c eval-requirements.txt
     #   cryptography
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
     # via
     #   -c eval-requirements.txt
     #   pdfminer-six
     #   requests
+click==8.1.8
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 colorama==0.4.6
     # via
     #   -c eval-requirements.txt
+    #   click
     #   pytest
+    #   schemathesis
     #   tqdm
-coverage==7.6.7
+coverage==7.6.10
     # via pytest-cov
-cryptography==43.0.3
+cryptography==44.0.0
     # via
     #   -c eval-requirements.txt
     #   pdfminer-six
@@ -53,44 +75,106 @@ distro==1.9.0
     # via
     #   -c eval-requirements.txt
     #   openai
+fqdn==1.5.1
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+graphql-core==3.2.5
+    # via
+    #   -c eval-requirements.txt
+    #   hypothesis-graphql
 h11==0.14.0
     # via
     #   -c eval-requirements.txt
     #   httpcore
+harfile==0.3.0
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 httpcore==1.0.7
     # via
     #   -c eval-requirements.txt
     #   httpx
-httpx==0.27.2
+httpx==0.28.1
     # via
     #   -c eval-requirements.txt
     #   openai
+    #   schemathesis
+hypothesis==6.124.0
+    # via
+    #   -c eval-requirements.txt
+    #   basyx-python-sdk
+    #   hypothesis-graphql
+    #   hypothesis-jsonschema
+    #   schemathesis
+hypothesis-graphql==0.11.1
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+hypothesis-jsonschema==0.23.1
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 idna==3.10
     # via
     #   -c eval-requirements.txt
     #   anyio
     #   httpx
+    #   jsonschema
     #   requests
+    #   yarl
 iniconfig==2.0.0
-    # via pytest
-jiter==0.7.1
+    # via
+    #   -c eval-requirements.txt
+    #   pytest
+isoduration==20.11.0
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+jiter==0.8.2
     # via
     #   -c eval-requirements.txt
     #   openai
+jsonpointer==3.0.0
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+jsonschema==4.23.0
+    # via
+    #   -c eval-requirements.txt
+    #   basyx-python-sdk
+    #   hypothesis-jsonschema
+    #   schemathesis
+jsonschema-specifications==2024.10.1
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+junit-xml==1.9
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 lxml==4.9.4
     # via
     #   -c eval-requirements.txt
     #   basyx-python-sdk
     #   pyecma376-2
+lxml-stubs==0.5.1
+    # via
+    #   -c eval-requirements.txt
+    #   basyx-python-sdk
 markupsafe==2.1.5
     # via
     #   -c eval-requirements.txt
     #   werkzeug
-mypy==1.13.0
+multidict==6.1.0
+    # via
+    #   -c eval-requirements.txt
+    #   yarl
+mypy==1.14.1
     # via pdf2aas (pyproject.toml)
 mypy-extensions==1.0.0
     # via mypy
-openai==1.54.4
+openai==1.59.7
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -104,33 +188,39 @@ pdfminer-six==20231228
     # via
     #   -c eval-requirements.txt
     #   pdfplumber
-pdfplumber==0.11.4
+pdfplumber==0.11.5
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
 pefile==2023.2.7
     # via pyinstaller
-pillow==11.0.0
+pillow==11.1.0
     # via
     #   -c eval-requirements.txt
     #   pdfplumber
 pluggy==1.5.0
-    # via pytest
+    # via
+    #   -c eval-requirements.txt
+    #   pytest
+propcache==0.2.1
+    # via
+    #   -c eval-requirements.txt
+    #   yarl
 pycparser==2.22
     # via
     #   -c eval-requirements.txt
     #   cffi
-pydantic==2.9.2
+pydantic==2.10.5
     # via
     #   -c eval-requirements.txt
     #   openai
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-pydantic-core==2.23.4
+pydantic-core==2.27.2
     # via
     #   -c eval-requirements.txt
     #   pydantic
-pydantic-settings==2.6.1
+pydantic-settings==2.7.1
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -140,22 +230,34 @@ pyecma376-2==1.0.0
     #   basyx-python-sdk
 pyinstaller==6.11.1
     # via pdf2aas (pyproject.toml)
-pyinstaller-hooks-contrib==2024.10
+pyinstaller-hooks-contrib==2024.11
     # via pyinstaller
-pypdfium2==4.30.0
+pypdfium2==4.30.1
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
     #   pdfplumber
-pytest==8.3.3
+pyrate-limiter==3.7.0
     # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+pytest==8.3.4
+    # via
+    #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
     #   pytest-cov
+    #   pytest-subtests
+    #   schemathesis
 pytest-cov==6.0.0
     # via pdf2aas (pyproject.toml)
+pytest-subtests==0.14.1
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 python-dateutil==2.9.0.post0
     # via
     #   -c eval-requirements.txt
+    #   arrow
     #   basyx-python-sdk
 python-dotenv==1.0.1
     # via
@@ -164,31 +266,81 @@ python-dotenv==1.0.1
     #   pydantic-settings
 pywin32-ctypes==0.2.3
     # via pyinstaller
+pyyaml==6.0.2
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+referencing==0.35.1
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+    #   jsonschema-specifications
 requests==2.32.3
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
-ruff==0.7.4
-    # via pdf2aas (pyproject.toml)
-six==1.16.0
+    #   schemathesis
+    #   starlette-testclient
+rfc3339-validator==0.1.4
     # via
     #   -c eval-requirements.txt
+    #   jsonschema
+rfc3987==1.3.8
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+rpds-py==0.22.3
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+    #   referencing
+ruff==0.9.1
+    # via pdf2aas (pyproject.toml)
+schemathesis==3.39.6
+    # via
+    #   -c eval-requirements.txt
+    #   basyx-python-sdk
+six==1.17.0
+    # via
+    #   -c eval-requirements.txt
+    #   junit-xml
     #   python-dateutil
+    #   rfc3339-validator
 sniffio==1.3.1
     # via
     #   -c eval-requirements.txt
     #   anyio
-    #   httpx
     #   openai
+sortedcontainers==2.4.0
+    # via
+    #   -c eval-requirements.txt
+    #   hypothesis
 soupsieve==2.6
     # via
     #   -c eval-requirements.txt
     #   beautifulsoup4
+starlette==0.41.3
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+    #   starlette-testclient
+starlette-testclient==0.4.1
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 tabulate==0.9.0
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
-tqdm==4.67.0
+tomli==2.2.1
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+tomli-w==1.2.0
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
+tqdm==4.67.1
     # via
     #   -c eval-requirements.txt
     #   openai
@@ -196,33 +348,52 @@ types-beautifulsoup4==4.12.0.20241020
     # via pdf2aas (pyproject.toml)
 types-html5lib==1.1.11.20241018
     # via types-beautifulsoup4
-types-openpyxl==3.1.5.20241114
+types-openpyxl==3.1.5.20241225
     # via pdf2aas (pyproject.toml)
+types-python-dateutil==2.9.0.20241206
+    # via
+    #   -c eval-requirements.txt
+    #   arrow
+    #   basyx-python-sdk
 types-requests==2.32.0.20241016
     # via pdf2aas (pyproject.toml)
-types-tabulate==0.9.0.20240106
+types-tabulate==0.9.0.20241207
     # via pdf2aas (pyproject.toml)
 typing-extensions==4.12.2
     # via
     #   -c eval-requirements.txt
+    #   anyio
     #   mypy
     #   openai
     #   pydantic
     #   pydantic-core
-urllib3==2.2.3
+uri-template==1.3.0
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
+urllib3==2.3.0
     # via
     #   -c eval-requirements.txt
     #   basyx-python-sdk
     #   requests
     #   types-requests
+webcolors==24.11.1
+    # via
+    #   -c eval-requirements.txt
+    #   jsonschema
 werkzeug==3.1.3
     # via
     #   -c eval-requirements.txt
     #   basyx-python-sdk
+    #   schemathesis
 xlrd==2.0.1
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
+yarl==1.18.3
+    # via
+    #   -c eval-requirements.txt
+    #   schemathesis
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
