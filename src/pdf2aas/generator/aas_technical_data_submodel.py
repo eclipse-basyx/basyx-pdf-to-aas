@@ -174,7 +174,7 @@ class AASSubmodelTechnicalData(Generator):
             model.Property(
                 id_short="ValidDate",
                 value_type=model.datatypes.Date,
-                value=datetime.now(tz=timezone.utc).date(),
+                value=datetime.now(tz=timezone.utc).date(), # type: ignore [arg-type]
                 category="PARAMETER",
                 semantic_id=self._create_semantic_id(
                     "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1",
@@ -415,7 +415,7 @@ class AASSubmodelTechnicalData(Generator):
     def _create_aas_property_recursive(
         self,
         property_: Property,
-        value: model.ValueDataType,
+        value: model.ValueDataType | None,
         id_short: str,
         display_name: model.MultiLanguageNameType | None,
         description: model.MultiLanguageTextType | None,
