@@ -13,23 +13,7 @@ anyio==4.8.0
     #   -c demo-requirements.txt
     #   httpx
     #   openai
-    #   starlette
-arrow==1.3.0
-    # via
-    #   -c demo-requirements.txt
-    #   isoduration
-attrs==24.3.0
-    # via
-    #   -c demo-requirements.txt
-    #   hypothesis
-    #   jsonschema
-    #   pytest-subtests
-    #   referencing
-backoff==2.2.1
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
-basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@933b9fa74a89a1312f43b85fed4bba00db1dc4c0#subdirectory=sdk
+basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@b178a8cc1e8bbe5076e935aa0359133a3f772b9e#subdirectory=sdk
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -52,16 +36,9 @@ charset-normalizer==3.4.1
     #   -c demo-requirements.txt
     #   pdfminer-six
     #   requests
-click==8.1.8
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 colorama==0.4.6
     # via
     #   -c demo-requirements.txt
-    #   click
-    #   pytest
-    #   schemathesis
     #   tqdm
 contourpy==1.3.1
     # via matplotlib
@@ -81,22 +58,10 @@ et-xmlfile==2.0.0
     #   openpyxl
 fonttools==4.55.3
     # via matplotlib
-fqdn==1.5.1
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-graphql-core==3.2.5
-    # via
-    #   -c demo-requirements.txt
-    #   hypothesis-graphql
 h11==0.14.0
     # via
     #   -c demo-requirements.txt
     #   httpcore
-harfile==0.3.0
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 httpcore==1.0.7
     # via
     #   -c demo-requirements.txt
@@ -105,60 +70,16 @@ httpx==0.28.1
     # via
     #   -c demo-requirements.txt
     #   openai
-    #   schemathesis
-hypothesis==6.124.0
-    # via
-    #   -c demo-requirements.txt
-    #   basyx-python-sdk
-    #   hypothesis-graphql
-    #   hypothesis-jsonschema
-    #   schemathesis
-hypothesis-graphql==0.11.1
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
-hypothesis-jsonschema==0.23.1
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 idna==3.10
     # via
     #   -c demo-requirements.txt
     #   anyio
     #   httpx
-    #   jsonschema
     #   requests
-    #   yarl
-iniconfig==2.0.0
-    # via
-    #   -c demo-requirements.txt
-    #   pytest
-isoduration==20.11.0
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
 jiter==0.8.2
     # via
     #   -c demo-requirements.txt
     #   openai
-jsonpointer==3.0.0
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-jsonschema==4.23.0
-    # via
-    #   -c demo-requirements.txt
-    #   basyx-python-sdk
-    #   hypothesis-jsonschema
-    #   schemathesis
-jsonschema-specifications==2024.10.1
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-junit-xml==1.9
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 kiwisolver==1.4.8
     # via matplotlib
 levenshtein==0.26.1
@@ -168,26 +89,18 @@ lxml==4.9.4
     #   -c demo-requirements.txt
     #   basyx-python-sdk
     #   pyecma376-2
-lxml-stubs==0.5.1
-    # via
-    #   -c demo-requirements.txt
-    #   basyx-python-sdk
 markupsafe==2.1.5
     # via
     #   -c demo-requirements.txt
     #   werkzeug
 matplotlib==3.10.0
     # via pdf2aas (pyproject.toml)
-multidict==6.1.0
-    # via
-    #   -c demo-requirements.txt
-    #   yarl
-numpy==2.2.1
+numpy==2.2.2
     # via
     #   -c demo-requirements.txt
     #   contourpy
     #   matplotlib
-openai==1.59.7
+openai==1.59.9
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -199,7 +112,6 @@ packaging==24.2
     # via
     #   -c demo-requirements.txt
     #   matplotlib
-    #   pytest
 pdfminer-six==20231228
     # via
     #   -c demo-requirements.txt
@@ -213,14 +125,6 @@ pillow==11.1.0
     #   -c demo-requirements.txt
     #   matplotlib
     #   pdfplumber
-pluggy==1.5.0
-    # via
-    #   -c demo-requirements.txt
-    #   pytest
-propcache==0.2.1
-    # via
-    #   -c demo-requirements.txt
-    #   yarl
 pycparser==2.22
     # via
     #   -c demo-requirements.txt
@@ -239,7 +143,7 @@ pydantic-settings==2.7.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-pyecma376-2==1.0.0
+pyecma376-2==1.0.1
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
@@ -250,23 +154,9 @@ pypdfium2==4.30.1
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
     #   pdfplumber
-pyrate-limiter==3.7.0
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
-pytest==8.3.4
-    # via
-    #   -c demo-requirements.txt
-    #   pytest-subtests
-    #   schemathesis
-pytest-subtests==0.14.1
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 python-dateutil==2.9.0.post0
     # via
     #   -c demo-requirements.txt
-    #   arrow
     #   basyx-python-sdk
     #   matplotlib
 python-dotenv==1.0.1
@@ -274,89 +164,33 @@ python-dotenv==1.0.1
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-pyyaml==6.0.2
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 rapidfuzz==3.11.0
     # via levenshtein
-referencing==0.35.1
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-    #   jsonschema-specifications
 requests==2.32.3
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-    #   schemathesis
-    #   starlette-testclient
-rfc3339-validator==0.1.4
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-rfc3987==1.3.8
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-rpds-py==0.22.3
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
-    #   referencing
-schemathesis==3.39.6
-    # via
-    #   -c demo-requirements.txt
-    #   basyx-python-sdk
 six==1.17.0
     # via
     #   -c demo-requirements.txt
-    #   junit-xml
     #   python-dateutil
-    #   rfc3339-validator
 sniffio==1.3.1
     # via
     #   -c demo-requirements.txt
     #   anyio
     #   openai
-sortedcontainers==2.4.0
-    # via
-    #   -c demo-requirements.txt
-    #   hypothesis
 soupsieve==2.6
     # via
     #   -c demo-requirements.txt
     #   beautifulsoup4
-starlette==0.41.3
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
-    #   starlette-testclient
-starlette-testclient==0.4.1
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 tabulate==0.9.0
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-tomli==2.2.1
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
-tomli-w==1.2.0
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
 tqdm==4.67.1
     # via
     #   -c demo-requirements.txt
     #   openai
-types-python-dateutil==2.9.0.20241206
-    # via
-    #   -c demo-requirements.txt
-    #   arrow
-    #   basyx-python-sdk
 typing-extensions==4.12.2
     # via
     #   -c demo-requirements.txt
@@ -364,29 +198,16 @@ typing-extensions==4.12.2
     #   openai
     #   pydantic
     #   pydantic-core
-uri-template==1.3.0
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
 urllib3==2.3.0
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
     #   requests
-webcolors==24.11.1
-    # via
-    #   -c demo-requirements.txt
-    #   jsonschema
 werkzeug==3.1.3
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
-    #   schemathesis
 xlrd==2.0.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-yarl==1.18.3
-    # via
-    #   -c demo-requirements.txt
-    #   schemathesis
