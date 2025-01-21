@@ -2,11 +2,12 @@
 
 from .class_definition import ClassDefinition
 from .property import Property
-from .property_definition import PropertyDefinition, SimplePropertyDataType
+from .property_definition import PropertyDefinition, SimplePropertyDataType, ValueDefinitionKeyType
 
 __all__ = [
-    "PropertyDefinition",
     "ClassDefinition",
     "Property",
+    "PropertyDefinition",
     "SimplePropertyDataType",
+    "ValueDefinitionKeyType",
 ]

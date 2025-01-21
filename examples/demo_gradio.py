@@ -4,16 +4,17 @@ from logging.handlers import RotatingFileHandler
 import json
 import tempfile
 from datetime import datetime
+from typing import Literal
 
 import gradio as gr
 from gradio_pdf import PDF
 from dotenv import load_dotenv
-from openai import OpenAI, AzureOpenAI
+from openai import OpenAI, OpenAIError, AzureOpenAI
 import pandas as pd
 
 from pdf2aas.model import PropertyDefinition, Property
 from pdf2aas.dictionary import Dictionary, CDD, ECLASS, ETIM
-from pdf2aas.preprocessor import PDFium, Text
+import pdf2aas.preprocessor as preprocessor
 from pdf2aas.extractor import PropertyLLM, PropertyLLMSearch, CustomLLMClientHTTP
 from pdf2aas.generator import AASSubmodelTechnicalData, AASTemplate
 
@@ -36,7 +37,7 @@ def get_class_choices(dictionary: Dictionary):
     if isinstance(dictionary, ECLASS):
         return [(f"{eclass.id} {eclass.name}", eclass.id) for eclass in dictionary.classes.values() if not eclass.id.endswith('00')]
     elif isinstance(dictionary, ETIM):
-        return [(f"{etim.id.split('/')[0]} {etim.name}", etim.id) for etim in dictionary.classes.values()]
+        return [(f"{etim.id.split('/')[-1]} {etim.name}", etim.id) for etim in dictionary.classes.values()]
     return [(f"{class_.id} {class_.name}", class_.id) for class_ in dictionary.classes.values()]
 
 def change_dictionary_type(dictionary_type):
@@ -44,6 +45,7 @@ def change_dictionary_type(dictionary_type):
         yield (gr.update(),
                 gr.update(visible=True),
                 gr.update(visible=True),
+                gr.update(visible=False),
                 gr.update(visible=False)
             )
         if dictionary_type == "ECLASS":
@@ -57,11 +59,13 @@ def change_dictionary_type(dictionary_type):
             gr.update(choices=get_class_choices(dictionary), value=None),
             gr.update(choices=dictionary.supported_releases, value=dictionary.release),
             gr.update(value=None),
+            gr.update(value=None),
         )
     else:
         yield (None,
             gr.update(visible=False, value=None),
             gr.update(visible=False, value=None),
+            gr.update(visible=dictionary_type == "AAS", value=None),
             gr.update(visible=dictionary_type == "AAS", value=None)
         )
 
@@ -120,7 +124,7 @@ def get_class_property_definitions(
         {
             'ID': definition.id,
             'Type': definition.type,
-            'Name': definition.name.get('en'),
+            'Name': definition.get_name('en'),
         }
         for definition in definitions
     ])
@@ -131,7 +135,7 @@ def get_class_property_definitions(
             gr.update(visible=True, value=property_details_default_str)
     )
 
-def get_aas_template_properties(aas_template_upload):
+def get_aas_template_properties(aas_template_upload, aas_template_filter):
     if aas_template_upload is None:
         return (
             None,
@@ -139,7 +143,19 @@ def get_aas_template_properties(aas_template_upload):
             gr.update(visible=False)
         )
 
-    aas_template = AASTemplate(aas_template_upload)
+    submodel_element_filter = None
+    if aas_template_filter:
+        def filter_property_path(element):
+            id_ = AASTemplate._create_id_from_path(element)
+            if any(s in id_ for s in aas_template_filter.split(',')):
+                return True
+            return False
+        submodel_element_filter = filter_property_path
+
+    aas_template = AASTemplate(
+        aasx_path=aas_template_upload,
+        submodel_element_filter=submodel_element_filter,
+    )
     properties = aas_template.get_properties()
     if len(properties) == 0:
         gr.Warning("No properties found in aasx template.")
@@ -169,16 +185,10 @@ def get_aas_template_properties(aas_template_upload):
     )
 
 def select_property_info(dictionary_type: str, dictionary: Dictionary | None, aas_template: AASTemplate | None, evt: gr.SelectData):
-    if dictionary is None and aas_template is None:
-        return None
-
-    #FIXME Currently this will get the wrong row, when the user has sorted the dataframe: https://github.com/gradio-app/gradio/pull/9128
-    #Therefore, we only accept selection of the first row
-    if evt.index[1] != 0:
-        return property_details_default_str
-
     if dictionary_type == "AAS":
-        property_ = aas_template.get_property(evt.value)
+        if aas_template is None:
+            return None
+        property_ = aas_template.get_property(evt.row_value[0])
         if property_ is None:
             return property_details_default_str
         property_info = \
@@ -204,10 +214,12 @@ f"""
 * Values:{"".join(["\n  * " +
         f"{v.get('value')} ({v.get('id')})"
         if isinstance(v, dict) else str(v)
-        for v in property_.definition.values])}
+        for v in definition.values])}
 """
     else:
-        definition = dictionary.get_property(evt.value)
+        if dictionary is None:
+            return None
+        definition = dictionary.get_property(evt.row_value[0])
         if definition is None:
             return property_details_default_str
     return \
@@ -248,17 +260,27 @@ def change_client(
     if len(endpoint.strip()) == 0:
         endpoint = None
     if endpoint_type == "openai":
-        return OpenAI(
-            api_key=get_from_var_or_env(api_key, ['OPENAI_API_KEY']),
-            base_url=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL'])
-        )
+        try:
+            client = OpenAI(
+                api_key=get_from_var_or_env(api_key, ['OPENAI_API_KEY']),
+                base_url=get_from_var_or_env(endpoint, ['OPENAI_BASE_URL'])
+            )
+        except OpenAIError as error:
+            gr.Error(f"Couldn't create OpenAI client: {error}")
+            return None
+        return client
     elif endpoint_type == "azure":
-        return AzureOpenAI(
-            api_key=get_from_var_or_env(api_key, ['AZURE_OPENAI_API_KEY','OPENAI_API_KEY']),
-            azure_endpoint=get_from_var_or_env(endpoint, ['AZURE_ENDPOINT']),
-            azure_deployment=get_from_var_or_env(azure_deployment, ['AZURE_DEPLOYMENT']),
-            api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
-        )
+        try:
+            client = AzureOpenAI(
+                api_key=get_from_var_or_env(api_key, ['AZURE_OPENAI_API_KEY','OPENAI_API_KEY']),
+                azure_endpoint=get_from_var_or_env(endpoint, ['AZURE_ENDPOINT']),
+                azure_deployment=get_from_var_or_env(azure_deployment, ['AZURE_DEPLOYMENT']),
+                api_version=get_from_var_or_env(azure_api_version, ['AZURE_API_VERSION'])
+            )
+        except (OpenAIError, ValueError) as error:
+            gr.Error(f"Couldn't create AzureOpenAI client: {error}")
+            return None
+        return client
     elif endpoint_type == "custom":
         headers_json = None
         try:
@@ -297,7 +319,7 @@ def mark_extracted_references(datasheet:str | None, properties: list[Property]):
         if property_.definition is None:
             name = property_.label
         else:
-            name = f"{property_.definition_name} ({property_.definition_id.split('/')[-1]})"
+            name = f"{property_.definition_name} ({property_.definition.id.split('/')[-1]})"
         entities.append({
             'entity': f"{name}: {property_.value}{unit}",
             'start': start,
@@ -323,17 +345,41 @@ def properties_to_dataframe(properties: list[Property], aas_template : AASTempla
         })
     return pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
 
-def change_datasheet(datasheet):
+def preprocess_datasheet(datasheet, preprocessor_type, tempdir):
     pdf_preview = gr.update(visible=False, value=None)
     if datasheet is None:
         return pdf_preview, None
     
     if datasheet.lower().endswith(".pdf"):
-        preprocessor = PDFium()
         pdf_preview = gr.update(visible=True, value=datasheet)
+
+        pre = None
+        if preprocessor_type == "text":
+            gr.Warning("Text preprocessor not suitable for PDFs. Falling back to PDFium.")
+        elif preprocessor_type == "pdfplumber":
+            pre = preprocessor.PDFPlumber()
+        elif preprocessor_type.startswith("pdfplumber_table"):
+            pre = preprocessor.PDFPlumberTable(output_format=preprocessor_type.split("_")[-1])
+        elif preprocessor_type.startswith("pdf2htmlEx"):
+            if preprocessor.PDF2HTMLEX.is_installed():
+                pre = preprocessor.PDF2HTMLEX(
+                    reduction_level=getattr(
+                        preprocessor.ReductionLevel,
+                        preprocessor_type.split("_")[-1].upper(),
+                        preprocessor.ReductionLevel.STRUCTURE
+                    ),
+                    temp_dir = tempdir.name
+                )
+            else:
+                gr.Warning("PDF2HTMLEX not installed in system. Falling back to PDFium.")
+        if pre is None:
+            pre = preprocessor.PDFium()
     else:
-        preprocessor = Text(encoding="utf-8")
-    preprocessed_datasheet = preprocessor.convert(datasheet)
+        if preprocessor_type not in ["auto", "text"]:
+            gr.Warning(f"Preprocessor '{preprocessor_type}' not suitable for '{datasheet.split('.')[-1]}' files. Falling back to Text preprocessor.")
+        pre = preprocessor.Text(encoding="utf-8")
+
+    preprocessed_datasheet = pre.convert(datasheet)
     if preprocessed_datasheet is None:
         gr.Warning("Error while preprocessing datasheet.")
         return pdf_preview, None
@@ -341,16 +387,16 @@ def change_datasheet(datasheet):
 
 def extract(
         datasheet: str | None,
-        class_id: str | None,
+        class_id: str,
         dictionary: Dictionary | None,
         aas_template: AASTemplate | None,
-        client: OpenAI | AzureOpenAI | CustomLLMClientHTTP,
+        client: OpenAI | AzureOpenAI | CustomLLMClientHTTP | None,
         prompt_hint: str,
         model: str,
         batch_size: int,
         temperature: float,
         max_tokens: int,
-        use_in_prompt: list[str],
+        use_in_prompt: list[Literal["definition", "unit", "values", "datatype"]],
         extract_general_information: bool,
         max_definition_chars: int,
         max_values_length: int,
@@ -358,7 +404,12 @@ def extract(
 
     if datasheet is None or len (datasheet) == 0:
         gr.Warning("Preprocessed datasheet is none or empty.")
-        return None, None, None, None, gr.update(interactive=False)
+        yield None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+        return
+    if client is None:
+        gr.Warning("No or wrong client configured. Please update settings.")
+        yield None, properties_to_dataframe([]), None, None, gr.update(interactive=False)
+        return
 
     if dictionary is not None:
         definitions = dictionary.get_class_properties(class_id)
@@ -369,6 +420,8 @@ def extract(
 
     if extract_general_information and aas_template is None:
         for property_ in AASSubmodelTechnicalData().general_information.value:
+            if property_.semantic_id is None:
+                continue
             if any(
                 ECLASS.check_property_irdi(d.id)
                 and d.id[10:16] == property_.semantic_id.key[0].value[10:16]
@@ -397,14 +450,14 @@ def extract(
             property_keys_in_prompt=use_in_prompt,
         )
         gr.Info(f"Searching for {len(definitions)} properties.", duration=3)
+        extractor.max_values_length = max_values_length
+        extractor.max_definition_chars = max_definition_chars
         
     extractor.temperature = temperature
     extractor.max_tokens = max_tokens if max_tokens > 0 else None
-    extractor.max_values_length = max_values_length
-    extractor.max_definition_chars = max_definition_chars
 
-    raw_results=[]
-    raw_prompts=[]
+    raw_results: list = []
+    raw_prompts: list = []
     if batch_size <= 0:
         properties = extractor.extract(
             datasheet,
@@ -415,9 +468,12 @@ def extract(
         )
     else:
         properties = []
-        yield None, None, None, None, gr.update(interactive=True)
+        yield None, properties_to_dataframe([]), None, None, gr.update(interactive=True)
         for chunk_pos in range(0, len(definitions), batch_size):
-            property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
+            if batch_size == 1:
+                property_definition_batch: list[PropertyDefinition] | PropertyDefinition = definitions[chunk_pos]
+            else:
+                property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
             extracted = extractor.extract(
                     datasheet,
                     property_definition_batch,
@@ -428,6 +484,10 @@ def extract(
             yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update()
     gr.Info('Extraction completed.', duration=3)
     yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update(interactive=False)
+
+def cancel_extract():
+    gr.Info("Canceled extraction.")
+    return gr.update(interactive=False)
 
 def create_chat_history(raw_prompts, raw_results, client):
     if raw_prompts is None or len(raw_prompts) == 0:
@@ -441,6 +501,8 @@ def create_chat_history(raw_prompts, raw_results, client):
                 if content is None:
                     continue
                 answer = {'role': 'assistant', 'content': content}
+            elif isinstance(raw_results[idx], str):
+                answer = {'role': 'assistant', 'content': raw_results[idx]}
             else:
                 try:
                     answer = raw_results[idx]['choices'][0]['message']
@@ -518,7 +580,7 @@ def init_tempdir():
     logger.info(f"Created tempdir: {tempdir.name}")
     return tempdir
 
-def main(debug=False, init_settings_path=None, share=False, server_port=None):
+def main(debug=False, init_settings_path=None, server_name=None, server_port=None):
 
     with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:
         dictionary = gr.State(value=None)
@@ -556,34 +618,39 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         scale=2,
                         height=80
                     )
+                aas_template_filter = gr.Textbox(
+                    label="Filter AAS template properties",
+                    info="Enter part of id short path (ID) to select property definitions for extraction. Multi selection separated by comma.",
+                    visible=False,
+                )
                 class_info = gr.Markdown(
                     value="# Class Info",
                     show_copy_button=True,
                     visible=False,
                 )
-                with gr.Row():
-                    property_defintions = gr.DataFrame(
-                        label="Property Definitions",
-                        show_label=False,
-                        headers=['ID', 'Type', 'Name'],
-                        interactive=False,
-                        scale=3,
-                        visible=False,
-                    )
-                    property_info = gr.Markdown(
-                        show_copy_button=True,
-                        visible=False,
-                    )
+                property_defintions = gr.DataFrame(
+                    label="Property Definitions",
+                    show_label=False,
+                    headers=['ID', 'Type', 'Name'],
+                    interactive=False,
+                    scale=3,
+                    visible=False,
+                    max_height=500
+                )
+                property_info = gr.Markdown(
+                    show_copy_button=True,
+                    visible=False,
+                )
 
         with gr.Tab("Extract"):
-            with gr.Column():
-                with gr.Row():
-                    datasheet_upload = gr.File(
-                        label="Upload Datasheet",
-                        scale=2,
-                        file_count='single',
-                        file_types=['.pdf', 'text'],
-                    )
+            with gr.Row():
+                datasheet_upload = gr.File(
+                    label="Upload Datasheet",
+                    scale=2,
+                    file_count='single',
+                    file_types=['.pdf', 'text'],
+                )
+                with gr.Column():
                     extract_button = gr.Button(
                         "Extract Technical Data",
                         interactive=False,
@@ -594,27 +661,27 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         variant="stop",
                         interactive=False,
                     )
-                    results = gr.File(
-                        label="Download Results",
-                        scale=2,
-                    )
-                extracted_properties_df = gr.DataFrame(
-                    label="Extracted Values",
-                    headers=['ID', 'Name', 'Value', 'Unit', 'Reference'],
-                    value=properties_to_dataframe([]),
-                    interactive=False,
-                    wrap=True,
+                results = gr.File(
+                    label="Download Results",
+                    scale=2,
                 )
-                with gr.Accordion("Preprocessed Datasheet with References", open=False):
-                    with gr.Row():
-                        datasheet_text_highlighted = gr.HighlightedText(
-                            show_label=False,
-                            combine_adjacent=True,
-                        )
-                        datasheet_preview = PDF(
-                            label="Datasheet Preview",
-                            interactive=False,
-                        )
+            extracted_properties_df = gr.DataFrame(
+                label="Extracted Values",
+                headers=['ID', 'Name', 'Value', 'Unit', 'Reference'],
+                value=properties_to_dataframe([]),
+                interactive=False,
+                wrap=True,
+            )
+            with gr.Accordion("Preprocessed Datasheet with References", open=False):
+                with gr.Row():
+                    datasheet_text_highlighted = gr.HighlightedText(
+                        show_label=False,
+                        combine_adjacent=True,
+                    )
+                    datasheet_preview = PDF(
+                        label="Datasheet Preview",
+                        interactive=False,
+                    )
 
         with gr.Tab("Raw Results"):
             chat_history = gr.Chatbot(
@@ -639,6 +706,18 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                     minimum=0,
                     maximum=100,
                     step=1
+                )
+                preprocessor_type = gr.Dropdown(
+                    label="Preprocessor type",
+                    choices=[
+                        "auto", "pdfium",
+                        "text",
+                        "pdfplumber",
+                        "pdfplumber_table", "pdfplumber_table_tsv", "pdfplumber_table_github", "pdfplumber_table_html",
+                        "pdf2htmlEx", "pdf2htmlEx_pages", "pdf2htmlEx_divs", "pdf2htmlEx_text"
+                    ],
+                    value="auto",
+                    multiselect=False,
                 )
                 extract_general_information = gr.Checkbox(
                     label="Extract General Information",
@@ -665,7 +744,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
                         label="Endpoint Type",
                         choices=["openai", "azure", "custom"],
                         value="openai",
-                        allow_custom_value=True
+                        allow_custom_value=False
                     )
                     model = gr.Dropdown(
                         label="Model",
@@ -733,7 +812,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         dictionary_type.change(
             fn=change_dictionary_type,
             inputs=dictionary_type,
-            outputs=[dictionary, dictionary_class, dictionary_release, aas_template_upload],
+            outputs=[dictionary, dictionary_class, dictionary_release, aas_template_upload, aas_template_filter],
         )
         dictionary_release.change(
             fn=change_dictionary_release,
@@ -758,9 +837,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[property_info],
             show_progress='hidden'
         )
-        aas_template_upload.change(
+        gr.on(
+            triggers=[aas_template_upload.change, aas_template_filter.submit],
             fn=get_aas_template_properties,
-            inputs=[aas_template_upload],
+            inputs=[aas_template_upload, aas_template_filter],
             outputs=[aas_template, property_defintions, property_info],
         )
 
@@ -776,9 +856,10 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             outputs=[azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers]
         )
 
-        datasheet_upload.change(
-            fn=change_datasheet,
-            inputs=datasheet_upload,
+        gr.on(
+            triggers=[datasheet_upload.change, preprocessor_type.change],
+            fn=preprocess_datasheet,
+            inputs=[datasheet_upload, preprocessor_type, tempdir],
             outputs=[datasheet_preview, datasheet_text]
         )
 
@@ -793,7 +874,11 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             inputs=[datasheet_text, dictionary_class, dictionary, aas_template, client, prompt_hint, model, batch_size, temperature, max_tokens, use_in_prompt, extract_general_information, max_definition_chars, max_values_length],
             outputs=[extracted_properties, extracted_properties_df, raw_prompts, raw_results, cancel_extract_button],
         )
-        cancel_extract_button.click(fn=lambda : gr.Info("Cancel after next response from LLM."), cancels=[extraction_started])
+        cancel_extract_button.click(
+            fn=cancel_extract,
+            outputs=cancel_extract_button,
+            cancels=[extraction_started]
+        )
         extraction_started.then(
             fn=create_download_results,
             inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class, aas_template],
@@ -814,6 +899,7 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
         settings_list = [
             dictionary_type,
             dictionary_release,
+            preprocessor_type,
             prompt_hint,
             endpoint_type, model,
             endpoint, api_key,
@@ -861,28 +947,32 @@ def main(debug=False, init_settings_path=None, share=False, server_port=None):
             )
         except FileNotFoundError:
             logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
-        except gr.exceptions.Error as error:
+        except gr.Error as error:
             logger.warning(f"Initial settings file not loaded: {error}")
         gr.on(
             triggers=[demo.load, settings_save.click, settings_load.upload],
             fn=save_settings,
             inputs={tempdir} | set(settings_list),
             outputs=settings_file
+        ).then(
+            fn=change_client,
+            inputs=[endpoint_type, endpoint, api_key, azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers],
+            outputs=client
         )
     
     demo.queue(max_size=10)
-    demo.launch(quiet=not debug, share=share, server_port=server_port)
+    demo.launch(quiet=not debug, server_name=server_name, server_port=server_port)
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Small webapp for toolchain pdfium + eclass / etim / cdd --> LLM --> xlsx / json / aasx')
     parser.add_argument('--settings', type=str, help="Load settings from file. Defaults to settings.json", default='settings.json')
     parser.add_argument('--port', type=str, help="Change server port (default 7860 if free)", default=None)
-    parser.add_argument('--share', action="store_true", help="Allow to use webserver outside localhost, aka. public.")
+    parser.add_argument('--host', type=str, help="Change server name/ip to listen to, e.g. 0.0.0.0 for all interfaces.", default=None)
     parser.add_argument('--debug', action="store_true", help="Print debug information.")
     args = parser.parse_args()
 
-    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=1e6, backupCount=0, encoding="utf-8")
+    file_handler = RotatingFileHandler('pdf-to-aas.log', maxBytes=int(1e6), backupCount=0, encoding="utf-8")
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s"))
     if args.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -892,4 +982,4 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.addHandler(file_handler)
 
-    main(args.debug, args.settings, args.share, args.port)
+    main(args.debug, args.settings, args.host, args.port)

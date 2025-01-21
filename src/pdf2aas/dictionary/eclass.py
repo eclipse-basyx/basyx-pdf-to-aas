@@ -11,13 +11,15 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import quote
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
+
+from pdf2aas.model import SimplePropertyDataType, ValueDefinitionKeyType
 
 from .core import ClassDefinition, Dictionary, PropertyDefinition
 
 logger = logging.getLogger(__name__)
 
-eclass_datatype_to_type = {
+eclass_datatype_to_type: dict[str | None, SimplePropertyDataType] = {
     "BOOLEAN": "bool",
     "INTEGER_COUNT": "numeric",
     "INTEGER_MEASURE": "numeric",
@@ -52,8 +54,11 @@ def _extract_values_from_eclass_property_soup(soup: BeautifulSoup) -> list[str]:
 def _split_keywords(li_keywords: dict) -> list[str]:
     if li_keywords is None:
         return []
-    keywords = li_keywords.get("title").strip().split(":")[1].split()
-    keyphrases = []
+    keyword_tuple = li_keywords.get("title", "").strip().split(":")
+    if len(keyword_tuple) == 0:
+        return []
+    keywords = keyword_tuple[1].split()
+    keyphrases: list[str] = []
     for keyword in keywords:
         if len(keyphrases) == 0 or keyword[0].isupper():
             keyphrases.append(keyword)
@@ -93,7 +98,7 @@ class ECLASS(Dictionary):
 
     class_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D={class_id}&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
     property_search_pattern: str = "https://eclass.eu/en/eclass-standard/search-content/show?tx_eclasssearch_ecsearch%5Bcc2prdat%5D={property_id}&tx_eclasssearch_ecsearch%5Bdischarge%5D=0&tx_eclasssearch_ecsearch%5Bid%5D=-1&tx_eclasssearch_ecsearch%5Blanguage%5D={language}&tx_eclasssearch_ecsearch%5Bversion%5D={release}"
-    releases: ClassVar[dict[dict[str, ClassDefinition]]] = {}
+    releases: ClassVar[dict[str, dict[str, ClassDefinition]]] = {}
     properties: ClassVar[dict[str, PropertyDefinition]] = {}
     properties_download_failed: ClassVar[dict[str, set[str]]] = {}
     supported_releases: ClassVar[list[str]] = [
@@ -151,23 +156,25 @@ class ECLASS(Dictionary):
                                       associated with the specified class ID.
 
         """
-        class_id = self.parse_class_id(class_id)
-        if class_id is None:
+        parsed_class_id = self.parse_class_id(class_id)
+        if parsed_class_id is None:
             return []
-        eclass_class = self.classes.get(class_id)
+        eclass_class = self.classes.get(parsed_class_id)
         if eclass_class is None:
             logger.info(
                 "Download class and property definitions for %s in release %s",
-                class_id,
+                parsed_class_id,
                 self.release,
             )
-            html_content = self._download_html(self.get_class_url(class_id))
+            html_content = self._download_html(self.get_class_url(parsed_class_id))
             if html_content is None:
                 return []
             eclass_class = self._parse_html_eclass_class(html_content)
+            if eclass_class is None:
+                return []
         return eclass_class.properties
 
-    def get_property(self, property_id: str) -> PropertyDefinition:
+    def get_property(self, property_id: str) -> PropertyDefinition | None:
         """Retrieve a single property definition from the dictionary.
 
         It is returned directly, if the property definition is already stored in
@@ -195,7 +202,7 @@ class ECLASS(Dictionary):
             return None
         property_ = self.properties.get(property_id)
         if property_ is None:
-            if property_id in self.properties_download_failed.get(self.release):
+            if property_id in self.properties_download_failed.get(self.release, {}):
                 logger.debug(
                     "Property %s definition download failed already. Skipping download.",
                     property_id,
@@ -222,12 +229,15 @@ class ECLASS(Dictionary):
             self.properties[property_id] = property_
         return property_
 
-    def _parse_html_eclass_class(self, html_content: str) -> ClassDefinition:
+    def _parse_html_eclass_class(self, html_content: str) -> ClassDefinition | None:
         soup = BeautifulSoup(html_content, "html.parser")
         # TODO: get IRDI instead of id, e.g.: 0173-1#01-AGZ376#020,
         # which is = data-cc in span of value lists
         class_hierarchy = soup.find("ul", attrs={"class": "tree-simple-list"})
+        if not isinstance(class_hierarchy, Tag):
+            return None
         li_elements = class_hierarchy.find_all("li", attrs={"id": True})
+        eclass_class = None
         for li in li_elements:
             identifier = li["id"].replace("node_", "")
             eclass_class = self.classes.get(identifier)
@@ -245,6 +255,8 @@ class ECLASS(Dictionary):
                 self.classes[identifier] = eclass_class
             else:
                 logger.debug("Found class %s: %s", identifier, eclass_class.name)
+        if eclass_class is None:
+            return None
         eclass_class.properties = self._parse_html_eclass_properties(soup)
         return eclass_class
 
@@ -260,39 +272,65 @@ class ECLASS(Dictionary):
                 property_ = self.properties.get(id_)
                 if property_ is None:
                     logger.debug("Add new property %s: %s", id_, data["preferred_name"])
-                    property_ = self._parse_html_eclass_property(span, data, id_)
+                    property_ = self._parse_html_eclass_property_from_class(span, data, id_)
                     self.properties[id_] = property_
                 else:
                     logger.debug("Add existing property %s: %s", id_, property_.name)
                 properties.append(property_)
         return properties
 
+    def _parse_html_eclass_property_from_class(
+        self,
+        span: Tag,
+        data: dict,
+        id_: str,
+    ) -> PropertyDefinition:
+        property_ = PropertyDefinition(
+            id_,
+            {data["language"]: data["preferred_name"]},
+            eclass_datatype_to_type.get(data["data_type"], "string"),
+            {data["language"]: data["definition"]},
+        )
+
+        # Check for physical unit
+        if (
+            ("unit_ref" in data)
+            and ("short_name" in data["unit_ref"])
+            and data["unit_ref"]["short_name"] != ""
+        ):
+            property_.unit = data["unit_ref"]["short_name"]
+
+        # Check for value list
+        value_list_span = span.find_next_sibling("span")
+        if value_list_span and isinstance(value_list_span, Tag):
+            logger.debug("Download value list for %s", property_.name[data["language"]])
+            self._parse_html_eclass_valuelist(property_, value_list_span)
+        return property_
+
     def _parse_html_eclass_property(
         self,
         html_content: str,
         property_id: str,
-    ) -> PropertyDefinition:
+    ) -> PropertyDefinition | None:
         soup = BeautifulSoup(html_content, "html.parser")
 
         if not soup.find(lambda tag: tag.name == "th" and tag.text.strip() == "Preferred name"):
             logger.warning("Couldn't parse 'preferred name' for %s", property_id)
             return None
+        preferred_name = _extract_attribute_from_eclass_property_soup(soup, "Preferred name")
+        definition = _extract_attribute_from_eclass_property_soup(soup, "Definition")
         return PropertyDefinition(
             id=property_id,
-            name={
-                self.language: _extract_attribute_from_eclass_property_soup(soup, "Preferred name"),
-            },
+            name={self.language: preferred_name} if preferred_name else {},
             type=eclass_datatype_to_type.get(
                 _extract_attribute_from_eclass_property_soup(soup, "Data type"),
                 "string",
             ),
-            definition={
-                self.language: _extract_attribute_from_eclass_property_soup(soup, "Definition"),
-            },
+            definition={self.language: definition} if definition else {},
             values=_extract_values_from_eclass_property_soup(soup),
         )
 
-    def get_class_url(self, class_id: str) -> str | None:
+    def get_class_url(self, class_id: str) -> str:
         """Return the class URL for ECLASS content search using the class_search_pattern."""
         return self.class_search_pattern.format(
             class_id=class_id,
@@ -300,7 +338,7 @@ class ECLASS(Dictionary):
             language=self.language_idx.get(self.language, "1"),
         )
 
-    def get_property_url(self, property_id: str) -> str | None:
+    def get_property_url(self, property_id: str) -> str:
         """Return the property URL for ECLASS content search using the property_search_pattern."""
         return self.property_search_pattern.format(
             property_id=quote(property_id),
@@ -347,7 +385,7 @@ class ECLASS(Dictionary):
             return None
         return class_id
 
-    def _load_from_release_csv_zip(self, filepath_str: str) -> None:  # noqa: C901, PLR0912, PLR0915
+    def _load_from_release_csv_zip(self, filepath_str: str | Path) -> None:  # noqa: C901, PLR0912, PLR0915
         logger.info("Load ECLASS dictionary from CSV release zip: %s", filepath_str)
 
         filepath = Path(filepath_str)
@@ -382,17 +420,17 @@ class ECLASS(Dictionary):
             next(reader, None)
             for row in reader:
                 irdi = row[20]  # IrdiPR
-                property_ = PropertyDefinition(
+                property_: PropertyDefinition | None = PropertyDefinition(
                     id=irdi,
                     name={row[14]: row[6]},  # ISOLanguageCode: PreferredName
                     type=eclass_datatype_to_type.get(row[19], "string"),  # DataType
                     definition={row[14]: row[8]},  # ISOLanguageCode: Definition
                     unit=units.get(row[13], ""),  # IrdiUN
                 )
-                self.properties[irdi] = property_
+                self.properties[irdi] = property_  # type: ignore[assignment]
 
         values = {}
-        with open(zip_dir / zip_dir, csv_filename.format("VA"), encoding="utf-8") as file:
+        with open(zip_dir / csv_filename.format("VA"), encoding="utf-8") as file:
             # Supplier;IdVA;Identifier;VersionNumber;RevisionNumber;VersionDate;
             # PreferredName;ShortName;Definition;Reference;ISOLanguageCode;
             # ISOCountryCode;IrdiVA;DataType
@@ -413,7 +451,7 @@ class ECLASS(Dictionary):
             reader = csv.reader(file, delimiter=";")
             next(reader, None)
             current_property_id = None
-            property_values = []
+            property_values: list = []
 
             for row in reader:
                 property_id = row[1]
@@ -434,12 +472,12 @@ class ECLASS(Dictionary):
                     property_values.append(value)
 
             # Update the last property
-            if property_values:
+            if property_values and current_property_id is not None:
                 property_ = self.properties.get(current_property_id)
                 if property_:
                     property_.values = property_values
 
-        class_property_map = defaultdict(list)
+        class_property_map: dict[str, list] = defaultdict(list)
         with open(zip_dir / csv_filename.format("CC_PR"), encoding="utf-8") as file:
             # SupplierIdCC;IdCC;ClassCodedName;SupplierIdPR;IdPR;IrdiCC;IrdiPR;
             # PreferredNameBlockAspect
@@ -498,7 +536,13 @@ class ECLASS(Dictionary):
                     return True
         return super().load_from_file(filepath)
 
-    def _parse_html_eclass_valuelist(self, property_: PropertyDefinition, span: dict) -> None:
+    def _parse_html_eclass_valuelist(
+        self,
+        property_: PropertyDefinition,
+        span: Tag,
+    ) -> None:
+        if not isinstance(span["data-cc"], str) or not isinstance(span["data-json"], str):
+            return
         valuelist_url = (
             "https://eclass.eu/?discharge=basic&cc="
             + span["data-cc"].replace("#", "%")
@@ -507,6 +551,8 @@ class ECLASS(Dictionary):
         )
         # https://eclass.eu/?discharge=basic&cc=0173-1%2301-AGZ376%23020&data=%7B%22identifier%22%3A%22BAD853%22%2C%22preferred_name%22%3A%22cascadable%22%2C%22short_name%22%3A%22%22%2C%22definition%22%3A%22whether%20a%20base%20device%20(host)%20can%20have%20a%20subsidiary%20device%20(guest)%20connected%20to%20it%20by%20means%20of%20a%20cable%22%2C%22note%22%3A%22%22%2C%22remark%22%3A%22%22%2C%22formular_symbol%22%3A%22%22%2C%22irdiun%22%3A%22%22%2C%22attribute_type%22%3A%22INDIRECT%22%2C%22definition_class%22%3A%220173-1%2301-RAA001%23001%22%2C%22data_type%22%3A%22BOOLEAN%22%2C%22IRDI_PR%22%3A%220173-1%2302-BAD853%23008%22%2C%22language%22%3A%22en%22%2C%22version%22%3A%2213_0%22%2C%22values%22%3A%5B%7B%22IRDI_VA%22%3A%220173-1%2307-CAA017%23003%22%7D%2C%7B%22IRDI_VA%22%3A%220173-1%2307-CAA016%23001%22%7D%5D%7D
         valuelist = self._download_html(valuelist_url)
+        if valuelist is None:
+            return
         valuelist_soup = BeautifulSoup(valuelist, "html.parser")
         for valuelist_span in valuelist_soup.find_all("span", attrs={"data-props": True}):
             try:
@@ -517,32 +563,9 @@ class ECLASS(Dictionary):
                     valuelist_span["data-props"],
                 )
                 continue
-            value = {"value": valuelist_data["preferred_name"]}
+            value: dict[ValueDefinitionKeyType, str] = {"value": valuelist_data["preferred_name"]}
             if len(valuelist_data["definition"].strip()) > 0:
                 value["definition"] = valuelist_data["definition"]
             # add valuelist_data["short_name"]
             # add valuelist_data["data_type"]
-            property_.values.append(value)
-
-    def _parse_html_eclass_property(self, span: dict, data: dict, id_: str) -> PropertyDefinition:
-        property_ = PropertyDefinition(
-            id_,
-            {data["language"]: data["preferred_name"]},
-            eclass_datatype_to_type.get(data["data_type"], "string"),
-            {data["language"]: data["definition"]},
-        )
-
-        # Check for physical unit
-        if (
-            ("unit_ref" in data)
-            and ("short_name" in data["unit_ref"])
-            and data["unit_ref"]["short_name"] != ""
-        ):
-            property_.unit = data["unit_ref"]["short_name"]
-
-        # Check for value list
-        value_list_span = span.find_next_sibling("span")
-        if value_list_span:
-            logger.debug("Download value list for %s", property_.name[data["language"]])
-            self._parse_html_eclass_valuelist(property_, value_list_span)
-        return property_
+            property_.values.append(value)  # type: ignore[arg-type]

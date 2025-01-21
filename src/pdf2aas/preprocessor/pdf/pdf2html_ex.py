@@ -59,7 +59,7 @@ class PDF2HTMLEX(Preprocessor):
         self.temp_dir = temp_dir
 
     # TODO: add possibility to specify pages
-    def convert(self, filepath: str) -> list[str] | str | None:
+    def convert(self, filepath: str) -> list[str] | str:
         """Convert a PDF file at the given filepath to HTML text.
 
         Args:
@@ -117,7 +117,7 @@ class PDF2HTMLEX(Preprocessor):
             )
         except FileNotFoundError:
             logger.exception("pdf2htmlEX executable not found in path.")
-            return None
+            return ""
 
         if pdf2html.stdout:
             logger.debug("pdf2htmlEX stdout:\n%s", pdf2html.stdout)
@@ -128,11 +128,15 @@ class PDF2HTMLEX(Preprocessor):
             logger.error("Call to pdf2htmlEX failed with returncode: %s", pdf2html.returncode)
             logger.debug("pdf2htmlEX arguments: %s", pdf2html.args)
             # TODO: raise custom PDF2HTML error instead
-            return None
+            return ""
 
         return self.reduce_datasheet(Path(dest_dir, filename + ".html").read_text())
 
-    def reduce_datasheet(self, datasheet: str, level: ReductionLevel = None) -> str:
+    def reduce_datasheet(  # noqa: C901
+        self,
+        datasheet: str,
+        level: ReductionLevel | None = None,
+    ) -> str | list[str]:
         """Reduce the HTML content of a datasheet according to the specified reduction level.
 
         Args:
@@ -149,33 +153,44 @@ class PDF2HTMLEX(Preprocessor):
         reduced_datasheet = datasheet
         if level >= ReductionLevel.BODY:
             logger.debug("Reducing datasheet to ReductionLevel.BODY")
-            reduced_datasheet = re.search(
+            reduced_datasheet_match = re.search(
                 r"<body>\n((?:.*\n)*.*)\n</body>",
                 reduced_datasheet,
-            ).group(1)
+            )
+            if reduced_datasheet_match is None:
+                return ""
+            reduced_datasheet = reduced_datasheet_match.group(1)
+
+        reduced_datasheet_list = []
         if level >= ReductionLevel.PAGES:
             logger.debug("Reducing datasheet to ReductionLevel.PAGES")
-            reduced_datasheet = re.findall(r'<div id="pf.*', reduced_datasheet)
+            reduced_datasheet_list = re.findall(r'<div id="pf.*', reduced_datasheet)
         if level >= ReductionLevel.DIVS:
             logger.debug("Reducing datasheet to ReductionLevel.DIVS")
-            for idx, page in enumerate(reduced_datasheet):
-                reduced_datasheet[idx] = re.sub(r"<span .*?>|</span>", "", page)
+            for idx, page in enumerate(reduced_datasheet_list):
+                reduced_datasheet_list[idx] = re.sub(r"<span .*?>|</span>", "", page)
         if level >= ReductionLevel.STRUCTURE:
             logger.debug("Reducing datasheet to ReductionLevel.STRUCTURE")
-            for idx, page in enumerate(reduced_datasheet):
-                reduced_datasheet[idx] = re.sub(r"<div.*?>", "<div>", page)
+            for idx, page in enumerate(reduced_datasheet_list):
+                reduced_datasheet_list[idx] = re.sub(r"<div.*?>", "<div>", page)
         if level >= ReductionLevel.TEXT:
             logger.debug("Reducing datasheet to ReductionLevel.TEXT")
-            for idx, page in enumerate(reduced_datasheet):
-                reduced_datasheet[idx] = re.sub(r"<div.*?>|</div>", "", page)
+            for idx, page in enumerate(reduced_datasheet_list):
+                reduced_datasheet_list[idx] = re.sub(r"<div.*?>|</div>", "", page)
+        result = reduced_datasheet_list if level >= ReductionLevel.PAGES else reduced_datasheet
         logger.info("Reduced datasheet to ReductionLevel %s", level.name)
-        logger.debug("reduced datasheet:\n%s", str(reduced_datasheet))
-        return reduced_datasheet
+        logger.debug("Reduced datasheet text:\n%s", str(result))
+        return result
 
     def clear_temp_dir(self) -> None:
         """Clear the temporary directory used for storing intermediate HTML files."""
-        if not Path.isdir(self.temp_dir):
+        if not Path(self.temp_dir).is_dir():
             return
 
         logger.info("Clearing temporary directory: %s", os.path.realpath(self.temp_dir))
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @staticmethod
+    def is_installed() -> bool:
+        """Check if pdf2htmlEX is on path."""
+        return shutil.which("pdf2htmlEX") is not None

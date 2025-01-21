@@ -12,11 +12,11 @@ class Generator:
 
     def __init__(self) -> None:
         """Initialize the Generator with an empty list of properties."""
-        self._properties: list[Property] = []
+        self._properties: list = []
 
     def reset(self) -> None:
         """Reset the list of properties to an empty list."""
-        self._properties: list[Property] = []
+        self._properties = []
 
     def add_properties(self, properties: list[Property]) -> None:
         """Add a list of properties to the generator."""

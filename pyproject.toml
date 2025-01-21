@@ -11,8 +11,9 @@ dependencies = [
   "requests",
   "python-dotenv",
   "pypdfium2",
-  "camelot-py[cv]",
-  "basyx-python-sdk@git+https://github.com/eclipse-basyx/basyx-python-sdk.git@47f5e613fb725f7cf627de1ebb1f4d8f9cd5cda9",
+  "pdfplumber",
+  "tabulate",
+  "basyx-python-sdk@git+https://github.com/eclipse-basyx/basyx-python-sdk.git@b178a8cc1e8bbe5076e935aa0359133a3f772b9e#subdirectory=sdk",
   "xlrd",
 ]
 name = "pdf2aas"
@@ -28,12 +29,21 @@ dev = [
   "pytest-cov",
   "pyinstaller",
   "ruff",
+  "mypy",
+  "types-beautifulsoup4",
+  "types-openpyxl",
+  "types-requests",
+  "types-tabulate",
 ]
 demo = [
-  "gradio==4.41.0",
-  "fastapi==0.112.4",
+  "gradio",
   "gradio_pdf",
   "pandas",
+  "openpyxl",
+]
+eval = [
+  "matplotlib",
+  "levenshtein",
   "openpyxl",
 ]
 
@@ -63,3 +73,8 @@ ignore = [
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 80
+
+[tool.mypy]
+files = [
+  "src/"
+]

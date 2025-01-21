@@ -1,8 +1,10 @@
+import pytest
 from pdf2aas.model import PropertyDefinition
 from pdf2aas.dictionary import CDD, ECLASS
 
 class TestCDD:
     @staticmethod
+    @pytest.mark.xfail(reason="IEC CDD might not be available from CI environment.")
     def test_get_class_properties():
         d = CDD(release="V2.0018.0002")
         class_id = "0112/2///62683#ACC501#002"
@@ -50,6 +52,7 @@ class TestCDD:
 
 class TestECLASS:
     @staticmethod
+    @pytest.mark.xfail(reason="ECLASS Website might not be available from CI environment.")
     def test_get_class_properties():
         d = ECLASS(release="14.0")
         properties = d.get_class_properties("27274001")
