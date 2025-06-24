@@ -43,6 +43,6 @@ class Text(Preprocessor):
             with open(filepath, encoding=self.encoding, newline=self.newline) as file:
                 text = file.read()
         except (OSError, FileNotFoundError, PermissionError, IsADirectoryError):
-            logging.exception("Couldn't load file.")
+            logger.exception("Couldn't load file.")
             return None
         return text
