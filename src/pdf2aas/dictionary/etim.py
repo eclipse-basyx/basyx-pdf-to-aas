@@ -336,13 +336,15 @@ class ETIM(Dictionary):
         Searches in `self.tempdir` for "ETIM-<release>-...CSV....zip" file, if
         no filepath is given.
         """
-        if filepath is None and Path(self.temp_dir).exists():
-            for filename in os.listdir(self.temp_dir):
-                if re.match(f"{self.name}-{self.release}.*CSV.*\\.zip", filename, re.IGNORECASE):
+        temp_path = Path(self.temp_dir)
+        if filepath is None and temp_path.exists():
+            for filename in temp_path.iterdir():
+                if re.match(f"{self.name}-{self.release}.*CSV.*\\.zip",
+                            str(filename), re.IGNORECASE):
                     try:
-                        self._load_from_release_csv_zip(Path(self.temp_dir) / filename)
+                        self._load_from_release_csv_zip(temp_path / filename)
                     except OSError as e:
-                        logger.warning("Error while loading csv zip '%s': %s", filename, e)
+                        logger.warning("Error while loading csv zip '%s': %s", str(filename), e)
                     return True
         return super().load_from_file(filepath)
 
