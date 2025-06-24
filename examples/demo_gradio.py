@@ -950,7 +950,7 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
         except gr.Error as error:
             logger.warning(f"Initial settings file not loaded: {error}")
         gr.on(
-            triggers=[demo.load, settings_save.click, settings_load.upload],
+            triggers=[settings_save.click, settings_load.upload],
             fn=save_settings,
             inputs={tempdir} | set(settings_list),
             outputs=settings_file
