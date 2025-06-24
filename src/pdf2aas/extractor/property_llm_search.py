@@ -153,7 +153,7 @@ Represent ranges as json list of two values.
         if self.use_property_values and len(property_.values) > 0:
             property_values = property_.values_list
             if self.max_values_length > 0 and len(property_values) > self.max_values_length:
-                property_values = property_values[: self.max_values_length] + ["..."]
+                property_values = [*property_values[:self.max_values_length], "..."]
             prompt += f'The "{property_name}" can be one of these values: "{property_values}".\n'
 
         prompt += f'What is the "{property_name}" of the device?\n'
@@ -215,7 +215,7 @@ Represent ranges as json list of two values.
         if self.use_property_values and len(property_.values) > 0:
             property_values = property_.values_list
             if self.max_values_length > 0 and len(property_values) > self.max_values_length:
-                property_values = property_values[: self.max_values_length] + ["..."]
+                property_values = [*property_values[:self.max_values_length], "..."]
             row.append(str(property_values))
         return row
 
