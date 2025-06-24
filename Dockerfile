@@ -13,6 +13,8 @@ WORKDIR /app
 RUN apk add --no-cache libffi
 COPY --from=builder /install /usr/local
 COPY . /app/
+# Create temp/dict folder to inject dictionary releases via directory mapping
+RUN mkdir -p /app/temp/dict
 EXPOSE 7860
 
 # run the Gradio demo
