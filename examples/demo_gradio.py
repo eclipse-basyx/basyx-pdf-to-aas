@@ -314,7 +314,7 @@ def mark_extracted_references(datasheet:str | None, properties: list[Property]):
         if start == -1:
             start = datasheet.replace('\n',' ').find(reference.replace('\n',' '))
         if start == -1:
-            logger.info(f"Reference not found: {reference}")
+            logger.debug(f"Reference not found: {reference}")
             # TODO mark red in properties dataframe
             continue
         unit = f" [{property_.unit}]" if property_.unit else ''
