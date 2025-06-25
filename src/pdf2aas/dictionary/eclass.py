@@ -526,13 +526,13 @@ class ECLASS(Dictionary):
         """
         temp_path = Path(self.temp_dir)
         if filepath is None and temp_path.exists():
-            for filename in temp_path.iterdir():
+            for file in temp_path.iterdir():
                 if re.match(f"{self.name}-{self.release}.*CSV.*\\.zip",
-                            str(filename), re.IGNORECASE):
+                            file.name, re.IGNORECASE):
                     try:
-                        self._load_from_release_csv_zip(temp_path / filename)
+                        self._load_from_release_csv_zip(str(file))
                     except OSError as e:
-                        logger.warning("Error while loading csv zip '%s': %s", str(filename), e)
+                        logger.warning("Error while loading csv zip '%s': %s", str(file), e)
                         continue
                     return True
         return super().load_from_file(filepath)
