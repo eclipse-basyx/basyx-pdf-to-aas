@@ -179,6 +179,7 @@ def get_aas_template_properties(aas_template_upload, aas_template_filter):
         }
         for property_ in properties
     ])
+    properties_df = properties_df.fillna("")
 
     return (aas_template,
         gr.update(visible=True, value=properties_df),
@@ -344,7 +345,8 @@ def properties_to_dataframe(properties: list[Property], aas_template : AASTempla
             'Unit': property_.unit,
             'Reference': property_.reference,
         })
-    return pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
+    df = pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
+    return df.fillna("")
 
 def preprocess_datasheet(datasheet, preprocessor_type):
     pdf_preview = gr.update(visible=False, value=None)
@@ -532,7 +534,7 @@ def create_download_results(
     os.makedirs(results_dir)
     
     properties_path = os.path.join(results_dir, 'properties_extracted.json')
-    property_df.to_json(properties_path, indent=2, orient='records')
+    property_df.replace("", None).to_json(properties_path, indent=2, orient='records')
 
     excel_path = os.path.join(results_dir, "properties_extracted.xlsx")
     with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
