@@ -100,7 +100,7 @@ def get_class_property_definitions(
     download = False
     if class_id not in dictionary.classes.keys():
         download = True
-        gr.Info("Class not in dictionary file. Try downloading from website.", duration=3)
+        gr.Info("Class not in dictionary file. Will try downloading it from website.")
     definitions = dictionary.get_class_properties(class_id)
     class_info = dictionary.classes.get(class_id)
     if class_info:
@@ -374,7 +374,7 @@ def preprocess_datasheet(datasheet, preprocessor_type):
                     temp_dir = app_temp_dir.name
                 )
             else:
-                gr.Warning("PDF2HTMLEX not installed in system. Falling back to PDFium.")
+                gr.Warning("PDF2HTMLEX not installed in system. Falling back to PDFium." , duration=None)
         if pre is None:
             pre = preprocessor.PDFium()
     else:
@@ -445,14 +445,12 @@ def extract(
             model_identifier=model,
             client=client,
         )
-        gr.Info("Extracting all properties without definitions to search for.", duration=3)
     else:
         extractor = PropertyLLMSearch(
             model_identifier=model,
             client=client,
             property_keys_in_prompt=use_in_prompt,
         )
-        gr.Info(f"Searching for {len(definitions)} properties.", duration=3)
         extractor.max_values_length = max_values_length
         extractor.max_definition_chars = max_definition_chars
         
@@ -462,6 +460,10 @@ def extract(
     raw_results: list = []
     raw_prompts: list = []
     if batch_size <= 0 or len(definitions) == 0:
+        if len(definitions) == 0:
+            gr.Info("Extracting all properties without definitions to search for.")
+        else:
+            gr.Info(f"Searching for {len(definitions)} property definitions at once.")
         properties = extractor.extract(
             datasheet,
             definitions,
@@ -475,8 +477,11 @@ def extract(
         for chunk_pos in range(0, len(definitions), batch_size):
             if batch_size == 1:
                 property_definition_batch: list[PropertyDefinition] | PropertyDefinition = definitions[chunk_pos]
+                if chunk_pos % 10 == 0:
+                    gr.Info(f"Searching value for definition # {chunk_pos} of {len(definitions)}.", duration=3)
             else:
                 property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
+                gr.Info(f"Searching value for definition # {chunk_pos} to {chunk_pos+batch_size} of {len(definitions)}.", duration=3)
             extracted = extractor.extract(
                     datasheet,
                     property_definition_batch,
@@ -489,7 +494,7 @@ def extract(
     yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update(interactive=False)
 
 def cancel_extract():
-    gr.Info("Canceled extraction.")
+    gr.Info("Cancel extraction after next response from LLM.")
     return gr.update(interactive=False)
 
 def create_chat_history(raw_prompts, raw_results, client):
@@ -930,7 +935,7 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
             for key, value in settings.get('settings').items():
                 component = next((component for component in settings_list if component.label == key), None)
                 if component is None:
-                    gr.Warning(f"Unexpected setting key '{key}'. Value ignored: {value}")
+                    gr.Warning(f"Unexpected setting key '{key}'. Value ignored: {value}", duration=None)
                 else:
                     updated_settings[component] = value
             logger.info(f"Loaded settings from {settings_file_path}")
