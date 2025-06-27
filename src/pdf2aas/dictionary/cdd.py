@@ -251,6 +251,9 @@ class CDD(Dictionary):
             class_.keywords = keywords.split(", ")
 
         class_.properties = self._download_property_definitions(url, soup)
+        if len(class_.properties) == 0:
+            logger.warning(f"Couldn't download properties for CDD class {class_id}: {class_name}")
+            return None
         self.classes[class_id] = class_
         return class_
 
@@ -278,11 +281,11 @@ class CDD(Dictionary):
         class_url: str,
         class_html_soup: BeautifulSoup,
     ) -> list[PropertyDefinition]:
-        # export6 corresponds menu Export > All > Class and superclasses
-        export6 = class_html_soup.find("input", {"id": "export6"})
-        if not isinstance(export6, Tag):
+        # export7 corresponds menu Export > All > Class and superclasses
+        export7 = class_html_soup.find("input", {"id": "export7"})
+        if not isinstance(export7, Tag):
             return []
-        on_click = export6.get("onclick")
+        on_click = export7.get("onclick")
         if on_click is None or isinstance(on_click, list):
             return []
         export_id = on_click.split("'")[1]
