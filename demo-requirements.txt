@@ -14,7 +14,7 @@ anyio==4.9.0
     #   httpx
     #   openai
     #   starlette
-basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@b178a8cc1e8bbe5076e935aa0359133a3f772b9e#subdirectory=sdk
+basyx-python-sdk==1.2.1
     # via pdf2aas (pyproject.toml)
 beautifulsoup4==4.13.4
     # via pdf2aas (pyproject.toml)
@@ -86,7 +86,7 @@ jinja2==3.1.6
     # via gradio
 jiter==0.10.0
     # via openai
-lxml==4.9.4
+lxml==5.4.0
     # via
     #   basyx-python-sdk
     #   pyecma376-2

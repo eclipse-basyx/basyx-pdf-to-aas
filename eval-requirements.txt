@@ -13,7 +13,7 @@ anyio==4.9.0
     #   -c demo-requirements.txt
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@b178a8cc1e8bbe5076e935aa0359133a3f772b9e#subdirectory=sdk
+basyx-python-sdk==1.2.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -80,7 +80,7 @@ kiwisolver==1.4.8
     # via matplotlib
 levenshtein==0.27.1
     # via pdf2aas (pyproject.toml)
-lxml==4.9.4
+lxml==5.4.0
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk

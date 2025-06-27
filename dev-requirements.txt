@@ -15,7 +15,7 @@ anyio==4.9.0
     #   -c eval-requirements.txt
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@b178a8cc1e8bbe5076e935aa0359133a3f772b9e#subdirectory=sdk
+basyx-python-sdk==1.2.1
     # via
     #   -c eval-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -72,7 +72,7 @@ jiter==0.10.0
     # via
     #   -c eval-requirements.txt
     #   openai
-lxml==4.9.4
+lxml==5.4.0
     # via
     #   -c eval-requirements.txt
     #   basyx-python-sdk
