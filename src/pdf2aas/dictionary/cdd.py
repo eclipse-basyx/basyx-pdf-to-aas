@@ -252,7 +252,8 @@ class CDD(Dictionary):
 
         class_.properties = self._download_property_definitions(url, soup)
         if len(class_.properties) == 0:
-            logger.warning(f"Couldn't download properties for CDD class {class_id}: {class_name}")
+            logger.warning("Couldn't download properties for CDD class %s: %s",
+                            class_id, class_name)
             return None
         self.classes[class_id] = class_
         return class_
