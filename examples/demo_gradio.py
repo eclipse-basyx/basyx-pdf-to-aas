@@ -461,7 +461,7 @@ def extract(
 
     raw_results: list = []
     raw_prompts: list = []
-    if batch_size <= 0:
+    if batch_size <= 0 or len(definitions) == 0:
         properties = extractor.extract(
             datasheet,
             definitions,
