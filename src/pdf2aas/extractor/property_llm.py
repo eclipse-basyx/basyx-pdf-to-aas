@@ -195,21 +195,16 @@ Example result:
         self,
         messages: list[dict[str, str]],
     ) -> tuple[str | Any | None, dict]:
-        if self.response_format is None or isinstance(self.client, AzureOpenAI):
-            chat_completion = self.client.chat.completions.create(
-                model=self.model_identifier,
-                temperature=self.temperature,
-                messages=messages, # type: ignore[arg-type]
-                max_tokens=self.max_tokens,
-            )
-        else:  # response format = None is not equal to NotGiven, e.g. AzureOpenAI won't work
-            chat_completion = self.client.chat.completions.create( # type: ignore[call-overload, union-attr]
-                model=self.model_identifier,
-                temperature=self.temperature,
-                messages=messages,
-                max_tokens=self.max_tokens,
-                response_format=self.response_format,
-            )
+        payload = {
+            "model": self.model_identifier,
+            "temperature": self.temperature,
+            "messages": messages,
+            "max_tokens": self.max_tokens,
+            "response_format": self.response_format,
+        }
+        payload = {k: v for k, v in payload.items() if v is not None}
+
+        chat_completion = self.client.chat.completions.create(**payload)  # type: ignore[call-overload, union-attr]
         result = chat_completion.choices[0].message.content
         if chat_completion.choices[0].finish_reason not in ["stop", "None"]:
             logger.warning(
