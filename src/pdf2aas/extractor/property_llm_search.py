@@ -36,7 +36,7 @@ class PropertyLLMSearch(PropertyLLM):
             multiple datasheets vs. when same datasheet is searched for
             different properties.
         property_table_format (str): output format for the property defintions.
-            Defaults to "github" (markdown). See `tabulate.tabulate_formats` for
+            Defaults to "html". See `tabulate.tabulate_formats` for
             available options. Examples are: 'github', 'html', 'simple', 'tsv'.
 
     """
@@ -53,7 +53,7 @@ When multiple values apply use a json list to represent them.
 Represent ranges as json list of two values.
 """
     )
-    property_table_format: str = "github"
+    property_table_format: str = "html"
 
     def __init__(
         self,
