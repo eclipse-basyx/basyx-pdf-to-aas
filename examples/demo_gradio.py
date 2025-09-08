@@ -490,7 +490,12 @@ def extract(
                     raw_prompts=raw_prompts)
             properties.extend(extracted)
             yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update()
-    gr.Info('Extraction completed.', duration=3)
+    if len(properties) == 0:
+        gr.Warning('Extraction completed with no properties. Check raw results for errors.')
+    elif len(definitions) > 0 and len(properties) != len(definitions):
+        gr.Warning(f'Extraction completed with different property count ({len(properties)}/{len(definitions)}).')
+    else:
+        gr.Info(f'Extraction completed. Returned {len(properties)} properties.', duration=3)
     yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update(interactive=False)
 
 def cancel_extract():
