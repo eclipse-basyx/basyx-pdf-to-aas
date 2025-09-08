@@ -259,7 +259,7 @@ def change_client(
         request_template,
         result_path,
         headers):
-    if len(endpoint.strip()) == 0:
+    if endpoint is not None and len(endpoint.strip()) == 0:
         endpoint = None
     if endpoint_type == "openai":
         try:
