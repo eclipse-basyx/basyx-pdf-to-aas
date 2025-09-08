@@ -450,7 +450,7 @@ class AASSubmodelTechnicalData(Generator):
             else:
                 if isinstance(value_id_raw, int):
                     value_id_raw = property_.definition.id + "/" + str(value_id_raw)
-                value_id = self._create_semantic_id(value_id_raw, property_.definition, str(value))
+                value_id = self._create_semantic_id(value_id_raw, None, str(value))
 
         value = cast_property(value, property_.definition)
         return model.Property(
