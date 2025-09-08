@@ -3,10 +3,10 @@
   "modelType": "Submodel",
   "id": "id1",
   "semanticId": {
-    "type": "ModelReference",
+    "type": "ExternalReference",
     "keys": [
       {
-        "type": "ConceptDescription",
+        "type": "GlobalReference",
         "value": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2"
       }
     ]
@@ -16,10 +16,10 @@
       "idShort": "GeneralInformation",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ModelReference",
+        "type": "ExternalReference",
         "keys": [
           {
-            "type": "ConceptDescription",
+            "type": "GlobalReference",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1"
           }
         ]
@@ -30,10 +30,10 @@
           "category": "PARAMETER",
           "modelType": "Property",
           "semanticId": {
-            "type": "ModelReference",
+            "type": "ExternalReference",
             "keys": [
               {
-                "type": "ConceptDescription",
+                "type": "GlobalReference",
                 "value": "0173-1#02-AAO677#002"
               }
             ]
@@ -45,10 +45,10 @@
           "category": "PARAMETER",
           "modelType": "MultiLanguageProperty",
           "semanticId": {
-            "type": "ModelReference",
+            "type": "ExternalReference",
             "keys": [
               {
-                "type": "ConceptDescription",
+                "type": "GlobalReference",
                 "value": "0173-1#02-AAW338#001"
               }
             ]
@@ -59,10 +59,10 @@
           "category": "PARAMETER",
           "modelType": "Property",
           "semanticId": {
-            "type": "ModelReference",
+            "type": "ExternalReference",
             "keys": [
               {
-                "type": "ConceptDescription",
+                "type": "GlobalReference",
                 "value": "0173-1#02-AAO676#003"
               }
             ]
@@ -74,10 +74,10 @@
           "category": "PARAMETER",
           "modelType": "Property",
           "semanticId": {
-            "type": "ModelReference",
+            "type": "ExternalReference",
             "keys": [
               {
-                "type": "ConceptDescription",
+                "type": "GlobalReference",
                 "value": "0173-1#02-AAO227#002"
               }
             ]
@@ -90,10 +90,10 @@
       "idShort": "ProductClassifications",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ModelReference",
+        "type": "ExternalReference",
         "keys": [
           {
-            "type": "ConceptDescription",
+            "type": "GlobalReference",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1"
           }
         ]
@@ -103,10 +103,10 @@
       "idShort": "TechnicalProperties",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ModelReference",
+        "type": "ExternalReference",
         "keys": [
           {
-            "type": "ConceptDescription",
+            "type": "GlobalReference",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1"
           }
         ]
@@ -116,10 +116,10 @@
       "idShort": "FurtherInformation",
       "modelType": "SubmodelElementCollection",
       "semanticId": {
-        "type": "ModelReference",
+        "type": "ExternalReference",
         "keys": [
           {
-            "type": "ConceptDescription",
+            "type": "GlobalReference",
             "value": "https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1"
           }
         ]
@@ -130,10 +130,10 @@
           "category": "PARAMETER",
           "modelType": "MultiLanguageProperty",
           "semanticId": {
-            "type": "ModelReference",
+            "type": "ExternalReference",
             "keys": [
               {
-                "type": "ConceptDescription",
+                "type": "GlobalReference",
                 "value": "https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1"
               }
             ]
@@ -150,15 +150,15 @@
           "category": "PARAMETER",
           "modelType": "Property",
           "semanticId": {
-            "type": "ModelReference",
+            "type": "ExternalReference",
             "keys": [
               {
-                "type": "ConceptDescription",
+                "type": "GlobalReference",
                 "value": "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1"
               }
             ]
           },
-          "value": "2024-08-26",
+          "value": "2025-09-08",
           "valueType": "xs:date"
         }
       ]

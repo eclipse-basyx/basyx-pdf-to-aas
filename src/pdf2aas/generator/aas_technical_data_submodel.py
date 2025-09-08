@@ -59,8 +59,16 @@ class AASSubmodelTechnicalData(Generator):
         further_information (SubmodelElementCollection): Shortcut to the
             further information collection of the submodel. Holding the date
             and a remark, which can be extended.
+        use_local_concept_descriptions (ClassVar[bool]): create concept
+            descriptions for property definitions and reference them via model
+            references instead of using external references to global
+            identifers.
+            If true the embedded data specifications are added to the concept
+            descriptions instead of the properties itself.
 
     """
+
+    use_local_concept_descriptions: ClassVar[bool] = True
 
     def __init__(
         self,
@@ -228,12 +236,11 @@ class AASSubmodelTechnicalData(Generator):
         self.product_classifications.value.add(classification)
 
     @staticmethod
-    def _add_embedded_data_spec(
-        cd: model.concept.ConceptDescription,
-        definition: PropertyDefinition,
-    ) -> None:
-        if len(definition.name) == 0:
-            return
+    def _create_embedded_data_specs(
+        definition: PropertyDefinition | None,
+    ) -> list[model.EmbeddedDataSpecification]:
+        if definition is None or len(definition.name) == 0:
+            return []
         data_spec = model.DataSpecificationIEC61360(
             model.PreferredNameTypeIEC61360(
                 {ln: v[:AAS_IEC61360_NAME_LENGTH] for ln, v in definition.name.items()},
@@ -259,12 +266,10 @@ class AASSubmodelTechnicalData(Generator):
             data_spec.value_list = AASSubmodelTechnicalData._get_embedded_data_spec_value_list(
                 definition,
             )
-        cd.embedded_data_specifications.append(
-            model.EmbeddedDataSpecification(
+        return [model.EmbeddedDataSpecification(
                 data_specification=AAS_IEC61360_DATA_SPEC_REFERENCE,
                 data_specification_content=data_spec,
-            ),
-        )
+            )]
 
     @staticmethod
     def _get_embedded_data_spec_value_list(
@@ -336,7 +341,7 @@ class AASSubmodelTechnicalData(Generator):
                         for ln, n in property_defintion.definition.items()
                     },
                 )
-            self._add_embedded_data_spec(cd, property_defintion)
+            cd.embedded_data_specifications = self._create_embedded_data_specs(property_defintion)
         elif value:
             cd.id_short = self._create_id_short(value)
             cd.display_name = model.MultiLanguageNameType({"en": value[:AAS_MULTILANG_NAME_LENGTH]})
@@ -346,20 +351,44 @@ class AASSubmodelTechnicalData(Generator):
     def _create_semantic_id(
         self,
         reference: str | None,
-        property_defintion: PropertyDefinition | None = None,
-        value: str | None = None,
-    ) -> model.ModelReference | None:
+    ) -> model.ExternalReference | None:
         if reference is None:
             return None
-        self._add_concept_description(reference, property_defintion, value)
-        return model.ModelReference(
+        return model.ExternalReference(
             (
                 model.Key(
-                    type_=model.KeyTypes.CONCEPT_DESCRIPTION,
+                    type_=model.KeyTypes.GLOBAL_REFERENCE,
                     value=reference,
                 ),
             ),
-            type_=model.concept.ConceptDescription,
+        )
+
+    def _create_custom_semantic_id(
+        self,
+        reference: str | None,
+        property_defintion: PropertyDefinition | None = None,
+        value: str | None = None,
+    ) -> model.Reference | None:
+        if reference is None:
+            return None
+        if self.use_local_concept_descriptions:
+            self._add_concept_description(reference, property_defintion, value)
+            return model.ModelReference(
+                (
+                    model.Key(
+                        type_=model.KeyTypes.CONCEPT_DESCRIPTION,
+                        value=reference,
+                    ),
+                ),
+                type_=model.concept.ConceptDescription,
+            )
+        return model.ExternalReference(
+            (
+                model.Key(
+                    type_=model.KeyTypes.GLOBAL_REFERENCE,
+                    value=reference,
+                ),
+            ),
         )
 
     @staticmethod
@@ -383,7 +412,7 @@ class AASSubmodelTechnicalData(Generator):
         smc = model.SubmodelElementCollection(
             id_short=self._create_id_short(id_short),
             display_name=display_name,
-            semantic_id=self._create_semantic_id(property_.definition_id),
+            semantic_id=self._create_custom_semantic_id(property_.definition_id),
             description=description,
         )
         if isinstance(value, dict):
@@ -434,7 +463,7 @@ class AASSubmodelTechnicalData(Generator):
                     description,
                 )
 
-        value_id: model.ModelReference | None = None
+        value_id: model.Reference | None = None
         if (
             property_.definition is not None
             and len(property_.definition.values) > 0
@@ -450,7 +479,7 @@ class AASSubmodelTechnicalData(Generator):
             else:
                 if isinstance(value_id_raw, int):
                     value_id_raw = property_.definition.id + "/" + str(value_id_raw)
-                value_id = self._create_semantic_id(value_id_raw, None, str(value))
+                value_id = self._create_custom_semantic_id(value_id_raw, None, str(value))
 
         value = cast_property(value, property_.definition)
         return model.Property(
@@ -460,7 +489,11 @@ class AASSubmodelTechnicalData(Generator):
             value_type=type(value) if value is not None else model.datatypes.String,
             value=value,
             value_id=value_id,
-            semantic_id=self._create_semantic_id(property_.definition_id, property_.definition),
+            semantic_id=self._create_custom_semantic_id(
+                property_.definition_id, property_.definition),
+            embedded_data_specifications=
+                [] if self.use_local_concept_descriptions
+                else self._create_embedded_data_specs(property_.definition),
         )
 
     def _create_aas_property(self, property_: Property) -> model.SubmodelElement | None:
@@ -519,7 +552,11 @@ class AASSubmodelTechnicalData(Generator):
                 min=min_,
                 max=max_,
                 value_type=type_,
-                semantic_id=self._create_semantic_id(property_.definition_id, property_.definition),
+                semantic_id=self._create_custom_semantic_id(
+                    property_.definition_id, property_.definition),
+                embedded_data_specifications=
+                    [] if self.use_local_concept_descriptions
+                    else self._create_embedded_data_specs(property_.definition),
             )
 
         return self._create_aas_property_recursive(
