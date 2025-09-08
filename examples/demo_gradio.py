@@ -760,9 +760,10 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
                     )
                     model = gr.Dropdown(
                         label="Model",
-                        choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
-                        value="gpt-4o-mini",
-                        allow_custom_value=True
+                        choices=["gpt-5-nano", "gpt-5-mini", "gpt-5", "o4-mini", "o3", "o3-mini", "o1-mini", "o1", "gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo",],
+                        value="gpt-5-nano",
+                        allow_custom_value=True,
+                        info="All available model names are allowed. GPT5 models might need temperature set to 1.",
                     )
                     endpoint = gr.Text(
                         label="Endpoint",
