@@ -8,7 +8,7 @@ aiofiles==24.1.0
     # via gradio
 annotated-types==0.7.0
     # via pydantic
-anyio==4.9.0
+anyio==4.10.0
     # via
     #   gradio
     #   httpx
@@ -16,16 +16,18 @@ anyio==4.9.0
     #   starlette
 basyx-python-sdk==1.2.1
     # via pdf2aas (pyproject.toml)
-beautifulsoup4==4.13.4
+beautifulsoup4==4.13.5
     # via pdf2aas (pyproject.toml)
-certifi==2025.6.15
+brotli==1.1.0
+    # via gradio
+certifi==2025.8.3
     # via
     #   httpcore
     #   httpx
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.2
+charset-normalizer==3.4.3
     # via
     #   pdfminer-six
     #   requests
@@ -33,27 +35,27 @@ click==8.2.1
     # via
     #   typer
     #   uvicorn
-cryptography==45.0.4
+cryptography==45.0.7
     # via pdfminer-six
 distro==1.9.0
     # via openai
 et-xmlfile==2.0.0
     # via openpyxl
-fastapi==0.115.13
+fastapi==0.116.1
     # via gradio
-ffmpy==0.6.0
+ffmpy==0.6.1
     # via gradio
-filelock==3.18.0
+filelock==3.19.1
     # via huggingface-hub
-fsspec==2025.5.1
+fsspec==2025.9.0
     # via
     #   gradio-client
     #   huggingface-hub
-gradio==5.34.2
+gradio==5.44.1
     # via
     #   gradio-pdf
     #   pdf2aas (pyproject.toml)
-gradio-client==1.10.3
+gradio-client==1.12.1
     # via gradio
 gradio-pdf==0.0.22
     # via pdf2aas (pyproject.toml)
@@ -63,7 +65,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-hf-xet==1.1.5
+hf-xet==1.1.9
     # via huggingface-hub
 httpcore==1.0.9
     # via httpx
@@ -73,7 +75,7 @@ httpx==0.28.1
     #   gradio-client
     #   openai
     #   safehttpx
-huggingface-hub==0.33.0
+huggingface-hub==0.34.4
     # via
     #   gradio
     #   gradio-client
@@ -90,7 +92,7 @@ lxml==5.4.0
     # via
     #   basyx-python-sdk
     #   pyecma376-2
-markdown-it-py==3.0.0
+markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.2
     # via
@@ -99,22 +101,22 @@ markupsafe==3.0.2
     #   werkzeug
 mdurl==0.1.2
     # via markdown-it-py
-numpy==2.3.1
+numpy==2.3.2
     # via
     #   gradio
     #   pandas
-openai==1.91.0
+openai==1.106.1
     # via pdf2aas (pyproject.toml)
 openpyxl==3.1.5
     # via pdf2aas (pyproject.toml)
-orjson==3.10.18
+orjson==3.11.3
     # via gradio
 packaging==25.0
     # via
     #   gradio
     #   gradio-client
     #   huggingface-hub
-pandas==2.3.0
+pandas==2.3.2
     # via
     #   gradio
     #   pdf2aas (pyproject.toml)
@@ -122,7 +124,7 @@ pdfminer-six==20250506
     # via pdfplumber
 pdfplumber==0.11.7
     # via pdf2aas (pyproject.toml)
-pillow==11.2.1
+pillow==11.3.0
     # via
     #   gradio
     #   pdfplumber
@@ -137,7 +139,7 @@ pydantic==2.11.7
     #   pydantic-settings
 pydantic-core==2.33.2
     # via pydantic
-pydantic-settings==2.10.0
+pydantic-settings==2.10.1
     # via pdf2aas (pyproject.toml)
 pydub==0.25.1
     # via gradio
@@ -145,7 +147,7 @@ pyecma376-2==1.0.1
     # via basyx-python-sdk
 pygments==2.19.2
     # via rich
-pypdfium2==4.30.1
+pypdfium2==4.30.0
     # via
     #   pdf2aas (pyproject.toml)
     #   pdfplumber
@@ -165,13 +167,13 @@ pyyaml==6.0.2
     # via
     #   gradio
     #   huggingface-hub
-requests==2.32.4
+requests==2.32.5
     # via
     #   huggingface-hub
     #   pdf2aas (pyproject.toml)
-rich==14.0.0
+rich==14.1.0
     # via typer
-ruff==0.12.0
+ruff==0.12.12
     # via gradio
 safehttpx==0.1.6
     # via gradio
@@ -185,9 +187,9 @@ sniffio==1.3.1
     # via
     #   anyio
     #   openai
-soupsieve==2.7
+soupsieve==2.8
     # via beautifulsoup4
-starlette==0.46.2
+starlette==0.47.3
     # via
     #   fastapi
     #   gradio
@@ -199,9 +201,9 @@ tqdm==4.67.1
     # via
     #   huggingface-hub
     #   openai
-typer==0.16.0
+typer==0.17.4
     # via gradio
-typing-extensions==4.14.0
+typing-extensions==4.15.0
     # via
     #   anyio
     #   beautifulsoup4
@@ -212,6 +214,7 @@ typing-extensions==4.14.0
     #   openai
     #   pydantic
     #   pydantic-core
+    #   starlette
     #   typer
     #   typing-inspection
 typing-inspection==0.4.1
@@ -224,7 +227,7 @@ urllib3==2.5.0
     # via
     #   basyx-python-sdk
     #   requests
-uvicorn==0.34.3
+uvicorn==0.35.0
     # via gradio
 websockets==15.0.1
     # via gradio-client
