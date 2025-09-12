@@ -29,6 +29,9 @@ Use `-h` or `--help` argument for more information on command line arguments.
 ## WebUI
 
 A gradio based web UI is available by starting [examples/demo_gradio.py]().
+It is meant as an example to show some of the library features and to experiment with some settings,
+rather than being a production ready tool.
+
 To use it, additional dependencies need to be installed listed in demo-requirements: `pip install -r demo-requirements.txt`
 The webserver is also build as an windows executable, which can be download from the job artifacts:
 
@@ -49,6 +52,48 @@ The UI shows a table of the extracted properties and marks their references in t
 
 The Raw Results tabs show the raw and formated prompt and answer from the LLM in Chatbot style and json.
 Moreover, the Settings tab allows to configure different extractor and client parameter.
+
+### Docker
+
+A docker image can be build via the contained [Dockerfile](./Dockerfile).
+It uses the [WebUI](#webui) Example as entry point to showcase some features of the library.
+The entrypoint can be easily overwritten, to use the library directly.
+A prebuild container image can be used, e.g. via the [docker-compose](./docker-compose.yml) file to start the [WebUI](#webui).
+
+#### Dictionary Cache
+
+Because conversion of dictionary releases and web requests take some time, the dictionaries are cached in a `temp/dict` folder, which is mapped into the container.
+They are stored in a custom json format.
+This also allows to add ECLASS or ETIM releases.
+For example add the release as CSV zip files: `ETIM-9.0-ALL-SECTORS-CSV-METRIC-EI-2022-12-05.zip`, `ECLASS-14.0-CSV.zip`.
+They need some time to be converted to the internal format on first startup.
+
+#### WebUI Settings
+
+To customize the settings add a `settings.json` file to the working directory.
+To create a well formed settings file, an example can be downloaded from the WebUI under the Settings register card clicking "Save Settings File".
+The settings path can be additionaly overwritten via command arg `--settings SETTINGS`.
+
+Some settings can be altered via environment variables to prevent exposing secrets.
+For example an `.env` file can be loaded via docker-compose:
+
+```sh
+# OpenAI Endpoint
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=...
+# Azure Endpoint
+AZURE_OPENAI_API_KEY=...
+AZURE_ENDPOINT=https://...openai.azure.com
+AZURE_DEPLOYMENT=gpt-4...
+AZURE_API_VERSION=2025-...
+# Optional ETIM API
+ETIM_CLIENT_ID=...
+ETIM_CLIENT_SECRET=...
+# Optional proxy setup
+HTTP_PROXY=..
+HTTPS_PROXY=..
+NO_PROXY=...
+```
 
 ## Workflow
 
