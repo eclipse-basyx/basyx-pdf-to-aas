@@ -1,0 +1,11 @@
+services:
+  pdf-to-aas:
+    image: eclipsebasyx/pdf-to-aas:1.0.0
+    container_name: pdf-to-aas
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    volumes:
+      - ./temp/dict:/app/temp/dict
+    command: ["--host", "0.0.0.0"]

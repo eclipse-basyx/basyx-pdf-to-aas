@@ -3,6 +3,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import json
 import tempfile
+import shutil
 from datetime import datetime
 from typing import Literal
 
@@ -99,7 +100,7 @@ def get_class_property_definitions(
     download = False
     if class_id not in dictionary.classes.keys():
         download = True
-        gr.Info("Class not in dictionary file. Try downloading from website.", duration=3)
+        gr.Info("Class not in dictionary file. Will try downloading it from website.")
     definitions = dictionary.get_class_properties(class_id)
     class_info = dictionary.classes.get(class_id)
     if class_info:
@@ -178,6 +179,7 @@ def get_aas_template_properties(aas_template_upload, aas_template_filter):
         }
         for property_ in properties
     ])
+    properties_df = properties_df.fillna("")
 
     return (aas_template,
         gr.update(visible=True, value=properties_df),
@@ -257,7 +259,7 @@ def change_client(
         request_template,
         result_path,
         headers):
-    if len(endpoint.strip()) == 0:
+    if endpoint is not None and len(endpoint.strip()) == 0:
         endpoint = None
     if endpoint_type == "openai":
         try:
@@ -312,7 +314,7 @@ def mark_extracted_references(datasheet:str | None, properties: list[Property]):
         if start == -1:
             start = datasheet.replace('\n',' ').find(reference.replace('\n',' '))
         if start == -1:
-            logger.info(f"Reference not found: {reference}")
+            logger.debug(f"Reference not found: {reference}")
             # TODO mark red in properties dataframe
             continue
         unit = f" [{property_.unit}]" if property_.unit else ''
@@ -343,9 +345,10 @@ def properties_to_dataframe(properties: list[Property], aas_template : AASTempla
             'Unit': property_.unit,
             'Reference': property_.reference,
         })
-    return pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
+    df = pd.DataFrame(properties_dict, columns=['ID', 'Name', 'Value', 'Unit', 'Reference'])
+    return df.fillna("")
 
-def preprocess_datasheet(datasheet, preprocessor_type, tempdir):
+def preprocess_datasheet(datasheet, preprocessor_type):
     pdf_preview = gr.update(visible=False, value=None)
     if datasheet is None:
         return pdf_preview, None
@@ -368,10 +371,10 @@ def preprocess_datasheet(datasheet, preprocessor_type, tempdir):
                         preprocessor_type.split("_")[-1].upper(),
                         preprocessor.ReductionLevel.STRUCTURE
                     ),
-                    temp_dir = tempdir.name
+                    temp_dir = app_temp_dir.name
                 )
             else:
-                gr.Warning("PDF2HTMLEX not installed in system. Falling back to PDFium.")
+                gr.Warning("PDF2HTMLEX not installed in system. Falling back to PDFium." , duration=None)
         if pre is None:
             pre = preprocessor.PDFium()
     else:
@@ -442,14 +445,12 @@ def extract(
             model_identifier=model,
             client=client,
         )
-        gr.Info("Extracting all properties without definitions to search for.", duration=3)
     else:
         extractor = PropertyLLMSearch(
             model_identifier=model,
             client=client,
             property_keys_in_prompt=use_in_prompt,
         )
-        gr.Info(f"Searching for {len(definitions)} properties.", duration=3)
         extractor.max_values_length = max_values_length
         extractor.max_definition_chars = max_definition_chars
         
@@ -458,7 +459,11 @@ def extract(
 
     raw_results: list = []
     raw_prompts: list = []
-    if batch_size <= 0:
+    if batch_size <= 0 or len(definitions) == 0:
+        if len(definitions) == 0:
+            gr.Info("Extracting all properties without definitions to search for.")
+        else:
+            gr.Info(f"Searching for {len(definitions)} property definitions at once.")
         properties = extractor.extract(
             datasheet,
             definitions,
@@ -472,8 +477,11 @@ def extract(
         for chunk_pos in range(0, len(definitions), batch_size):
             if batch_size == 1:
                 property_definition_batch: list[PropertyDefinition] | PropertyDefinition = definitions[chunk_pos]
+                if chunk_pos % 10 == 0:
+                    gr.Info(f"Searching value for definition # {chunk_pos} of {len(definitions)}.", duration=3)
             else:
                 property_definition_batch = definitions[chunk_pos:chunk_pos+batch_size]
+                gr.Info(f"Searching value for definition # {chunk_pos} to {chunk_pos+batch_size} of {len(definitions)}.", duration=3)
             extracted = extractor.extract(
                     datasheet,
                     property_definition_batch,
@@ -482,11 +490,16 @@ def extract(
                     raw_prompts=raw_prompts)
             properties.extend(extracted)
             yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update()
-    gr.Info('Extraction completed.', duration=3)
+    if len(properties) == 0:
+        gr.Warning('Extraction completed with no properties. Check raw results for errors.')
+    elif len(definitions) > 0 and len(properties) != len(definitions):
+        gr.Warning(f'Extraction completed with different property count ({len(properties)}/{len(definitions)}).')
+    else:
+        gr.Info(f'Extraction completed. Returned {len(properties)} properties.', duration=3)
     yield properties, properties_to_dataframe(properties, aas_template), raw_prompts, raw_results, gr.update(interactive=False)
 
 def cancel_extract():
-    gr.Info("Canceled extraction.")
+    gr.Info("Cancel extraction after next response from LLM.")
     return gr.update(interactive=False)
 
 def create_chat_history(raw_prompts, raw_results, client):
@@ -514,7 +527,6 @@ def create_chat_history(raw_prompts, raw_results, client):
 def create_download_results(
         properties: list[Property],
         property_df: pd.DataFrame,
-        tempdir,
         prompt_hint,
         model, temperature,
         batch_size,
@@ -527,11 +539,14 @@ def create_download_results(
 ):
     if properties is None or len(properties) == 0:
         return None
+    results_dir = os.path.join(app_temp_dir.name, "results")
+    shutil.rmtree(results_dir, ignore_errors=True)
+    os.makedirs(results_dir)
     
-    properties_path = os.path.join(tempdir.name, 'properties_extracted.json')
-    property_df.to_json(properties_path, indent=2, orient='records')
+    properties_path = os.path.join(results_dir, 'properties_extracted.json')
+    property_df.replace("", None).to_json(properties_path, indent=2, orient='records')
 
-    excel_path = os.path.join(tempdir.name, "properties_extracted.xlsx")
+    excel_path = os.path.join(results_dir, "properties_extracted.xlsx")
     with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
         property_df.to_excel(
             writer,
@@ -555,37 +570,34 @@ def create_download_results(
         settings.append(['dictionary_class', class_id])
     
     if aas_template is None:
-        submodel_path = os.path.join(tempdir.name, 'technical_data_submodel.json')
+        submodel_path = os.path.join(results_dir, 'technical_data_submodel.json')
         submodel = AASSubmodelTechnicalData()
         if dictionary is not None and class_id is not None:
             submodel.add_classification(dictionary, class_id)
         submodel.add_properties(properties)
         submodel.dump(submodel_path)
 
-        aasx_path = os.path.join(tempdir.name, 'technical_data.aasx')
+        aasx_path = os.path.join(results_dir, 'technical_data.aasx')
         submodel.save_as_aasx(aasx_path)
 
         submodel.remove_empty_submodel_elements()
-        aasx_path_noneEmpty = os.path.join(tempdir.name, 'technical_data_withoutEmpty.aasx')
+        aasx_path_noneEmpty = os.path.join(results_dir, 'technical_data_withoutEmpty.aasx')
         submodel.save_as_aasx(aasx_path_noneEmpty)
         return [excel_path, properties_path, submodel_path, aasx_path, aasx_path_noneEmpty]
     else:
         aas_template.add_properties(properties)
-        aasx_path = os.path.join(tempdir.name, os.path.basename(aas_template.aasx_path))
+        aasx_path = os.path.join(results_dir, os.path.basename(aas_template.aasx_path))
         aas_template.save_as_aasx(aasx_path)
         return [excel_path, properties_path, aasx_path]
 
-def init_tempdir():
-    tempdir =  tempfile.TemporaryDirectory(prefix="pdf2aas_")
-    logger.info(f"Created tempdir: {tempdir.name}")
-    return tempdir
+app_temp_dir = tempfile.TemporaryDirectory(prefix="pdf2aas_")
 
 def main(debug=False, init_settings_path=None, server_name=None, server_port=None):
+    logger.info(f"Using application temp dir: {app_temp_dir.name}")
 
-    with gr.Blocks(title="BaSys4Transfer PDF to AAS",analytics_enabled=False) as demo:
+    with gr.Blocks(title="BaSys4Transfer PDF to AAS", analytics_enabled=False, delete_cache=[1800,3600] ) as demo:
         dictionary = gr.State(value=None)
         client = gr.State()
-        tempdir = gr.State(value=init_tempdir)
         extracted_properties = gr.State()
         aas_template = gr.State()
         datasheet_text = gr.State()
@@ -748,9 +760,10 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
                     )
                     model = gr.Dropdown(
                         label="Model",
-                        choices=["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"],
-                        value="gpt-4o-mini",
-                        allow_custom_value=True
+                        choices=["gpt-5-nano", "gpt-5-mini", "gpt-5", "o4-mini", "o3", "o3-mini", "o1-mini", "o1", "gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo",],
+                        value="gpt-5-nano",
+                        allow_custom_value=True,
+                        info="All available model names are allowed. GPT5 models might need temperature set to 1.",
                     )
                     endpoint = gr.Text(
                         label="Endpoint",
@@ -798,17 +811,14 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
                 )
             with gr.Group():
                 with gr.Row():
-                    settings_save = gr.Button(
-                        "Create Settings File"
+                    settings_save = gr.DownloadButton(
+                        "Save Settings File"
                     )
                     settings_load = gr.UploadButton(
-                        "Load Settings File"
+                        "Load Settings File",
+                        value=init_settings_path if os.path.exists(init_settings_path) else None,
                     )
-                settings_file = gr.File(
-                    label="Download Settings"
-                )
 
-        
         dictionary_type.change(
             fn=change_dictionary_type,
             inputs=dictionary_type,
@@ -859,7 +869,7 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
         gr.on(
             triggers=[datasheet_upload.change, preprocessor_type.change],
             fn=preprocess_datasheet,
-            inputs=[datasheet_upload, preprocessor_type, tempdir],
+            inputs=[datasheet_upload, preprocessor_type],
             outputs=[datasheet_preview, datasheet_text]
         )
 
@@ -881,7 +891,7 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
         )
         extraction_started.then(
             fn=create_download_results,
-            inputs=[extracted_properties, extracted_properties_df, tempdir, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class, aas_template],
+            inputs=[extracted_properties, extracted_properties_df, prompt_hint, model, temperature, batch_size, use_in_prompt, max_definition_chars, max_values_length, dictionary, dictionary_class, aas_template],
             outputs=[results]
         )
         gr.on(
@@ -910,15 +920,18 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
         ]
 
         def save_settings(settings):
-            settings_path = os.path.join(settings[tempdir].name, "settings.json")
+            # TODO: this might fail, if two sessions save the settings at the same time.
+            settings_path = os.path.join(app_temp_dir.name, "settings.json")
             with open(settings_path, 'w') as settings_file:
                 json.dump({
-                    'date': str(datetime.now()),
-                    'settings': {c.label: v for c, v in settings.items() if c != tempdir},
+                    # 'date': str(datetime.now()), # Remove date so that gradio cache can reuse same settingsfiles by hash
+                    'settings': {c.label: v for c, v in settings.items()},
                 }, settings_file, indent=2)
-            return settings_path
+            return gr.DownloadButton(value=settings_path)
 
         def load_settings(settings_file_path):
+            if settings_file_path is None:
+                return settings_list
             try:
                 settings = json.load(open(settings_file_path))
             except (json.JSONDecodeError, OSError, FileNotFoundError) as error:
@@ -928,32 +941,21 @@ def main(debug=False, init_settings_path=None, server_name=None, server_port=Non
             for key, value in settings.get('settings').items():
                 component = next((component for component in settings_list if component.label == key), None)
                 if component is None:
-                    gr.Warning(f"Unexpected setting key '{key}'. Value ignored: {value}")
+                    gr.Warning(f"Unexpected setting key '{key}'. Value ignored: {value}", duration=None)
                 else:
                     updated_settings[component] = value
             logger.info(f"Loaded settings from {settings_file_path}")
             return updated_settings
 
-        settings_load.upload(
+        gr.on(
+            triggers=[demo.load, settings_load.upload],
             fn=load_settings,
             inputs=settings_load,
             outputs=settings_list,
-        )
-        try:
-            demo.load(
-                fn=load_settings,
-                inputs=gr.File(init_settings_path, visible=False),
-                outputs=settings_list,
-            )
-        except FileNotFoundError:
-            logger.info(f"Initial settings file not found: {os.path.abspath(init_settings_path)}")
-        except gr.Error as error:
-            logger.warning(f"Initial settings file not loaded: {error}")
-        gr.on(
-            triggers=[demo.load, settings_save.click, settings_load.upload],
+        ).then(
             fn=save_settings,
-            inputs={tempdir} | set(settings_list),
-            outputs=settings_file
+            inputs=set(settings_list),
+            outputs=settings_save
         ).then(
             fn=change_client,
             inputs=[endpoint_type, endpoint, api_key, azure_deployment, azure_api_version, custom_llm_request_template, custom_llm_result_path, custom_llm_headers],

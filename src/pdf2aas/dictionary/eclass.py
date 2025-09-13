@@ -3,7 +3,6 @@
 import csv
 import json
 import logging
-import os
 import re
 import shutil
 from collections import defaultdict
@@ -102,6 +101,7 @@ class ECLASS(Dictionary):
     properties: ClassVar[dict[str, PropertyDefinition]] = {}
     properties_download_failed: ClassVar[dict[str, set[str]]] = {}
     supported_releases: ClassVar[list[str]] = [
+        "15.0",
         "14.0",
         "13.0",
         "12.0",
@@ -117,17 +117,17 @@ class ECLASS(Dictionary):
         "7.0",
         "6.2",
         "6.1",
-        "5.14",
+        "5.1.4",
     ]
     license = "https://eclass.eu/en/eclass-standard/licenses"
     language_idx: ClassVar[dict[str, str]] = {"de": "0", "en": "1", "fr": "2", "cn": "3"}
 
-    def __init__(self, release: str = "14.0", temp_dir: str | None = None) -> None:
+    def __init__(self, release: str = "15.0", temp_dir: str | None = None) -> None:
         """Initialize ECLASS dictionary with a specified eCl@ss release version.
 
         Arguments:
             release (str): The release version of the eCl@ss standard to be
-                used. Defaults to '14.0'.
+                used. Defaults to '15.0'.
             temp_dir (str): Set the temporary directory. Will be used to load
                 releases from file, the first time the release is used.
 
@@ -525,13 +525,15 @@ class ECLASS(Dictionary):
         Searches in `self.tempdir` for "ECLASS-<release>-...CSV....zip" file,
         if no filepath is given. Otherwise, searches for cached dicts.
         """
-        if filepath is None and Path(self.temp_dir).exists():
-            for filename in os.listdir(self.temp_dir):
-                if re.match(f"{self.name}-{self.release}.*CSV.*\\.zip", filename, re.IGNORECASE):
+        temp_path = Path(self.temp_dir)
+        if filepath is None and temp_path.exists():
+            for file in temp_path.iterdir():
+                if re.match(f"{self.name}-{self.release}.*CSV.*\\.zip",
+                            file.name, re.IGNORECASE):
                     try:
-                        self._load_from_release_csv_zip(Path(self.temp_dir) / filename)
+                        self._load_from_release_csv_zip(str(file))
                     except OSError as e:
-                        logger.warning("Error while loading csv zip '%s': %s", filename, e)
+                        logger.warning("Error while loading csv zip '%s': %s", str(file), e)
                         continue
                     return True
         return super().load_from_file(filepath)

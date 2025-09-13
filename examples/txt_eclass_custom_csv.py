@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # Load the .env file with openai API Key
 load_dotenv()
 
-def main(datasheet,class_id,output):
+def main(datasheet, class_id, output):
     #Format according to demo_gradio settings file expected
     settings=json.load(open('settings.json'))
     settings=settings["settings"]
@@ -32,7 +32,7 @@ def main(datasheet,class_id,output):
         settings['Model'], 
         client=client, 
         max_tokens=settings['Max. Tokens'],
-        property_keys_in_prompt=['unit','datatype'],
+        property_keys_in_prompt=settings['Use in prompt'],
     )
 
     pdf_to_aas = PDF2AAS(
@@ -41,7 +41,7 @@ def main(datasheet,class_id,output):
         generator=CSV(),
         batch_size=settings['Batch Size']
     )
-    pdf_to_aas.dictionary.save_to_file()
+    pdf_to_aas.convert(datasheet, class_id, output)
 
   
 if __name__ == '__main__':
@@ -65,5 +65,5 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
     logger = logging.getLogger()
 
-    main(args.data_sheet,args.class_id,args.output)
+    main(args.data_sheet, args.class_id, args.output)
     

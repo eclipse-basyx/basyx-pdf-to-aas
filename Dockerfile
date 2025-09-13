@@ -12,7 +12,9 @@ FROM python:3.12-alpine
 WORKDIR /app
 RUN apk add --no-cache libffi
 COPY --from=builder /install /usr/local
-COPY . /app/
+COPY ./examples /app/examples
+# Create temp/dict folder to inject dictionary releases via directory mapping
+RUN mkdir -p /app/temp/dict
 EXPOSE 7860
 
 # run the Gradio demo

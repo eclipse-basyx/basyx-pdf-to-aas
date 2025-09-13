@@ -8,20 +8,20 @@ annotated-types==0.7.0
     # via
     #   -c demo-requirements.txt
     #   pydantic
-anyio==4.8.0
+anyio==4.10.0
     # via
     #   -c demo-requirements.txt
     #   httpx
     #   openai
-basyx-python-sdk @ git+https://github.com/eclipse-basyx/basyx-python-sdk.git@b178a8cc1e8bbe5076e935aa0359133a3f772b9e#subdirectory=sdk
+basyx-python-sdk==1.2.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-beautifulsoup4==4.12.3
+beautifulsoup4==4.13.5
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-certifi==2024.12.14
+certifi==2025.8.3
     # via
     #   -c demo-requirements.txt
     #   httpcore
@@ -31,18 +31,14 @@ cffi==1.17.1
     # via
     #   -c demo-requirements.txt
     #   cryptography
-charset-normalizer==3.4.1
+charset-normalizer==3.4.3
     # via
     #   -c demo-requirements.txt
     #   pdfminer-six
     #   requests
-colorama==0.4.6
-    # via
-    #   -c demo-requirements.txt
-    #   tqdm
-contourpy==1.3.1
+contourpy==1.3.3
     # via matplotlib
-cryptography==44.0.0
+cryptography==45.0.7
     # via
     #   -c demo-requirements.txt
     #   pdfminer-six
@@ -56,13 +52,13 @@ et-xmlfile==2.0.0
     # via
     #   -c demo-requirements.txt
     #   openpyxl
-fonttools==4.55.3
+fonttools==4.59.2
     # via matplotlib
-h11==0.14.0
+h11==0.16.0
     # via
     #   -c demo-requirements.txt
     #   httpcore
-httpcore==1.0.7
+httpcore==1.0.9
     # via
     #   -c demo-requirements.txt
     #   httpx
@@ -76,31 +72,31 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
-jiter==0.8.2
+jiter==0.10.0
     # via
     #   -c demo-requirements.txt
     #   openai
-kiwisolver==1.4.8
+kiwisolver==1.4.9
     # via matplotlib
-levenshtein==0.26.1
+levenshtein==0.27.1
     # via pdf2aas (pyproject.toml)
-lxml==4.9.4
+lxml==5.4.0
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
     #   pyecma376-2
-markupsafe==2.1.5
+markupsafe==3.0.2
     # via
     #   -c demo-requirements.txt
     #   werkzeug
-matplotlib==3.10.0
+matplotlib==3.10.6
     # via pdf2aas (pyproject.toml)
-numpy==2.2.2
+numpy==2.3.2
     # via
     #   -c demo-requirements.txt
     #   contourpy
     #   matplotlib
-openai==1.59.9
+openai==1.106.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -108,19 +104,19 @@ openpyxl==3.1.5
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-packaging==24.2
+packaging==25.0
     # via
     #   -c demo-requirements.txt
     #   matplotlib
-pdfminer-six==20231228
+pdfminer-six==20250506
     # via
     #   -c demo-requirements.txt
     #   pdfplumber
-pdfplumber==0.11.5
+pdfplumber==0.11.7
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
-pillow==11.1.0
+pillow==11.3.0
     # via
     #   -c demo-requirements.txt
     #   matplotlib
@@ -129,17 +125,17 @@ pycparser==2.22
     # via
     #   -c demo-requirements.txt
     #   cffi
-pydantic==2.10.5
+pydantic==2.11.7
     # via
     #   -c demo-requirements.txt
     #   openai
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-pydantic-core==2.27.2
+pydantic-core==2.33.2
     # via
     #   -c demo-requirements.txt
     #   pydantic
-pydantic-settings==2.7.1
+pydantic-settings==2.10.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -147,9 +143,9 @@ pyecma376-2==1.0.1
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
-pyparsing==3.2.1
+pyparsing==3.2.3
     # via matplotlib
-pypdfium2==4.30.1
+pypdfium2==4.30.0
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -159,14 +155,14 @@ python-dateutil==2.9.0.post0
     #   -c demo-requirements.txt
     #   basyx-python-sdk
     #   matplotlib
-python-dotenv==1.0.1
+python-dotenv==1.1.1
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
     #   pydantic-settings
-rapidfuzz==3.11.0
+rapidfuzz==3.14.0
     # via levenshtein
-requests==2.32.3
+requests==2.32.5
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)
@@ -179,7 +175,7 @@ sniffio==1.3.1
     #   -c demo-requirements.txt
     #   anyio
     #   openai
-soupsieve==2.6
+soupsieve==2.8
     # via
     #   -c demo-requirements.txt
     #   beautifulsoup4
@@ -191,14 +187,21 @@ tqdm==4.67.1
     # via
     #   -c demo-requirements.txt
     #   openai
-typing-extensions==4.12.2
+typing-extensions==4.15.0
     # via
     #   -c demo-requirements.txt
     #   anyio
+    #   beautifulsoup4
     #   openai
     #   pydantic
     #   pydantic-core
-urllib3==2.3.0
+    #   typing-inspection
+typing-inspection==0.4.1
+    # via
+    #   -c demo-requirements.txt
+    #   pydantic
+    #   pydantic-settings
+urllib3==2.5.0
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
@@ -207,7 +210,7 @@ werkzeug==3.1.3
     # via
     #   -c demo-requirements.txt
     #   basyx-python-sdk
-xlrd==2.0.1
+xlrd==2.0.2
     # via
     #   -c demo-requirements.txt
     #   pdf2aas (pyproject.toml)

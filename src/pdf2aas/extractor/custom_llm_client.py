@@ -76,8 +76,9 @@ class CustomLLMClientHTTP(CustomLLMClient):
         result_path: str | None = None,
         headers: dict[str, str] | None = None,
         retries: int = 0,
-        verify: bool | None = None,
         timeout: float = 120,
+        *,
+        verify: bool | None = None,
     ) -> None:
         """Initialize a custom LLM client for HTTP connections with defaults.
 

@@ -3,7 +3,7 @@
 import logging
 
 import pdfplumber
-from pdfminer.pdftypes import PSException
+from pdfminer.pdftypes import PDFException
 from tabulate import tabulate
 
 from pdf2aas.preprocessor import Preprocessor
@@ -32,7 +32,7 @@ class PDFPlumber(Preprocessor):
                     page.extract_text().replace("\r\n", "\n").replace("\r", "\n")
                     for page in pdf.pages
                 ]
-        except (PSException, FileNotFoundError):
+        except (PDFException, FileNotFoundError):
             logger.exception("Error reading filepath: %s.", filepath)
             return None
 

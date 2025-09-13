@@ -1,6 +1,99 @@
-# PDF to AAS
+# PDF Datasheets to AAS
 
-Python library and scripts to extract technical data from PDFs utilizing transformers and especially **Large Language Models (LLMs)** to export them in an **Asset Administration Shell (AAS)** submodel.
+Python library and scripts to **extract technical** data from PDFs or texts utilizing transformers and especially **Large Language Models (LLMs)** to export them in an **Asset Administration Shell (AAS)** submodel.
+
+## Usage
+
+```py
+from pdf2aas import PDF2AAS
+pdf2aas = PDF2AAS()
+pdf2aas.convert('path/to/datasheet.pdf', 'eclass id e.g. 27274001', 'path/to/submodel.json')
+```
+
+The [default toolchain PDF2AAS](src/pdf2aas/core.py) will save the submodel in json format to a given path, using:
+
+* pypdfium2 preprocessor
+* ECLASS dictionary
+* PropertyLLMSearch extractor with openAI client
+* AAS Technical Data Submodel generator
+
+See [Modules](#modules) for details.
+
+## Examples
+
+You can find some example toolchains with intermediate steps in the [examples](examples/) folder.
+To run them make sure pdf2aas is installed according to [setup section above](#setup).
+Then execute for example: `python default_toolchain.py`
+Use `-h` or `--help` argument for more information on command line arguments.
+
+## WebUI
+
+A gradio based web UI is available by starting [examples/demo_gradio.py]().
+It is meant as an example to show some of the library features and to experiment with some settings,
+rather than being a production ready tool.
+
+To use it, additional dependencies need to be installed listed in demo-requirements: `pip install -r demo-requirements.txt`
+The webserver is also build as an windows executable, which can be download from the job artifacts:
+
+[![Package gradio example with PyInstaller - Windows](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml/badge.svg?branch=main)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml)
+
+The web UI features the selection of an asset class from ECLASS, ETIM or CDD dictionary in different releases.
+If no dictionary is selected, the extractor searches for all technical propertiers without using definitions.
+An AAS Template (in fact any aasx package) can be opened and searched for properties. They can be used as definitions to search for as well.
+
+![Screenshot of the webui showing the tab where definitions (Dictionary, Release and Class) are selected](doc/example_webui_definitions.png)
+
+A datasheet (PDF, text, csv, html, ...) can be uploaded and the properties of the selected dictionary class or AAS templated can be extracted by an LLM.
+The extracted properties can be downloaded as xlsx, json, technical data submodel (json) and as an AAS (aasx).
+In case of a given AAS template, the aasx can be downloaded with property values updated from the extraction.
+The UI shows a table of the extracted properties and marks their references in the preprocessed text if found.
+
+![Screenshot of the webui showing the tab where the PDF is uploaded and extracted values are presented and results can be downloaded.](doc/example_webui_extract.png)
+
+The Raw Results tabs show the raw and formated prompt and answer from the LLM in Chatbot style and json.
+Moreover, the Settings tab allows to configure different extractor and client parameter.
+
+### Docker
+
+A docker image can be build via the contained [Dockerfile](./Dockerfile).
+It uses the [WebUI](#webui) Example as entry point to showcase some features of the library.
+The entrypoint can be easily overwritten, to use the library directly.
+A prebuild container image can be used, e.g. via the [docker-compose](./docker-compose.yml) file to start the [WebUI](#webui).
+
+#### Dictionary Cache
+
+Because conversion of dictionary releases and web requests take some time, the dictionaries are cached in a `temp/dict` folder, which is mapped into the container.
+They are stored in a custom json format.
+This also allows to add ECLASS or ETIM releases.
+For example add the release as CSV zip files: `ETIM-9.0-ALL-SECTORS-CSV-METRIC-EI-2022-12-05.zip`, `ECLASS-14.0-CSV.zip`.
+They need some time to be converted to the internal format on first startup.
+
+#### WebUI Settings
+
+To customize the settings add a `settings.json` file to the working directory.
+To create a well formed settings file, an example can be downloaded from the WebUI under the Settings register card clicking "Save Settings File".
+The settings path can be additionaly overwritten via command arg `--settings SETTINGS`.
+
+Some settings can be altered via environment variables to prevent exposing secrets.
+For example an `.env` file can be loaded via docker-compose:
+
+```sh
+# OpenAI Endpoint
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=...
+# Azure Endpoint
+AZURE_OPENAI_API_KEY=...
+AZURE_ENDPOINT=https://...openai.azure.com
+AZURE_DEPLOYMENT=gpt-4...
+AZURE_API_VERSION=2025-...
+# Optional ETIM API
+ETIM_CLIENT_ID=...
+ETIM_CLIENT_SECRET=...
+# Optional proxy setup
+HTTP_PROXY=..
+HTTPS_PROXY=..
+NO_PROXY=...
+```
 
 ## Workflow
 
@@ -41,57 +134,13 @@ flowchart LR
     
 ```
 
-Remarks:
+### Remarks
 
-* Typical *Property Dictionaries* are ECLASS, CDD, ETIM, EDIBATEC, EPIC, GPC, UniClass.
-* The *classification* (e.g. ECLASS or ETIM class of the device) will be done manualy first, but can be automated (e.g. also via LLMs, RAG, etc.) in the future.
-* Additional *PDF Preprocessors* might be added in the future, e.g. specialized on table or image extraction.
+* Typical **Property Dictionaries** are ECLASS, CDD, ETIM, EDIBATEC, EPIC, GPC, UniClass.
+* The **Classification** (e.g. ECLASS or ETIM class of the device) needs to be done manualy, but can be automated (e.g. also via LLMs, RAG, etc.) in the future.
+* Additional **PDF Preprocessors** might be added in the future, e.g. specialized on table or image extraction.
 LLMs might also be used to preprocess the PDF content first, e.g. summarize it in JSON format.
-* Property definitions might be derived from an AAS template (or instance), instead of providing the property definitions from a class of a dictionary directly.
-
-## Usage
-
-```py
-from pdf2aas import PDF2AAS
-pdf2aas = PDF2AAS()
-pdf2aas.convert('path/to/datasheet.pdf', 'eclass id e.g. 27274001', 'path/to/submodel.json')
-```
-
-The [default toolchain PDF2AAS](src/pdf2aas/core.py) will save the submodel in json format to a given path, using:
-
-* pypdfium2 preprocessor
-* ECLASS dictionary
-* PropertyLLMSearch extractor with openAI client
-* AAS Technical Data Submodel generator
-
-See [Modules](#modules) for details.
-
-## Examples
-
-You can find some example toolchains with intermediate steps in the [examples](examples/) folder.
-To run them make sure pdf2aas is installed according to [setup section above](#setup).
-Then execute for example: `python default_toolchain.py`
-Use `-h` or `--help` argument for more information on command line arguments.
-
-### Webui
-
-A gradio based web UI is available by starting [examples/demo_gradio.py]().
-To use it, additional dependencies need to be installed listed in demo-requirements: `pip install -r demo-requirements.txt`
-The webserver is also build as an windows executable, which can be download from the job artifacts: [![Package gradio example with PyInstaller - Windows](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml/badge.svg?branch=main)](https://github.com/eclipse-basyx/basyx-pdf-to-aas/actions/workflows/pyinstaller-demo-gradio-win.yml)
-
-The web UI features the selection of an asset class from ECLASS, ETIM or CDD dictionary in different releases.
-If no dictionary is selected, the extractor searches for all technical propertiers without using definitions.
-An AAS Template (in fact any aasx package) can be opened and searched for properties. They can be used as definitions to search for as well.
-![Screenshot of the webui showing the tab where definitions (Dictionary, Release and Class) are selected](doc/example_webui_definitions.png)
-
-A datasheet (PDF, text, csv, html, ...) can be uploaded and the properties of the selected dictionary class or AAS templated can be extracted by an LLM.
-The extracted properties can be downloaded as xlsx, json, technical data submodel (json) and as an AAS (aasx).
-In case of a given AAS template, the aasx can be downloaded with property values updated from the extraction.
-The UI shows a table of the extracted properties and marks their references in the preprocessed text if found.
-![Screenshot of the webui showing the tab where the PDF is uploaded and extracted values are presented and results can be downloaded.](doc/example_webui_extract.png)
-
-The Raw Results tabs show the raw and formated prompt and answer from the LLM in Chatbot style and json.
-Moreover, the Settings tab allows to configure different extractor and client parameter.
+* Property definitions can be derived from an AAS template (or instance), instead of providing the property definitions from a class of a dictionary directly.
 
 ## Modules
 
